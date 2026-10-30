@@ -1,0 +1,23 @@
+{
+  "appId": "com.sportstream.app",
+  "appName": "SportStream",
+  "webDir": "www",
+  "backgroundColor": "#06090e",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "launchFadeOutDuration": 250,
+      "backgroundColor": "#06090e",
+      "showSpinner": false
+    }
+  }
+}
