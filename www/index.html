@@ -2966,6 +2966,31 @@ function _pmFocusFirst() {
 function _pmChoose(level) {
   if (!pm) return;
   const { src, playUrl, playType, referer, restoreEl } = pm;
+
+  /* PRUEBA: las películas se reproducen con ExoPlayer nativo (headers Referer/Origin reales). */
+  const exo = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VideoPlayer;
+  if (src.kind === 'movie' && exo && exo.openStream) {
+    _pmMutedPrevVideo = false;
+    closePmModal(true);
+    exo.openStream({ url: playUrl, title: src.name || '', referer: referer || '' })
+      .then(r => {
+        if (r && r.error) {
+          showToast('ExoPlayer: ' + String(r.error).slice(0, 120), 'error', 6000);
+          console.warn('[Exo] error:', r.error);
+        }
+      })
+      .catch(e => {
+        showToast('ExoPlayer no abrió: ' + ((e && e.message) || e), 'error', 6000);
+        console.warn('[Exo] openStream falló:', e);
+      })
+      .finally(() => {
+        if (restoreEl && document.contains(restoreEl)) {
+          try { restoreEl.focus({ preventScroll: true }); } catch (_) {}
+        }
+      });
+    return;
+  }
+
   const hlsPre = (playType === 'hls' && typeof pm.takeHls === 'function') ? pm.takeHls() : null;
   _pmMutedPrevVideo = false;
   closePmModal(true);
