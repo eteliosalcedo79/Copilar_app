@@ -1457,9 +1457,30 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 </div>
 
 <!-- ══════ LIBS ══════ -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-<script src="https://cdn.jsdelivr.net/npm/mpegts.js@1"></script>
+<script src="hls.min.js"></script>
+<script src="mpegts.min.js"></script>
 
+<script>
+/* ── Ocultar splash nativo de Capacitor (launchAutoHide: false) ── */
+(function () {
+  var done = false;
+  function hideSplash() {
+    if (done) return;
+    try {
+      var C = window.Capacitor;
+      if (C && C.Plugins && C.Plugins.SplashScreen && C.Plugins.SplashScreen.hide) {
+        C.Plugins.SplashScreen.hide();
+        done = true;
+      }
+    } catch (e) {}
+  }
+  hideSplash();
+  document.addEventListener('DOMContentLoaded', hideSplash);
+  window.addEventListener('load', hideSplash);
+  // Reintentos por si el puente nativo tarda en estar listo
+  var n = 0, t = setInterval(function () { hideSplash(); if (done || ++n > 20) clearInterval(t); }, 250);
+})();
+</script>
 <script>
 /* ════════════════════════════════════════════════════════════════
    PELÍCULAS Y SERIES · Test standalone
