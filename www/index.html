@@ -2366,6 +2366,10 @@ function scheduleReconnect(ctx, streamId) {
 }
 
 function failPlayback() {
+  try {
+    const sub = document.querySelector('.ss-offline-sub');
+    if (sub) sub.textContent = 'No se pudo conectar. Probá con otro servidor.' + (window._lastHlsErr ? ' [' + window._lastHlsErr + ']' : '') + (window._playingUrl ? ' · ' + String(window._playingUrl).split('://').pop().slice(0, 40) : '');
+  } catch (_) {}
   destroyStream();
   setPlayerLoader('hidden');
   hideReconnectOverlay();
@@ -2397,6 +2401,7 @@ function _playHls(ctx, streamId) {
     };
 
     hls.on(Hls.Events.ERROR, (_, d) => {
+      if (d && d.details) window._lastHlsErr = d.details + (d.response && d.response.code ? ' ' + d.response.code : '') + (d.fatal ? ' (fatal)' : '');
       if (!d.fatal || stale() || hlsInst !== hls) return;
       if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
         try { hls.stopLoad(); } catch (_) {}
