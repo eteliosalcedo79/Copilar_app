@@ -1892,9 +1892,12 @@ function renderInlineSeasonEpisodes(season) {
 
 /* ══════════════════ BÚSQUEDA DE EMBEDS ══════════════════ */
 let ultimoErrorEmbed = '';
+let ultimoLogEmbed = [];
+function capturarLogEmbed(ifr){ try { ultimoLogEmbed = (ifr.contentWindow.__log || []).slice(0, 8); } catch (_) {} }
 
 async function buscarEmbedsReales(meta, season, episode) {
   ultimoErrorEmbed = '';
+  ultimoLogEmbed = [];
   return new Promise(async (resolve) => {
     let iframe = null;
     let listener = null;
@@ -1921,6 +1924,7 @@ async function buscarEmbedsReales(meta, season, episode) {
       listener = (event) => {
         if (event.data && event.data.type === 'EMBED_ENCONTRADO') {
           if (event.data.error) ultimoErrorEmbed = String(event.data.error);
+          capturarLogEmbed(iframe);
           cleanup();
           resolve(Array.isArray(event.data.links) ? event.data.links : []);
         }
@@ -1936,7 +1940,14 @@ async function buscarEmbedsReales(meta, season, episode) {
          - require('crypto-js') y module.exports (formato CommonJS)
          - fetch del documento principal (con CapacitorHttp pasa por la red nativa, sin CORS) */
       const script = `
-        window.fetch = window.parent.fetch.bind(window.parent);
+        window.__log = [];
+        var __f0 = window.parent.fetch.bind(window.parent);
+        window.fetch = async function (u, o) {
+          var m = (o && o.method) || 'GET';
+          var n = String(u).split('://').pop().replace('api_key=', 'k=').slice(0, 55);
+          try { var r = await __f0(u, o); window.__log.push(m + ' ' + n + ' → ' + r.status); return r; }
+          catch (e) { window.__log.push(m + ' ' + n + ' ✗ ' + ((e && e.message) || e)); throw e; }
+        };
         window.CryptoJS = window.parent.CryptoJS;
         var module = { exports: {} };
         var exports = module.exports;
@@ -1966,6 +1977,7 @@ async function buscarEmbedsReales(meta, season, episode) {
 
       timeoutId = setTimeout(() => {
         ultimoErrorEmbed = ultimoErrorEmbed || 'Tiempo de espera agotado';
+        capturarLogEmbed(iframe);
         cleanup();
         resolve([]);
       }, 55000);
@@ -2001,7 +2013,7 @@ async function openSourcesWithEpisode(season, episode) {
         <span class="src-empty-big">📡</span>
         No se encontraron servidores disponibles.
         <small>En el navegador puede fallar por CORS. Probá desde la app.</small>
-        ${ultimoErrorEmbed ? `<small style="display:block;margin-top:6px;color:var(--red)">${escapeHtml(ultimoErrorEmbed)}</small>` : ''}
+        <small style="display:block;margin-top:6px;color:var(--red)">${ultimoErrorEmbed ? escapeHtml(ultimoErrorEmbed) + '<br>' : ''}Diagnóstico (v2): ${ultimoLogEmbed.length ? ultimoLogEmbed.map(escapeHtml).join('<br>') : 'el plugin no hizo ninguna petición'}</small>
       </div>`;
     setStatus('Sin servidores', 'error');
     setTimeout(() => document.querySelector('.src-close')?.focus({ preventScroll: true }), 100);
