@@ -18,6 +18,9 @@
       "launchFadeOutDuration": 250,
       "backgroundColor": "#06090e",
       "showSpinner": false
+    },
+    "CapacitorHttp": {
+      "enabled": true
     }
   }
 }
