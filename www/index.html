@@ -1490,7 +1490,16 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 /* ── CONSTANTES ── */
 const CATALOG_ADDON  = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22%2C%22region%22%3A%22CO%22%7D';
 const PROXY          = 'https://api.allorigins.win/raw?url=';
-const PLUGIN_URL     = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/lamovie.js';
+/* Plugins de Nuvio que se consultan EN PARALELO. Para agregar un sitio, añade una línea:
+   { nombre: 'Nombre', url: 'https://raw.githubusercontent.com/.../providers/archivo.js' } */
+const PLUGINS = [
+  { nombre: 'Embed69',        url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/embed69.js' },
+  { nombre: 'SoloLatino',     url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/sololatino.js' },
+  { nombre: 'PeliculasFlix',  url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/peliculasflix.js' },
+  { nombre: 'CineCalidad',    url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/cinecalidad.js' },
+  { nombre: 'LaMovie',        url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/lamovie.js' },
+  // Más disponibles en el manifest del repo: moviebox, cuevana, pelisplus, tioplus, allcalidad, hackstore, seriesmetro, homecine, areshd...
+];
 
 const EMBED_TIMEOUT_MS       = 7500;
 const EMBED_MAX_RETRY        = 2;
@@ -1891,29 +1900,31 @@ function renderInlineSeasonEpisodes(season) {
 }
 
 /* ══════════════════ BÚSQUEDA DE EMBEDS ══════════════════ */
-let ultimoErrorEmbed = '';
-let ultimoLogEmbed = [];
-function capturarLogEmbed(ifr){ try { ultimoLogEmbed = (ifr.contentWindow.__log || []).slice(0, 8); } catch (_) {} }
+let diagEmbed = [];
 
-async function buscarEmbedsReales(meta, season, episode) {
-  ultimoErrorEmbed = '';
-  ultimoLogEmbed = [];
+/* Ejecuta UN plugin en su propio iframe. Devuelve { links, error, log } */
+function ejecutarPlugin(plugin, meta, season, episode) {
   return new Promise(async (resolve) => {
     let iframe = null;
     let listener = null;
     let timeoutId = null;
+    let terminado = false;
 
-    const cleanup = () => {
+    const terminar = (links, error) => {
+      if (terminado) return;
+      terminado = true;
+      let log = [];
+      try { log = (iframe && iframe.contentWindow.__log || []).slice(0, 6); } catch (_) {}
       if (listener) window.removeEventListener('message', listener);
       if (timeoutId) clearTimeout(timeoutId);
       if (iframe && document.body.contains(iframe)) iframe.remove();
+      resolve({ links: Array.isArray(links) ? links : [], error: error || '', log });
     };
 
     try {
       if (!window.CryptoJS) throw new Error('Falta crypto-js.min.js en la carpeta www');
 
-      setStatus('Consultando servidores…');
-      const r = await fetch(PLUGIN_URL, { cache: 'no-store' });
+      const r = await fetch(plugin.url, { cache: 'no-store' });
       if (!r.ok) throw new Error('Plugin HTTP ' + r.status);
       const codigoJS = await r.text();
 
@@ -1921,13 +1932,9 @@ async function buscarEmbedsReales(meta, season, episode) {
       iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
       document.body.appendChild(iframe);
 
+      const canal = 'EMBED_' + Math.random().toString(36).slice(2);
       listener = (event) => {
-        if (event.data && event.data.type === 'EMBED_ENCONTRADO') {
-          if (event.data.error) ultimoErrorEmbed = String(event.data.error);
-          capturarLogEmbed(iframe);
-          cleanup();
-          resolve(Array.isArray(event.data.links) ? event.data.links : []);
-        }
+        if (event.data && event.data.type === canal) terminar(event.data.links, event.data.error);
       };
       window.addEventListener('message', listener);
 
@@ -1935,6 +1942,7 @@ async function buscarEmbedsReales(meta, season, episode) {
       const typeJson = JSON.stringify(String(meta.type || 'movie'));
       const seasonJson = JSON.stringify(season !== null && season !== undefined ? season : null);
       const episodeJson = JSON.stringify(episode !== null && episode !== undefined ? episode : null);
+      const canalJson = JSON.stringify(canal);
 
       /* Entorno mínimo que los plugins de Nuvio esperan:
          - require('crypto-js') y module.exports (formato CommonJS)
@@ -1962,33 +1970,49 @@ async function buscarEmbedsReales(meta, season, episode) {
               const fn = (module.exports && module.exports.getStreams) || (typeof getStreams === 'function' ? getStreams : null);
               if (!fn) throw new Error('El plugin no exporta getStreams');
               const r = await fn(${idJson}, ${typeJson}, ${seasonJson}, ${episodeJson});
-              window.parent.postMessage({ type: 'EMBED_ENCONTRADO', links: Array.isArray(r) ? r : [] }, '*');
+              window.parent.postMessage({ type: ${canalJson}, links: Array.isArray(r) ? r : [] }, '*');
             } catch (e) {
-              window.parent.postMessage({ type: 'EMBED_ENCONTRADO', links: [], error: (e && e.message) || String(e) }, '*');
+              window.parent.postMessage({ type: ${canalJson}, links: [], error: (e && e.message) || String(e) }, '*');
             }
           })();
         } catch (e) {
-          window.parent.postMessage({ type: 'EMBED_ENCONTRADO', links: [], error: (e && e.message) || String(e) }, '*');
+          window.parent.postMessage({ type: ${canalJson}, links: [], error: (e && e.message) || String(e) }, '*');
         }
       `;
 
       // eval directo en el iframe (evita problemas de parseo HTML con doc.write)
       iframe.contentWindow.eval(script);
 
-      timeoutId = setTimeout(() => {
-        ultimoErrorEmbed = ultimoErrorEmbed || 'Tiempo de espera agotado';
-        capturarLogEmbed(iframe);
-        cleanup();
-        resolve([]);
-      }, 55000);
-
+      timeoutId = setTimeout(() => terminar([], 'Tiempo de espera agotado'), 55000);
     } catch (e) {
-      console.warn('[Embeds]', e);
-      ultimoErrorEmbed = (e && e.message) || String(e);
-      cleanup();
-      resolve([]);
+      console.warn('[Embeds ' + plugin.nombre + ']', e);
+      terminar([], (e && e.message) || String(e));
     }
   });
+}
+
+/* Consulta TODOS los plugins a la vez. alActualizar(links, pendientes) se llama cada vez que uno termina. */
+async function buscarEmbedsReales(meta, season, episode, alActualizar) {
+  diagEmbed = [];
+  const vistos = new Set();
+  const todos = [];
+  let pendientes = PLUGINS.length;
+  setStatus('Consultando ' + PLUGINS.length + (PLUGINS.length === 1 ? ' sitio…' : ' sitios…'));
+
+  await Promise.all(PLUGINS.map(async (plugin) => {
+    const res = await ejecutarPlugin(plugin, meta, season, episode);
+    pendientes--;
+    for (const l of res.links) {
+      if (!l || !l.url || vistos.has(l.url)) continue;
+      vistos.add(l.url);
+      todos.push(l);
+    }
+    const lineas = [].concat(res.error ? ['✗ ' + res.error] : [], res.log);
+    diagEmbed.push('[' + plugin.nombre + '] ' + (res.links.length ? res.links.length + ' enlaces' : 'sin enlaces') + (lineas.length ? ':<br>' + lineas.map(escapeHtml).join('<br>') : ''));
+    if (alActualizar) alActualizar(todos.slice(), pendientes);
+  }));
+
+  return todos;
 }
 
 async function openSources() {
@@ -1998,46 +2022,62 @@ async function openSources() {
   openSourcesWithEpisode(null, null);
 }
 
+let busquedaEmbedId = 0;
+
 async function openSourcesWithEpisode(season, episode) {
   const list = document.getElementById('sourcesList');
   const epText = season ? ` (T${season}E${episode})` : '';
+  const miId = ++busquedaEmbedId;
   list.innerHTML = '<div class="src-loading"><div class="spin-anim"></div><div>Buscando servidores' + epText + '…</div></div>';
   document.getElementById('sourcesModal').classList.add('open');
 
-  const links = await buscarEmbedsReales(currentMovie, season, episode);
+  let primeraVez = true;
+  const pintar = (links, pendientes) => {
+    if (miId !== busquedaEmbedId) return; // el usuario abrió otra búsqueda
+    if (!links.length) return;            // mientras no haya nada, se mantiene el "Buscando…"
+    list.innerHTML = '';
+    links.forEach(link => {
+      const btn = document.createElement('button');
+      btn.className = 'src-item';
+      btn.tabIndex = 0;
+      btn.innerHTML = `
+        <span class="src-ic">${PM_VIDEO_SVG}</span>
+        <div class="src-info">
+          <div class="src-name">${escapeHtml(link.title || link.name || 'Servidor')}</div>
+          <div class="src-quality">${escapeHtml(link.quality || 'Auto')}</div>
+        </div>
+      `;
+      btn.addEventListener('click', () => playMovieSource(link));
+      list.appendChild(btn);
+    });
+    if (pendientes > 0) {
+      const mas = document.createElement('div');
+      mas.className = 'src-loading';
+      mas.innerHTML = '<div class="spin-anim"></div><div>Buscando en ' + pendientes + (pendientes === 1 ? ' sitio más…' : ' sitios más…') + '</div>';
+      list.appendChild(mas);
+    }
+    setStatus(links.length + ' servidores' + (pendientes > 0 ? '…' : ''), 'ok');
+    if (primeraVez) {
+      primeraVez = false;
+      setTimeout(() => list.querySelector('.src-item')?.focus({ preventScroll: true }), 100);
+    }
+  };
 
-  list.innerHTML = '';
+  const links = await buscarEmbedsReales(currentMovie, season, episode, pintar);
+  if (miId !== busquedaEmbedId) return;
+
   if (!links || links.length === 0) {
     list.innerHTML = `
       <div class="src-empty">
         <span class="src-empty-big">📡</span>
         No se encontraron servidores disponibles.
-        <small>En el navegador puede fallar por CORS. Probá desde la app.</small>
-        <small style="display:block;margin-top:6px;color:var(--red)">${ultimoErrorEmbed ? escapeHtml(ultimoErrorEmbed) + '<br>' : ''}Diagnóstico (v2): ${ultimoLogEmbed.length ? ultimoLogEmbed.map(escapeHtml).join('<br>') : 'el plugin no hizo ninguna petición'}</small>
+        <small style="display:block;margin-top:6px;color:var(--red)">Diagnóstico:<br>${diagEmbed.join('<br>') || 'sin datos'}</small>
       </div>`;
     setStatus('Sin servidores', 'error');
     setTimeout(() => document.querySelector('.src-close')?.focus({ preventScroll: true }), 100);
     return;
   }
-
-  links.forEach(link => {
-    if (!link || !link.url) return;
-    const btn = document.createElement('button');
-    btn.className = 'src-item';
-    btn.tabIndex = 0;
-    btn.innerHTML = `
-      <span class="src-ic">${PM_VIDEO_SVG}</span>
-      <div class="src-info">
-        <div class="src-name">${escapeHtml(link.title || link.name || 'Servidor')}</div>
-        <div class="src-quality">${escapeHtml(link.quality || 'Auto')}</div>
-      </div>
-    `;
-    btn.addEventListener('click', () => playMovieSource(link));
-    list.appendChild(btn);
-  });
-
-  setStatus(links.length + ' servidores', 'ok');
-  setTimeout(() => list.querySelector('.src-item')?.focus({ preventScroll: true }), 100);
+  pintar(links, 0); // quita el "Buscando en N sitios más…"
 }
 
 function closeSources(restoreFocus = true) {
