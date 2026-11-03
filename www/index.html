@@ -27,7 +27,7 @@
   --text:        #e8f0f8;
   --text-sub:    #5a6478;
 
-  --tv-topbar-h: clamp(48px, 5.5vh, 64px);
+  --tv-topbar-h: 0px;
   --tv-player-w: clamp(320px, 48vw, 720px);
 }
 *, *::before, *::after {
@@ -42,49 +42,6 @@ html, body {
   color: var(--text);
   font-family: 'Rajdhani', system-ui, -apple-system, sans-serif;
   touch-action: manipulation;
-}
-
-/* ══════════════════ TOP BAR ══════════════════ */
-.logo-footer {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: var(--tv-topbar-h);
-  display: flex; align-items: center;
-  padding: 0 10px; gap: 10px;
-  background: rgba(15,19,25,.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255,255,255,.05);
-  z-index: 50;
-}
-.logo-round {
-  width: calc(var(--tv-topbar-h) - 10px);
-  height: calc(var(--tv-topbar-h) - 10px);
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--bg);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.4rem;
-  flex-shrink: 0;
-}
-.logo-round img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.topbar-title {
-  font-family: 'Orbitron', monospace;
-  font-size: clamp(.7rem, 1.4vmin, .95rem);
-  font-weight: 900;
-  letter-spacing: 2px;
-  color: var(--accent);
-  text-transform: uppercase;
-}
-.topbar-status {
-  margin-left: auto;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: clamp(.65rem, 1.1vmin, .8rem);
-  font-weight: 700;
-  color: var(--text-sub);
-  letter-spacing: .5px;
-  white-space: nowrap;
-  padding: 0 8px;
 }
 
 /* ══════════════════ MAIN AREA (izquierda) ══════════════════ */
@@ -149,6 +106,35 @@ html, body {
               0 0 14px rgba(0,176,255,.55),
               0 4px 15px rgba(0,204,68,.3);
 }
+
+/* ── Buscador ── */
+.search-btn { display: flex; align-items: center; justify-content: center; padding: 8px 12px; }
+.search-btn svg { width: 18px; height: 18px; display: block; }
+.search-box { display: none; flex: 1; min-width: 0; align-items: center; gap: 8px; }
+.categories-bar.searching .search-box { display: flex; }
+.categories-bar.searching .category-btn[data-cat] { display: none; }
+.search-box input {
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem; font-weight: 600;
+  padding: 7px 12px;
+  outline: none;
+}
+.search-box input::placeholder { color: var(--text-sub); }
+.search-box input:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(0,176,255,.25); }
+.search-clear {
+  flex-shrink: 0; width: 34px; height: 34px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text);
+  font-size: 1rem; cursor: pointer; outline: none;
+}
+.search-clear:focus-visible { border-color: var(--accent2); color: var(--accent2); }
+.grid-msg { grid-column: 1 / -1; text-align: center; color: var(--text-sub); font-weight: 600; padding: 30px 10px; }
+.grid-more { padding: 14px 8px 22px; }
 
 /* ── Grid de pósters ── */
 .poster-grid {
@@ -335,11 +321,11 @@ html, body {
 
 /* ══════════════════ EPISODIOS INLINE (SERIES) ══════════════════ */
 .inline-episodes-wrap {
-  margin-top: 14px;
-  background: rgba(10, 15, 20, 0.7);
-  border-radius: 14px;
-  padding: 20px;
-  border: 1px solid rgba(255,255,255,0.05);
+  margin: 14px calc(-1 * clamp(20px, 3vw, 40px)) 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 20px clamp(20px, 3vw, 40px);
+  border: none;
   display: none;
 }
 
@@ -504,7 +490,6 @@ html, body {
 .detail-actions .seasons-bar:empty { display: none; }
 
 /* Modal de embeds: idioma + proveedor */
-#srcCount { font-size: 1.15rem; letter-spacing: 2px; }
 .src-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
 .src-tags .src-quality { margin-top: 0; }
 .src-tag {
@@ -759,7 +744,7 @@ html, body {
   box-shadow: 0 8px 32px rgba(0,0,0,.6);
 }
 .sources-header {
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -1100,7 +1085,6 @@ html, body {
 
 /* ══════════════════ FULLSCREEN / TV BAR ══════════════════ */
 body.fullscreen-active .main-area,
-body.fullscreen-active .logo-footer { display: none !important; }
 
 body.fullscreen-active #tvPlayerCol {
   position: fixed; inset: 0;
@@ -1341,7 +1325,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   .pm-card { width: 90%; }
   .poster-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; padding: 6px; }
   
-  .inline-episodes-wrap { padding: 10px; margin-top: 15px; }
+  .inline-episodes-wrap { padding: 10px clamp(20px, 3vw, 40px); margin-top: 15px; }
   .episode-card { min-width: 220px; max-width: 220px; height: 149px; }
   .ep-title { font-size: 1.15rem; }
   .ep-desc { -webkit-line-clamp: 2; }
@@ -1350,19 +1334,18 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 </head>
 <body>
 
-<!-- ══════ TOP BAR ══════ -->
-<div class="logo-footer">
-  <div class="logo-round">
-    <img src="1000439999.webp" alt="" onerror="this.style.display='none';this.parentNode.textContent='🎬'">
-  </div>
-  <div class="topbar-title">Películas y Series</div>
-  <div class="topbar-status" id="topbarStatus">Iniciando…</div>
-</div>
-
 <!-- ══════ MAIN AREA (izquierda) ══════ -->
 <div id="section-peliculas" class="main-area">
   <!-- Categorías arriba, scroll horizontal -->
-  <div class="categories-bar" id="categoriesBar"></div>
+  <div class="categories-bar" id="categoriesBar">
+    <button class="category-btn search-btn" id="searchBtn" aria-label="Buscar" tabindex="0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/></svg>
+    </button>
+    <div class="search-box" id="searchBox">
+      <input id="searchInput" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar película, serie, novela o anime…">
+      <button class="search-clear" id="searchClose" aria-label="Cerrar búsqueda" tabindex="0">✕</button>
+    </div>
+  </div>
 
   <!-- Grid de pósters debajo -->
   <div class="poster-grid" id="posterGrid">
@@ -1446,6 +1429,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 <div class="sources-modal" id="sourcesModal">
   <div class="sources-card">
     <div class="sources-header">
+      <span class="src-title">Servidores disponibles</span>
       <span id="srcCount">0</span>
     </div>
     <div class="sources-list" id="sourcesList"></div>
@@ -1568,10 +1552,7 @@ function loadPluginsFromManifest() {
       return PLUGINS;
     } catch (e) {
       console.error('[Plugins] Error manifest:', e);
-      PLUGINS = [
-        { nombre: 'LaMovie', url: REPO_BASE + 'providers/lamovie.js' },
-        { nombre: 'CineCalidad', url: REPO_BASE + 'providers/cinecalidad.js' }
-      ];
+      PLUGINS = [];
       return PLUGINS;
     }
   })();
@@ -1663,15 +1644,6 @@ function isSafeUrl(u) {
   } catch (_) { return false; }
 }
 
-function setStatus(msg, kind) {
-  const el = document.getElementById('topbarStatus');
-  if (!el) return;
-  el.textContent = msg || '';
-  el.style.color = kind === 'error' ? 'var(--red)'
-                 : kind === 'ok'    ? 'var(--accent)'
-                 : 'var(--text-sub)';
-}
-
 function showToast(msg, type = 'info', duration = 3500) {
   let box = document.getElementById('ssToastBox');
   if (!box) {
@@ -1702,7 +1674,6 @@ async function fetchJSON(url) {
 }
 
 async function loadCatalog() {
-  setStatus('Cargando catálogo…');
   const grid = document.getElementById('posterGrid');
   grid.innerHTML = '<div class="grid-msg">Cargando catálogo…</div>';
 
@@ -1715,11 +1686,9 @@ async function loadCatalog() {
 
     categories = cats;
     renderCategories();
-    setStatus('Catálogo OK', 'ok');
     await loadCategory(cats[0]);
   } catch (e) {
     console.error('[Catalog]', e);
-    setStatus('Error catálogo', 'error');
     grid.innerHTML = `<div class="grid-msg" style="color:var(--red);">
       No se pudo cargar el catálogo.<br>
       <small style="color:var(--text-sub);font-weight:500;">${escapeHtml(e.message)}</small>
@@ -1729,10 +1698,11 @@ async function loadCatalog() {
 
 function renderCategories() {
   const bar = document.getElementById('categoriesBar');
-  bar.innerHTML = '';
+  bar.querySelectorAll('.category-btn[data-cat]').forEach(b => b.remove());
   categories.forEach(cat => {
     const btn = document.createElement('button');
     btn.className = 'category-btn';
+    btn.dataset.cat = cat.id;
     btn.textContent = cat.name || (cat.type === 'series' ? 'Series' : 'Películas');
     btn.tabIndex = 0;
     if (currentCategory === cat.name) btn.classList.add('active');
@@ -1744,69 +1714,151 @@ function renderCategories() {
     bar.appendChild(btn);
   });
   if (!currentCategory && categories.length) {
-    bar.firstElementChild?.classList.add('active');
+    bar.querySelector('.category-btn[data-cat]')?.classList.add('active');
   }
 }
 
+
+/* ══════════ CATÁLOGO: paginación (scroll infinito, tope 150) y buscador ══════════ */
+const MAX_ITEMS = 150;
+let currentCatObj = null;
+let catState = {};          // id -> { skip, done, loading, wait }
+let searchMode = false;
+let searchSeq = 0;
+let searchTimer = null;
+let searchWantFocus = false;
+const searchCache = new Map();
+
 async function loadCategory(cat) {
+  currentCatObj = cat;
   currentCategory = cat.name;
   const grid = document.getElementById('posterGrid');
-  grid.innerHTML = '<div class="grid-msg">Cargando contenido…</div>';
-  setStatus('Cargando ' + cat.name + '…');
 
   if (moviesByCategory[cat.id]) {
     renderPosters(moviesByCategory[cat.id]);
-    setStatus(moviesByCategory[cat.id].length + ' elementos', 'ok');
+    _gridFooter(); _checkFill();
     return;
   }
+  grid.innerHTML = '<div class="grid-msg">Cargando contenido…</div>';
 
   try {
     const data = await fetchJSON(`${CATALOG_ADDON}/catalog/${cat.type}/${cat.id}.json`);
-    const metas = Array.isArray(data.metas) ? data.metas : [];
+    const raw = Array.isArray(data.metas) ? data.metas : [];
+    const metas = raw.slice(0, MAX_ITEMS);
     moviesByCategory[cat.id] = metas;
+    catState[cat.id] = { skip: raw.length, done: !raw.length || metas.length >= MAX_ITEMS, loading: false, wait: 0 };
     metas.forEach(m => { if (m.id) moviesById[m.id] = m; });
-    renderPosters(metas);
-    setStatus(metas.length + ' elementos', 'ok');
+    if (currentCatObj === cat && !searchMode) {
+      renderPosters(metas);
+      _gridFooter(); _checkFill();
+    }
   } catch (e) {
     console.error('[Catalog]', e);
-    setStatus('Error', 'error');
-    grid.innerHTML = `<div class="grid-msg" style="color:var(--red);">
-      Error al cargar la categoría.<br>
-      <small style="color:var(--text-sub);font-weight:500;">${escapeHtml(e.message)}</small>
-    </div>`;
+    if (currentCatObj === cat && !searchMode) {
+      grid.innerHTML = `<div class="grid-msg" style="color:var(--red);">
+        Error al cargar la categoría.<br>
+        <small style="color:var(--text-sub);font-weight:500;">${escapeHtml(e.message)}</small>
+      </div>`;
+    }
   }
 }
 
-function renderPosters(metas) {
+/* Carga la siguiente página de la categoría actual (de a una, hasta MAX_ITEMS) */
+async function loadMore() {
+  const cat = currentCatObj;
+  if (!cat || searchMode) return;
+  const st = catState[cat.id], arr = moviesByCategory[cat.id];
+  if (!st || !arr || st.done || st.loading || Date.now() < st.wait) return;
+  st.loading = true;
+  _gridFooter();
+  try {
+    const data = await fetchJSON(`${CATALOG_ADDON}/catalog/${cat.type}/${cat.id}/skip=${st.skip}.json`);
+    const raw = Array.isArray(data.metas) ? data.metas : [];
+    st.skip += raw.length;
+    if (!raw.length) st.done = true;
+    const seen = new Set(arr.map(m => m.id));
+    const fresh = [];
+    for (const m of raw) {
+      if (arr.length + fresh.length >= MAX_ITEMS) break;
+      if (!m || !m.id || seen.has(m.id)) continue;
+      seen.add(m.id); fresh.push(m); moviesById[m.id] = m;
+    }
+    arr.push(...fresh);
+    if (arr.length >= MAX_ITEMS) st.done = true;
+    if (currentCatObj === cat && !searchMode) appendPosters(fresh);
+  } catch (e) {
+    console.error('[Catalog] más', e);
+    st.wait = Date.now() + 4000;   // reintenta más tarde, sin insistir en bucle
+  }
+  st.loading = false;
+  if (currentCatObj === cat && !searchMode) { _gridFooter(); _checkFill(); }
+}
+
+function _gridFooter() {
+  const grid = document.getElementById('posterGrid');
+  grid.querySelectorAll('.grid-more').forEach(n => n.remove());
+  if (searchMode || !currentCatObj || !grid.querySelector('.poster-card')) return;
+  const st = catState[currentCatObj.id];
+  if (!st) return;
+  const txt = st.loading ? 'Cargando más…' : (st.done ? 'Fin de la lista · Usa la lupa para buscar' : '');
+  if (!txt) return;
+  const d = document.createElement('div');
+  d.className = 'grid-msg grid-more';
+  d.textContent = txt;
+  grid.appendChild(d);
+}
+
+/* Si la cuadrícula no llena la pantalla, pide la siguiente página */
+function _checkFill() {
+  setTimeout(() => {
+    const grid = document.getElementById('posterGrid');
+    if (!grid || searchMode) return;
+    if (grid.scrollHeight - grid.clientHeight < 300) loadMore();
+  }, 200);
+}
+
+function _makeCard(meta) {
+  const card = document.createElement('div');
+  card.className = 'poster-card';
+  card.tabIndex = 0;
+  card.dataset.id = meta.id || '';
+  if (currentMovie?.id === meta.id) card.classList.add('now-playing');
+  card.innerHTML = `
+    <div class="poster-img-wrap">
+      <img src="${escapeHtml(meta.poster || '')}" alt="" loading="lazy"
+           onerror="this.style.opacity=0;this.nextElementSibling.style.display='flex';">
+      <div class="poster-fallback" style="display:none;">🎬</div>
+    </div>
+    <div class="poster-name" title="${escapeHtml(meta.name || '')}">${escapeHtml(meta.name || '')}</div>
+  `;
+  card.addEventListener('click', () => showDetails(meta, card));
+  card.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      showDetails(meta, card);
+    }
+  });
+  return card;
+}
+
+/* Agrega pósters al final sin redibujar los existentes */
+function appendPosters(metas) {
+  const grid = document.getElementById('posterGrid');
+  grid.querySelectorAll('.grid-more').forEach(n => n.remove());
+  const frag = document.createDocumentFragment();
+  metas.forEach(m => frag.appendChild(_makeCard(m)));
+  grid.appendChild(frag);
+}
+
+function renderPosters(metas, emptyMsg) {
   const grid = document.getElementById('posterGrid');
   grid.innerHTML = '';
+  grid.scrollTo({ top: 0, behavior: 'auto' });
   if (!metas.length) {
-    grid.innerHTML = '<div class="grid-msg">Sin contenido en esta categoría.</div>';
+    grid.innerHTML = '<div class="grid-msg">' + (emptyMsg || 'Sin contenido en esta categoría.') + '</div>';
     return;
   }
-  metas.forEach(meta => {
-    const card = document.createElement('div');
-    card.className = 'poster-card';
-    card.tabIndex = 0;
-    card.dataset.id = meta.id || '';
-    if (currentMovie?.id === meta.id) card.classList.add('now-playing');
-    card.innerHTML = `
-      <div class="poster-img-wrap">
-        <img src="${escapeHtml(meta.poster || '')}" alt="" loading="lazy"
-             onerror="this.style.opacity=0;this.nextElementSibling.style.display='flex';">
-        <div class="poster-fallback" style="display:none;">🎬</div>
-      </div>
-      <div class="poster-name" title="${escapeHtml(meta.name || '')}">${escapeHtml(meta.name || '')}</div>
-    `;
-    card.addEventListener('click', () => showDetails(meta, card));
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        showDetails(meta, card);
-      }
-    });
-    grid.appendChild(card);
-  });
+  appendPosters(metas);
 
   setTimeout(() => {
     if (!document.activeElement || document.activeElement === document.body) {
@@ -1814,6 +1866,131 @@ function renderPosters(metas) {
     }
   }, 100);
 }
+
+/* ── Buscador ── */
+async function _searchOne(type, id, q) {
+  try {
+    const data = await fetchJSON(`${CATALOG_ADDON}/catalog/${type}/${id}/search=${encodeURIComponent(q)}.json`);
+    return Array.isArray(data.metas) ? data.metas : [];
+  } catch (e) { console.error('[Search]', e); return null; }
+}
+
+async function runSearch(q) {
+  const grid = document.getElementById('posterGrid');
+  const seq = ++searchSeq;
+  const key = q.toLowerCase();
+  let list = searchCache.get(key);
+
+  if (!list) {
+    if (!grid.querySelector('.poster-card')) grid.innerHTML = '<div class="grid-msg">Buscando…</div>';
+    const [mv, sr] = await Promise.all([
+      _searchOne('movie', 'popular-movies', q),
+      _searchOne('series', 'popular-series', q)
+    ]);
+    if (seq !== searchSeq || !searchMode) return;
+    if (mv === null && sr === null) {
+      grid.innerHTML = '<div class="grid-msg" style="color:var(--red);">No se pudo buscar. Revisa tu conexión.</div>';
+      return;
+    }
+    list = [];
+    const seen = new Set();
+    const a = mv || [], b = sr || [];
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      [a[i], b[i]].forEach(m => {
+        if (m && m.id && !seen.has(m.id)) { seen.add(m.id); list.push(m); moviesById[m.id] = m; }
+      });
+    }
+    if (searchCache.size > 30) searchCache.delete(searchCache.keys().next().value);
+    searchCache.set(key, list);
+  }
+  if (seq !== searchSeq || !searchMode) return;
+  renderPosters(list, 'Sin resultados para «' + escapeHtml(q) + '»');
+  if (searchWantFocus) {
+    searchWantFocus = false;
+    grid.querySelector('.poster-card')?.focus({ preventScroll: true });
+  }
+}
+
+function _searchHint() {
+  document.getElementById('posterGrid').innerHTML = '<div class="grid-msg">Escribe el título de una película, serie, novela o anime…</div>';
+}
+
+function openSearch() {
+  const bar = document.getElementById('categoriesBar');
+  const input = document.getElementById('searchInput');
+  if (searchMode) { input.focus(); return; }
+  searchMode = true;
+  bar.classList.add('searching');
+  bar.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('searchBtn').classList.add('active');
+  input.focus();
+  const q = input.value.trim();
+  if (q) runSearch(q); else _searchHint();
+}
+
+function closeSearch() {
+  if (!searchMode) return;
+  const bar = document.getElementById('categoriesBar');
+  const input = document.getElementById('searchInput');
+  searchMode = false;
+  searchSeq++;
+  clearTimeout(searchTimer);
+  searchWantFocus = false;
+  input.value = '';
+  input.blur();
+  bar.classList.remove('searching');
+  document.getElementById('searchBtn').classList.remove('active');
+  bar.querySelectorAll('.category-btn[data-cat]').forEach(b => b.classList.toggle('active', !!currentCatObj && b.dataset.cat === currentCatObj.id));
+  if (currentCatObj) loadCategory(currentCatObj);
+  document.getElementById('searchBtn').focus({ preventScroll: true });
+}
+
+(function initCatalogUI() {
+  const grid = document.getElementById('posterGrid');
+  const input = document.getElementById('searchInput');
+  document.getElementById('searchBtn').addEventListener('click', openSearch);
+  document.getElementById('searchClose').addEventListener('click', closeSearch);
+
+  input.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = input.value.trim();
+    if (!q) { searchSeq++; _searchHint(); return; }
+    searchTimer = setTimeout(() => runSearch(q), 350);
+  });
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); closeSearch(); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(searchTimer);
+      const q = input.value.trim();
+      input.blur();
+      if (q) { searchWantFocus = true; runSearch(q); }
+    } else if (e.key === 'ArrowDown') {
+      const first = grid.querySelector('.poster-card');
+      if (first) { e.preventDefault(); input.blur(); first.focus({ preventScroll: true }); }
+    }
+  });
+
+  let ticking = false;
+  grid.addEventListener('scroll', () => {
+    if (ticking || searchMode) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      if (grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 400) loadMore();
+    });
+  }, { passive: true });
+
+  /* Con el control remoto: al acercarse a las últimas filas, carga más */
+  grid.addEventListener('focusin', (e) => {
+    if (searchMode || !e.target.classList || !e.target.classList.contains('poster-card')) return;
+    const cards = grid.querySelectorAll('.poster-card');
+    const idx = Array.prototype.indexOf.call(cards, e.target);
+    if (idx >= cards.length - getGridColumns() * 2) loadMore();
+  });
+})();
+
 
 /* ══════════════════ DETALLE ══════════════════ */
 function showDetails(meta, cardEl) {
@@ -1927,7 +2104,7 @@ async function loadInlineEpisodes(meta) {
 
   } catch (e) {
     seasonsBar.innerHTML = '';
-    epsList.innerHTML = `<div class="src-empty" style="width:100%;">Error cargando episodios.<br><small style="color:var(--red)">${escapeHtml(e.message)}</small></div>`;
+    epsList.innerHTML = `<div class="src-empty" style="width:100%;">Error cargando episodios.</div>`;
   }
 }
 
@@ -1980,7 +2157,6 @@ function renderInlineSeasonEpisodes(season) {
 }
 
 /* ══════════════════ BÚSQUEDA DE EMBEDS ══════════════════ */
-let diagEmbed = [];
 
 async function nativeFetch(url, opts) {
   const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp;
@@ -2098,11 +2274,9 @@ function ejecutarPlugin(plugin, meta, season, episode) {
 
 /* ⬇️ CARGA EN LOTES DE 3 EN 3 PARA NO SATURAR EL WEBVIEW DE ANDROID ⬇️ */
 async function buscarEmbedsReales(meta, season, episode, alActualizar) {
-  diagEmbed = [];
   await loadPluginsFromManifest();
 
   if (!PLUGINS.length) {
-    setStatus('Sin plugins', 'error');
     if (alActualizar) alActualizar([], 0);
     return [];
   }
@@ -2110,7 +2284,6 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   const vistos = new Set();
   const todos = [];
   let pendientes = PLUGINS.length;
-  setStatus('Consultando ' + PLUGINS.length + ' sitios…');
 
   const limit = 3; // Solo 3 peticiones a la vez
   let index = 0;
@@ -2128,8 +2301,6 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar) {
       try { if (!l.__prov) l.__prov = plugin.nombre; } catch (_) {}
       todos.push(l);
     }
-    const lineas = [].concat(res.error ? ['✗ ' + res.error] : [], res.log);
-    diagEmbed.push('[' + plugin.nombre + '] ' + (res.links.length ? res.links.length + ' enlaces' : 'sin enlaces') + (lineas.length ? ':<br>' + lineas.map(escapeHtml).join('<br>') : ''));
     if (alActualizar) alActualizar(todos.slice(), pendientes);
 
     await runNext();
@@ -2146,7 +2317,7 @@ async function openSources() {
 }
 
 /* ── Caché: solo la última verificación de embeds (por película o por episodio) ── */
-let _embedState = null;      // { key, links, pendientes, done, diag, paint }
+let _embedState = null;      // { key, links, pendientes, done, paint }
 let _srcRendered = 0;
 let _srcFocused = false;
 let _selectedEmbedUrl = null;
@@ -2205,9 +2376,7 @@ function _srcPaint(st) {
       <div class="src-empty">
         <span class="src-empty-big">📡</span>
         No se encontraron servidores disponibles.
-        <small style="display:block;margin-top:6px;color:var(--red)">Diagnóstico:<br>${st.diag || 'sin datos'}</small>
       </div>`;
-    setStatus('Sin servidores', 'error');
     return;
   }
 
@@ -2224,7 +2393,6 @@ function _srcPaint(st) {
     more.innerHTML = '<div class="spin-anim"></div><div>Buscando en ' + st.pendientes + (st.pendientes === 1 ? ' sitio más…' : ' sitios más…') + '</div>';
   } else if (more) { more.remove(); }
 
-  setStatus(st.links.length + ' servidores' + (st.pendientes > 0 ? '…' : ''), 'ok');
 
   if (!_srcFocused) {
     const target = list.querySelector('.src-item.is-selected') || list.querySelector('.src-item');
@@ -2252,7 +2420,7 @@ async function openSourcesWithEpisode(season, episode) {
   }
 
   // Contenido distinto: la caché anterior se descarta y se guarda solo esta
-  const st = { key, links: [], pendientes: 0, done: false, diag: '', paint: null };
+  const st = { key, links: [], pendientes: 0, done: false, paint: null };
   _embedState = st;
   _selectedEmbedUrl = null;
   st.paint = () => _srcPaint(st);
@@ -2264,10 +2432,10 @@ async function openSourcesWithEpisode(season, episode) {
     if (st.paint) st.paint();
   }).then(links => {
     if (Array.isArray(links) && links.length >= st.links.length) st.links = links;
-    st.pendientes = 0; st.done = true; st.diag = diagEmbed.join('<br>');
+    st.pendientes = 0; st.done = true;
     if (st.paint) st.paint();
   }).catch(e => {
-    st.pendientes = 0; st.done = true; st.diag = escapeHtml((e && e.message) || String(e));
+    st.pendientes = 0; st.done = true;
     if (st.paint) st.paint();
   });
 }
@@ -2899,8 +3067,8 @@ function _pmChoose(level) {
   if (MOVIES_WITH_EXO && src.kind === 'movie' && exo && exo.openStream) {
     _pmMutedPrevVideo = false; closePmModal(true);
     exo.openStream({ url: playUrl, title: src.name || '', referer: referer || '' })
-      .then(r => { if (r && r.error) { showToast('ExoPlayer: ' + String(r.error).slice(0, 120), 'error', 6000); } })
-      .catch(e => { showToast('ExoPlayer no abrió: ' + ((e && e.message) || e), 'error', 6000); })
+      .then(r => { if (r && r.error) { showToast('No se pudo reproducir', 'error', 4000); } })
+      .catch(e => { showToast('No se pudo reproducir', 'error', 4000); })
       .finally(() => { if (restoreEl && document.contains(restoreEl)) { try { restoreEl.focus({ preventScroll: true }); } catch (_) {} } });
     return;
   }
@@ -3198,6 +3366,7 @@ function handleBackAction() {
   if (document.getElementById('pmModal')?.classList.contains('open')) { closePmModal(); return; }
   if (document.getElementById('sourcesModal')?.classList.contains('open')) { closeSources(); return; }
   if (document.getElementById('detailView')?.classList.contains('open')) { closeDetails(); return; }
+  if (searchMode) { closeSearch(); return; }
   if (document.body.classList.contains('fullscreen-active') || document.fullscreenElement || _wasFullscreen) {
     _wasFullscreen = false; if (_wasFullscreenTimer) { clearTimeout(_wasFullscreenTimer); _wasFullscreenTimer = null; }
     _exitFullscreen(); _handleExitFullscreen(); return;
@@ -3225,6 +3394,7 @@ function gridArrow(dir) {
 }
 
 document.addEventListener('keydown', (e) => {
+  if (e.target && e.target.id === 'searchInput') return;
   if (document.getElementById('pmModal')?.classList.contains('open')) { pmHandleKey(e); return; }
   if (!document.body.classList.contains('fullscreen-active') && document.getElementById('sourcesModal')?.classList.contains('open')) {
     const items = Array.from(document.querySelectorAll('#sourcesList .src-item')); const cur = document.activeElement; const idx = items.indexOf(cur);
