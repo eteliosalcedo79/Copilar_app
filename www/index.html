@@ -1478,7 +1478,6 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   hideSplash();
   document.addEventListener('DOMContentLoaded', hideSplash);
   window.addEventListener('load', hideSplash);
-  // Reintentos por si el puente nativo tarda en estar listo
   var n = 0, t = setInterval(function () { hideSplash(); if (done || ++n > 20) clearInterval(t); }, 250);
 })();
 </script>
@@ -1490,16 +1489,61 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 /* ── CONSTANTES ── */
 const CATALOG_ADDON  = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22%2C%22region%22%3A%22CO%22%7D';
 const PROXY          = 'https://api.allorigins.win/raw?url=';
-/* Plugins de Nuvio que se consultan EN PARALELO. Para agregar un sitio, añade una línea:
-   { nombre: 'Nombre', url: 'https://raw.githubusercontent.com/.../providers/archivo.js' } */
-const PLUGINS = [
-  { nombre: 'Embed69',        url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/embed69.js' },
-  { nombre: 'SoloLatino',     url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/sololatino.js' },
-  { nombre: 'PeliculasFlix',  url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/peliculasflix.js' },
-  { nombre: 'CineCalidad',    url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/cinecalidad.js' },
-  { nombre: 'LaMovie',        url: 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/providers/lamovie.js' },
-  // Más disponibles en el manifest del repo: moviebox, cuevana, pelisplus, tioplus, allcalidad, hackstore, seriesmetro, homecine, areshd...
-];
+
+/* ── CARGA DINÁMICA DE PLUGINS DESDE MANIFEST ──
+   Se lee el manifest del repo y se construye automáticamente el array PLUGINS
+   con TODOS los proveedores activos (como hace Nuvio). */
+const MANIFEST_URL = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/manifest.json';
+const REPO_BASE    = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/';
+
+let PLUGINS = [];
+let _pluginsLoadPromise = null;
+
+function _buildPluginUrl(s) {
+  if (!s) return '';
+  const direct = s.url || s.raw || '';
+  if (/^https?:\/\//i.test(direct)) return direct;
+  const p = s.filename || s.file || s.path || '';
+  if (!p) return '';
+  if (/^https?:\/\//i.test(p)) return p;
+  return REPO_BASE + String(p).replace(/^\/+/, '');
+}
+
+function loadPluginsFromManifest() {
+  if (_pluginsLoadPromise) return _pluginsLoadPromise;
+  _pluginsLoadPromise = (async () => {
+    try {
+      const res = await fetch(MANIFEST_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Manifest HTTP ' + res.status);
+      const manifest = await res.json();
+      const list = manifest.scrapers || manifest.providers || manifest.plugins || [];
+      const out  = [];
+      const seen = new Set();
+      for (const s of list) {
+        if (!s || s.enabled === false) continue;
+        const url = _buildPluginUrl(s);
+        if (!url || seen.has(url)) continue;
+        seen.add(url);
+        out.push({
+          nombre: s.name || s.id || url.split('/').pop().replace(/\.js$/i, ''),
+          url
+        });
+      }
+      PLUGINS = out;
+      console.log('[Plugins] Cargados desde manifest:', PLUGINS.length);
+      return PLUGINS;
+    } catch (e) {
+      console.error('[Plugins] Error cargando manifest:', e);
+      /* Fallback mínimo para que la app siga funcionando aunque el manifest falle */
+      PLUGINS = [
+        { nombre: 'LaMovie',     url: REPO_BASE + 'providers/lamovie.js' },
+        { nombre: 'CineCalidad', url: REPO_BASE + 'providers/cinecalidad.js' }
+      ];
+      return PLUGINS;
+    }
+  })();
+  return _pluginsLoadPromise;
+}
 
 const EMBED_TIMEOUT_MS       = 7500;
 const EMBED_MAX_RETRY        = 2;
@@ -1538,7 +1582,7 @@ let currentEvent = null;
 let currentSeason = null;
 let currentEpisode = null;
 
-let seriesEpisodesData = []; // Guarda los datos de los videos
+let seriesEpisodesData = [];
 
 let _currentStreamId = 0;
 let _startedId = 0;
@@ -1774,7 +1818,6 @@ function showDetails(meta, cardEl) {
   const bg = meta.background || meta.poster || '';
   dv.style.backgroundImage = bg ? `url('${bg}')` : 'none';
 
-  // Limpiar contenedores previos
   document.getElementById('detSeasonsBar').innerHTML = '';
   document.getElementById('detEpisodesList').innerHTML = '';
 
@@ -1814,11 +1857,9 @@ async function loadInlineEpisodes(meta) {
       return;
     }
 
-    // Agrupar por temporada
     const seasons = [...new Set(videos.map(v => v.season))].sort((a,b) => a - b);
     seriesEpisodesData = videos;
     
-    // Crear botones de temporada
     seasonsBar.innerHTML = '';
     seasons.forEach(season => {
       const btn = document.createElement('button');
@@ -1838,7 +1879,6 @@ async function loadInlineEpisodes(meta) {
 
     renderInlineSeasonEpisodes(seasons[0]);
 
-    // Dar foco al primer episodio
     setTimeout(() => {
       const firstEp = document.querySelector('#detEpisodesList .episode-card');
       if (firstEp) {
@@ -1902,9 +1942,6 @@ function renderInlineSeasonEpisodes(season) {
 /* ══════════════════ BÚSQUEDA DE EMBEDS ══════════════════ */
 let diagEmbed = [];
 
-/* fetch por la red nativa (CapacitorHttp.request llamado de forma explícita).
-   Sirve para los plugins de Nuvio sin tener CapacitorHttp activado globalmente,
-   así hls.js sigue pasando por el proxy nativo de MainActivity. */
 async function nativeFetch(url, opts) {
   const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp;
   if (!cap || !cap.request) return fetch(url, opts);
@@ -1937,7 +1974,6 @@ async function nativeFetch(url, opts) {
   return new Response(noBody ? null : text, { status: r.status, headers: r.headers || {} });
 }
 
-/* Ejecuta UN plugin en su propio iframe. Devuelve { links, error, log } */
 function ejecutarPlugin(plugin, meta, season, episode) {
   return new Promise(async (resolve) => {
     let iframe = null;
@@ -1979,9 +2015,6 @@ function ejecutarPlugin(plugin, meta, season, episode) {
       const episodeJson = JSON.stringify(episode !== null && episode !== undefined ? episode : null);
       const canalJson = JSON.stringify(canal);
 
-      /* Entorno mínimo que los plugins de Nuvio esperan:
-         - require('crypto-js') y module.exports (formato CommonJS)
-         - fetch del documento principal (con CapacitorHttp pasa por la red nativa, sin CORS) */
       const script = `
         window.__log = [];
         var __f0 = window.parent.nativeFetch.bind(window.parent);
@@ -2015,7 +2048,6 @@ function ejecutarPlugin(plugin, meta, season, episode) {
         }
       `;
 
-      // eval directo en el iframe (evita problemas de parseo HTML con doc.write)
       iframe.contentWindow.eval(script);
 
       timeoutId = setTimeout(() => terminar([], 'Tiempo de espera agotado'), 55000);
@@ -2026,9 +2058,18 @@ function ejecutarPlugin(plugin, meta, season, episode) {
   });
 }
 
-/* Consulta TODOS los plugins a la vez. alActualizar(links, pendientes) se llama cada vez que uno termina. */
 async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   diagEmbed = [];
+
+  /* Asegura que el manifest se haya cargado antes de buscar */
+  await loadPluginsFromManifest();
+
+  if (!PLUGINS.length) {
+    setStatus('Sin plugins', 'error');
+    if (alActualizar) alActualizar([], 0);
+    return [];
+  }
+
   const vistos = new Set();
   const todos = [];
   let pendientes = PLUGINS.length;
@@ -2052,7 +2093,6 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar) {
 
 async function openSources() {
   if (!currentMovie) return;
-  // El botón Play solo se ve en películas, pero por si acaso:
   if (currentMovie.type === 'series') return;
   openSourcesWithEpisode(null, null);
 }
@@ -2068,8 +2108,8 @@ async function openSourcesWithEpisode(season, episode) {
 
   let primeraVez = true;
   const pintar = (links, pendientes) => {
-    if (miId !== busquedaEmbedId) return; // el usuario abrió otra búsqueda
-    if (!links.length) return;            // mientras no haya nada, se mantiene el "Buscando…"
+    if (miId !== busquedaEmbedId) return;
+    if (!links.length) return;
     list.innerHTML = '';
     links.forEach(link => {
       const btn = document.createElement('button');
@@ -2112,13 +2152,12 @@ async function openSourcesWithEpisode(season, episode) {
     setTimeout(() => document.querySelector('.src-close')?.focus({ preventScroll: true }), 100);
     return;
   }
-  pintar(links, 0); // quita el "Buscando en N sitios más…"
+  pintar(links, 0);
 }
 
 function closeSources(restoreFocus = true) {
   document.getElementById('sourcesModal').classList.remove('open');
   if (restoreFocus) {
-    // Si estamos en una serie, volver a enfocar el episodio. Si no, el botón Play.
     if (currentMovie?.type === 'series') {
       setTimeout(() => document.querySelector('#detEpisodesList .episode-card')?.focus({ preventScroll: true }), 50);
     } else {
@@ -2915,7 +2954,6 @@ function openPlayModal(src) {
       if (!m3u8) { finish(false); return; }
       pm.playUrl = m3u8;
       pm.referer = referer || null;
-      /* Película: registrar Referer/Origin en el proxy nativo ANTES de que hls.js pida el manifiesto */
       if (src.kind === 'movie' && window.SSNative && window.SSNative.setHeaders) {
         try {
           const hd = {};
@@ -3013,7 +3051,6 @@ function _pmChoose(level) {
   if (!pm) return;
   const { src, playUrl, playType, referer, restoreEl } = pm;
 
-  /* Interruptor: true = películas con ExoPlayer nativo · false = hls.js con proxy nativo (opción B) */
   const MOVIES_WITH_EXO = false;
   const exo = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VideoPlayer;
   if (MOVIES_WITH_EXO && src.kind === 'movie' && exo && exo.openStream) {
@@ -3512,7 +3549,7 @@ class TVPlayerBar {
     }
   }
 
-  updateFavState() { /* sin favoritos en películas */ }
+  updateFavState() { }
 
   updatePlayState() {
     const v = document.getElementById('iptv-player');
@@ -3759,13 +3796,11 @@ function gridArrow(dir) {
 }
 
 document.addEventListener('keydown', (e) => {
-  /* PM Modal */
   if (document.getElementById('pmModal')?.classList.contains('open')) {
     pmHandleKey(e);
     return;
   }
 
-  /* Sources Modal */
   if (document.getElementById('sourcesModal')?.classList.contains('open')) {
     const items = Array.from(document.querySelectorAll('#sourcesList .src-item'));
     const cur   = document.activeElement;
@@ -3781,7 +3816,6 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  /* Exit Modal */
   if (document.getElementById('exitModal')?.classList.contains('open')) {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
@@ -3798,20 +3832,17 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  /* Escape universal → back */
   if (e.key === 'Escape') {
     e.preventDefault();
     handleBackAction();
     return;
   }
 
-  /* TV bar en fullscreen */
   if (document.body.classList.contains('fullscreen-active')) {
     if (tvBar && !tvBar.visible) { tvBar.show(); e.preventDefault(); return; }
     if (tvBar?.visible && tvBar.handleKey(e.key)) { e.preventDefault(); return; }
   }
 
-  /* Espacio / play-pause global */
   if ((e.key === ' ' || e.key === 'MediaPlayPause') &&
       !document.body.classList.contains('fullscreen-active')) {
     const v = document.getElementById('iptv-player');
@@ -3824,7 +3855,6 @@ document.addEventListener('keydown', (e) => {
 
   const focused = document.activeElement;
 
-  /* ── Pósters ── */
   if (focused?.classList.contains('poster-card')) {
     const cards = Array.from(document.querySelectorAll('.poster-card'));
     const idx   = cards.indexOf(focused);
@@ -3867,7 +3897,6 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  /* ── Categorías (barra horizontal) ── */
   if (focused?.classList.contains('category-btn')) {
     const cats = Array.from(document.querySelectorAll('.category-btn'));
     const idx  = cats.indexOf(focused);
@@ -3901,7 +3930,6 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  /* ── Detalle (Películas y Series) ── */
   if (document.getElementById('detailView')?.classList.contains('open')) {
     const isSeries = currentMovie?.type === 'series';
     const backBtn = document.getElementById('btnBackDetail');
@@ -3983,7 +4011,6 @@ document.addEventListener('keydown', (e) => {
     }
   }
 
-  /* ── Player container ── */
   if (focused?.id === 'playerContainerInline') {
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -3995,10 +4022,14 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ══════════════════ INICIO ══════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initPlayer();
   setupBackButton();
   setPlayerLoader('idle', MSG_START);
+
+  /* Precarga el manifest de plugins en segundo plano para que la primera
+     búsqueda sea instantánea. Si falla, buscarEmbedsReales hará fallback. */
+  loadPluginsFromManifest().catch(() => {});
 
   window.addEventListener('online', () => {
     if (_wasOffline && _ctx) {
