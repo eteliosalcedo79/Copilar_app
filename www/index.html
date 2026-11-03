@@ -379,7 +379,8 @@ html, body {
   gap: 16px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 10px;
+  padding: 12px 8px 14px;
+  margin: -12px -8px -4px;
   scroll-behavior: smooth;
   scrollbar-width: none;
   align-items: stretch;
@@ -388,9 +389,9 @@ html, body {
 
 .episode-card {
   position: relative;
-  min-width: 260px;
-  max-width: 260px;
-  height: 162px;
+  min-width: 200px;
+  max-width: 200px;
+  height: 125px;
   background: #0b0f14;
   border: 2px solid transparent;
   border-radius: 14px;
@@ -426,7 +427,7 @@ html, body {
 .ep-details {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  padding: 12px 14px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -445,7 +446,7 @@ html, body {
 }
 .ep-title {
   font-family: 'Rajdhani', sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #fff;
   line-height: 1.1;
@@ -1326,8 +1327,8 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   .poster-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; padding: 6px; }
   
   .inline-episodes-wrap { padding: 10px clamp(20px, 3vw, 40px); margin-top: 15px; }
-  .episode-card { min-width: 220px; max-width: 220px; height: 149px; }
-  .ep-title { font-size: 1.15rem; }
+  .episode-card { min-width: 170px; max-width: 170px; height: 105px; }
+  .ep-title { font-size: 1rem; }
   .ep-desc { -webkit-line-clamp: 2; }
 }
 </style>
@@ -1995,6 +1996,8 @@ function closeSearch() {
 /* ══════════════════ DETALLE ══════════════════ */
 function showDetails(meta, cardEl) {
   currentMovie = meta;
+  currentSeason = null;
+  currentEpisode = null;
   document.querySelectorAll('.poster-card').forEach(c => c.classList.remove('now-playing'));
   if (cardEl) cardEl.classList.add('now-playing');
 
@@ -2129,7 +2132,8 @@ function renderInlineSeasonEpisodes(season) {
     card.dataset.ep = v.episode;
     
     const imgSrc = v.thumbnail || currentMovie.background || currentMovie.poster || '';
-    const dur = v.runtime ? `${v.runtime} min` : '';
+    const rt = String(v.runtime || '').replace(/\s*min.*$/i, '').trim();
+    const dur = rt ? `${rt} min` : '';
     const imdbHtml = v.imdbRating ? `<span class="imdb-badge">IMDb</span> ${v.imdbRating}` : '';
 
     card.innerHTML = `
@@ -2138,7 +2142,6 @@ function renderInlineSeasonEpisodes(season) {
       <div class="ep-details">
         <span class="ep-num">EPISODIO ${v.episode}</span>
         <h3 class="ep-title">${escapeHtml(v.title || 'Sin título')}</h3>
-        <p class="ep-desc">${escapeHtml(v.overview || 'Sin sinopsis disponible.')}</p>
         <div class="ep-meta">
           ${dur ? `<span>⏱ ${escapeHtml(dur)}</span>` : ''}
           ${imdbHtml ? `<span style="display:flex;align-items:center;gap:4px;">${imdbHtml}</span>` : ''}
@@ -2460,7 +2463,7 @@ function playMovieSource(link) {
   openPlayModal({
     kind     : 'movie',
     movie    : currentMovie,
-    name     : currentMovie.name + (currentSeason ? ` T${currentSeason}E${currentEpisode}` : ''),
+    name     : currentMovie.name + (currentMovie.type === 'series' && currentSeason ? ` T${currentSeason}E${currentEpisode}` : ''),
     url      : link.url,
     isEmbed  : true,
     key      : 'mv:' + currentMovie.id + ':' + link.url,
