@@ -1902,6 +1902,41 @@ function renderInlineSeasonEpisodes(season) {
 /* ══════════════════ BÚSQUEDA DE EMBEDS ══════════════════ */
 let diagEmbed = [];
 
+/* fetch por la red nativa (CapacitorHttp.request llamado de forma explícita).
+   Sirve para los plugins de Nuvio sin tener CapacitorHttp activado globalmente,
+   así hls.js sigue pasando por el proxy nativo de MainActivity. */
+async function nativeFetch(url, opts) {
+  const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp;
+  if (!cap || !cap.request) return fetch(url, opts);
+  opts = opts || {};
+  const method = String(opts.method || 'GET').toUpperCase();
+
+  const headers = {};
+  const h = opts.headers;
+  if (h) {
+    if (typeof h.forEach === 'function' && !Array.isArray(h)) h.forEach((v, k) => { headers[k] = v; });
+    else if (Array.isArray(h)) h.forEach(p => { headers[p[0]] = p[1]; });
+    else Object.keys(h).forEach(k => { headers[k] = h[k]; });
+  }
+
+  let data = opts.body;
+  if (typeof data === 'string') {
+    const ct = Object.keys(headers).find(k => k.toLowerCase() === 'content-type');
+    const ctv = ct ? String(headers[ct]).toLowerCase() : '';
+    try {
+      if (ctv.includes('application/json')) data = JSON.parse(data);
+      else if (ctv.includes('application/x-www-form-urlencoded')) data = Object.fromEntries(new URLSearchParams(data));
+    } catch (_) {}
+  } else if (data && typeof data.toString === 'function' && data instanceof URLSearchParams) {
+    data = Object.fromEntries(data);
+  }
+
+  const r = await cap.request({ url: String(url), method, headers, data, responseType: 'text' });
+  const text = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
+  const noBody = [101, 204, 205, 304].includes(r.status);
+  return new Response(noBody ? null : text, { status: r.status, headers: r.headers || {} });
+}
+
 /* Ejecuta UN plugin en su propio iframe. Devuelve { links, error, log } */
 function ejecutarPlugin(plugin, meta, season, episode) {
   return new Promise(async (resolve) => {
@@ -1949,7 +1984,7 @@ function ejecutarPlugin(plugin, meta, season, episode) {
          - fetch del documento principal (con CapacitorHttp pasa por la red nativa, sin CORS) */
       const script = `
         window.__log = [];
-        var __f0 = window.parent.fetch.bind(window.parent);
+        var __f0 = window.parent.nativeFetch.bind(window.parent);
         window.fetch = async function (u, o) {
           var m = (o && o.method) || 'GET';
           var n = String(u).split('://').pop().replace('api_key=', 'k=').slice(0, 55);
@@ -2880,6 +2915,17 @@ function openPlayModal(src) {
       if (!m3u8) { finish(false); return; }
       pm.playUrl = m3u8;
       pm.referer = referer || null;
+      /* Película: registrar Referer/Origin en el proxy nativo ANTES de que hls.js pida el manifiesto */
+      if (src.kind === 'movie' && window.SSNative && window.SSNative.setHeaders) {
+        try {
+          const hd = {};
+          if (referer) {
+            hd['Referer'] = referer;
+            try { hd['Origin'] = new URL(referer).origin; } catch (_) {}
+          }
+          window.SSNative.setHeaders(m3u8, JSON.stringify(hd));
+        } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
+      }
       pm.cancel  = prepareHls(m3u8, pm.referer, (levels, take) => {
         if (pm && pm.seq === seq) pm.takeHls = take || null;
         finish(levels !== null, levels);
@@ -2967,9 +3013,10 @@ function _pmChoose(level) {
   if (!pm) return;
   const { src, playUrl, playType, referer, restoreEl } = pm;
 
-  /* PRUEBA: las películas se reproducen con ExoPlayer nativo (headers Referer/Origin reales). */
+  /* Interruptor: true = películas con ExoPlayer nativo · false = hls.js con proxy nativo (opción B) */
+  const MOVIES_WITH_EXO = false;
   const exo = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VideoPlayer;
-  if (src.kind === 'movie' && exo && exo.openStream) {
+  if (MOVIES_WITH_EXO && src.kind === 'movie' && exo && exo.openStream) {
     _pmMutedPrevVideo = false;
     closePmModal(true);
     exo.openStream({ url: playUrl, title: src.name || '', referer: referer || '' })
