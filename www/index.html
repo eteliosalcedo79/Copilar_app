@@ -335,7 +335,7 @@ html, body {
 
 /* ══════════════════ EPISODIOS INLINE (SERIES) ══════════════════ */
 .inline-episodes-wrap {
-  margin-top: 30px;
+  margin-top: 14px;
   background: rgba(10, 15, 20, 0.7);
   border-radius: 14px;
   padding: 20px;
@@ -404,7 +404,7 @@ html, body {
   position: relative;
   min-width: 260px;
   max-width: 260px;
-  height: 190px;
+  height: 162px;
   background: #0b0f14;
   border: 2px solid transparent;
   border-radius: 14px;
@@ -474,7 +474,7 @@ html, body {
   color: rgba(255,255,255,0.75);
   line-height: 1.3;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
@@ -495,6 +495,28 @@ html, body {
   font-size: 0.65rem;
 }
 
+
+/* Temporadas a la altura de "Reproducir" */
+.detail-actions .seasons-bar {
+  flex: 1 1 0; min-width: 0;
+  border-bottom: none; margin: 0; padding: 8px 8px;
+}
+.detail-actions .seasons-bar:empty { display: none; }
+
+/* Modal de embeds: idioma + proveedor */
+#srcCount { font-size: 1.15rem; letter-spacing: 2px; }
+.src-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+.src-tags .src-quality { margin-top: 0; }
+.src-tag {
+  font-size: .68rem; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 6px;
+  background: rgba(255,255,255,.1); color: #dbe7f3;
+}
+.src-tag.lang { background: rgba(0,176,255,.2); color: var(--accent2); }
+.src-tag.prov { background: rgba(245,197,24,.18); color: #f5c518; }
+.src-item:focus-visible .src-tag,
+.src-item.focused .src-tag { background: rgba(0,0,0,.35); color: #fff; }
+.src-item.is-selected { border-color: rgba(0,204,68,.6); }
 
 /* ══════════════════ PLAYER ══════════════════ */
 #tvPlayerCol {
@@ -737,7 +759,7 @@ html, body {
   box-shadow: 0 8px 32px rgba(0,0,0,.6);
 }
 .sources-header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -1320,7 +1342,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   .poster-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; padding: 6px; }
   
   .inline-episodes-wrap { padding: 10px; margin-top: 15px; }
-  .episode-card { min-width: 220px; max-width: 220px; height: 175px; }
+  .episode-card { min-width: 220px; max-width: 220px; height: 149px; }
   .ep-title { font-size: 1.15rem; }
   .ep-desc { -webkit-line-clamp: 2; }
 }
@@ -1360,14 +1382,12 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
           <button class="btn-play-large" id="btnPlayMain" onclick="openSources()">
             ▶ Reproducir
           </button>
-          <button class="btn-back" id="btnBackDetail" onclick="closeDetails()">
-            ← Volver
-          </button>
+          <!-- Temporadas (series): a la misma altura que "Reproducir" -->
+          <div class="seasons-bar" id="detSeasonsBar"></div>
         </div>
 
-        <!-- CONTENEDOR INLINE DE TEMPORADAS Y EPISODIOS -->
+        <!-- CONTENEDOR INLINE DE EPISODIOS -->
         <div class="inline-episodes-wrap" id="inlineEpisodesContainer">
-          <div class="seasons-bar" id="detSeasonsBar"></div>
           <div class="episodes-scroll-area" id="detEpisodesList"></div>
         </div>
 
@@ -1426,8 +1446,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 <div class="sources-modal" id="sourcesModal">
   <div class="sources-card">
     <div class="sources-header">
-      <span>Servidores disponibles</span>
-      <button class="src-close" onclick="closeSources()" aria-label="Cerrar">✕</button>
+      <span id="srcCount">0</span>
     </div>
     <div class="sources-list" id="sourcesList"></div>
   </div>
@@ -1887,7 +1906,11 @@ async function loadInlineEpisodes(meta) {
         document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         renderInlineSeasonEpisodes(season);
-        setTimeout(() => document.querySelector('#detEpisodesList .episode-card')?.focus({ preventScroll: true }), 50);
+        setTimeout(() => {
+          const list = document.getElementById('detEpisodesList');
+          if (list) list.scrollLeft = 0;
+          _focusH(list && list.querySelector('.episode-card'), list);
+        }, 50);
       });
       seasonsBar.appendChild(btn);
     });
@@ -1925,6 +1948,8 @@ function renderInlineSeasonEpisodes(season) {
     const card = document.createElement('div');
     card.className = 'episode-card';
     card.tabIndex = 0;
+    card.dataset.season = v.season;
+    card.dataset.ep = v.episode;
     
     const imgSrc = v.thumbnail || currentMovie.background || currentMovie.poster || '';
     const dur = v.runtime ? `${v.runtime} min` : '';
@@ -2100,6 +2125,7 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar) {
     for (const l of res.links) {
       if (!l || !l.url || vistos.has(l.url)) continue;
       vistos.add(l.url);
+      try { if (!l.__prov) l.__prov = plugin.nombre; } catch (_) {}
       todos.push(l);
     }
     const lineas = [].concat(res.error ? ['✗ ' + res.error] : [], res.log);
@@ -2119,78 +2145,150 @@ async function openSources() {
   openSourcesWithEpisode(null, null);
 }
 
-let busquedaEmbedId = 0;
+/* ── Caché: solo la última verificación de embeds (por película o por episodio) ── */
+let _embedState = null;      // { key, links, pendientes, done, diag, paint }
+let _srcRendered = 0;
+let _srcFocused = false;
+let _selectedEmbedUrl = null;
 
-async function openSourcesWithEpisode(season, episode) {
+function _embedKey(season, episode) {
+  return String((currentMovie && currentMovie.id) || '') + '|' + (season == null ? '' : season) + '|' + (episode == null ? '' : episode);
+}
+
+function _srcLang(link) {
+  const t = [link.language, link.lang, link.idioma, link.title, link.name, link.quality].filter(Boolean).join(' ').toLowerCase();
+  if (/\bsub(s|t[ií]tul\w*)?\b|\bvose\b|\bvos\b/.test(t)) return 'Subtitulada';
+  if (/\blat(ino|ina|am)?\b|latinoam\w*|🇲🇽/.test(t)) return 'Latino';
+  if (/espa[ñn]ol|castellano|\bcast\b|\besp\b|\bspa(nish)?\b|🇪🇸/.test(t)) return 'Español';
+  return '';
+}
+function _srcProv(link) { return String(link.__prov || link.provider || link.proveedor || ''); }
+
+function _srcAddItem(list, link, before) {
+  const btn = document.createElement('button');
+  btn.className = 'src-item';
+  btn.tabIndex = 0;
+  btn.dataset.url = link.url || '';
+  if (_selectedEmbedUrl && link.url === _selectedEmbedUrl) btn.classList.add('is-selected');
+  const lang = _srcLang(link), prov = _srcProv(link);
+  btn.innerHTML = `
+    <span class="src-ic">${PM_VIDEO_SVG}</span>
+    <div class="src-info">
+      <div class="src-name">${escapeHtml(link.title || link.name || 'Servidor')}</div>
+      <div class="src-tags">
+        ${lang ? `<span class="src-tag lang">${escapeHtml(lang)}</span>` : ''}
+        ${prov ? `<span class="src-tag prov">${escapeHtml(prov)}</span>` : ''}
+        <span class="src-quality">${escapeHtml(link.quality || 'Auto')}</span>
+      </div>
+    </div>
+  `;
+  btn.addEventListener('click', () => {
+    _selectedEmbedUrl = link.url;
+    list.querySelectorAll('.src-item.is-selected').forEach(b => b.classList.remove('is-selected'));
+    btn.classList.add('is-selected');
+    playMovieSource(link);
+  });
+  list.insertBefore(btn, before || null);
+}
+
+/* Agrega solo los embeds nuevos debajo de los que ya están; no reconstruye la lista */
+function _srcPaint(st) {
+  if (st !== _embedState) return;
   const list = document.getElementById('sourcesList');
-  const epText = season ? ` (T${season}E${episode})` : '';
-  const miId = ++busquedaEmbedId;
-  list.innerHTML = '<div class="src-loading"><div class="spin-anim"></div><div>Buscando servidores' + epText + '…</div></div>';
-  document.getElementById('sourcesModal').classList.add('open');
+  const count = document.getElementById('srcCount');
+  if (count) count.textContent = st.links.length;
 
-  let primeraVez = true;
-  const pintar = (links, pendientes) => {
-    if (miId !== busquedaEmbedId) return;
-    if (!links.length) return;
-    list.innerHTML = '';
-    links.forEach(link => {
-      const btn = document.createElement('button');
-      btn.className = 'src-item';
-      btn.tabIndex = 0;
-      btn.innerHTML = `
-        <span class="src-ic">${PM_VIDEO_SVG}</span>
-        <div class="src-info">
-          <div class="src-name">${escapeHtml(link.title || link.name || 'Servidor')}</div>
-          <div class="src-quality">${escapeHtml(link.quality || 'Auto')}</div>
-        </div>
-      `;
-      btn.addEventListener('click', () => playMovieSource(link));
-      list.appendChild(btn);
-    });
-    if (pendientes > 0) {
-      const mas = document.createElement('div');
-      mas.className = 'src-loading';
-      mas.innerHTML = '<div class="spin-anim"></div><div>Buscando en ' + pendientes + (pendientes === 1 ? ' sitio más…' : ' sitios más…') + '</div>';
-      list.appendChild(mas);
-    }
-    setStatus(links.length + ' servidores' + (pendientes > 0 ? '…' : ''), 'ok');
-    if (primeraVez) {
-      primeraVez = false;
-      setTimeout(() => list.querySelector('.src-item')?.focus({ preventScroll: true }), 100);
-    }
-  };
-
-  const links = await buscarEmbedsReales(currentMovie, season, episode, pintar);
-  if (miId !== busquedaEmbedId) return;
-
-  if (!links || links.length === 0) {
+  if (!st.links.length) {
+    if (!st.done) return;
+    _srcRendered = 0;
     list.innerHTML = `
       <div class="src-empty">
         <span class="src-empty-big">📡</span>
         No se encontraron servidores disponibles.
-        <small style="display:block;margin-top:6px;color:var(--red)">Diagnóstico:<br>${diagEmbed.join('<br>') || 'sin datos'}</small>
+        <small style="display:block;margin-top:6px;color:var(--red)">Diagnóstico:<br>${st.diag || 'sin datos'}</small>
       </div>`;
     setStatus('Sin servidores', 'error');
-    setTimeout(() => document.querySelector('.src-close')?.focus({ preventScroll: true }), 100);
     return;
   }
-  pintar(links, 0);
+
+  list.querySelectorAll('.src-first, .src-empty').forEach(n => n.remove());
+  let more = list.querySelector('.src-more');
+  for (let i = _srcRendered; i < st.links.length; i++) {
+    const l = st.links[i];
+    if (l && l.url) _srcAddItem(list, l, more);
+  }
+  _srcRendered = st.links.length;
+
+  if (st.pendientes > 0) {
+    if (!more) { more = document.createElement('div'); more.className = 'src-loading src-more'; list.appendChild(more); }
+    more.innerHTML = '<div class="spin-anim"></div><div>Buscando en ' + st.pendientes + (st.pendientes === 1 ? ' sitio más…' : ' sitios más…') + '</div>';
+  } else if (more) { more.remove(); }
+
+  setStatus(st.links.length + ' servidores' + (st.pendientes > 0 ? '…' : ''), 'ok');
+
+  if (!_srcFocused) {
+    const target = list.querySelector('.src-item.is-selected') || list.querySelector('.src-item');
+    if (target) { _srcFocused = true; setTimeout(() => target.focus({ preventScroll: true }), 100); }
+  }
+}
+
+async function openSourcesWithEpisode(season, episode) {
+  if (!currentMovie) return;
+  const list = document.getElementById('sourcesList');
+  const epText = season ? ` (T${season}E${episode})` : '';
+  const key = _embedKey(season, episode);
+  const loadingHtml = '<div class="src-loading src-first"><div class="spin-anim"></div><div>Buscando servidores' + epText + '…</div></div>';
+  _srcRendered = 0; _srcFocused = false;
+  document.getElementById('sourcesModal').classList.add('open');
+
+  // Mismo contenido (película o episodio): se reutiliza la caché o la búsqueda en curso, sin volver a buscar
+  const prev = _embedState;
+  if (prev && prev.key === key && (!prev.done || prev.links.length)) {
+    list.innerHTML = '';
+    prev.paint = () => _srcPaint(prev);
+    if (prev.links.length) _srcPaint(prev);
+    else { list.innerHTML = loadingHtml; document.getElementById('srcCount').textContent = '0'; }
+    return;
+  }
+
+  // Contenido distinto: la caché anterior se descarta y se guarda solo esta
+  const st = { key, links: [], pendientes: 0, done: false, diag: '', paint: null };
+  _embedState = st;
+  _selectedEmbedUrl = null;
+  st.paint = () => _srcPaint(st);
+  list.innerHTML = loadingHtml;
+  document.getElementById('srcCount').textContent = '0';
+
+  buscarEmbedsReales(currentMovie, season, episode, (links, pendientes) => {
+    st.links = links; st.pendientes = pendientes;
+    if (st.paint) st.paint();
+  }).then(links => {
+    if (Array.isArray(links) && links.length >= st.links.length) st.links = links;
+    st.pendientes = 0; st.done = true; st.diag = diagEmbed.join('<br>');
+    if (st.paint) st.paint();
+  }).catch(e => {
+    st.pendientes = 0; st.done = true; st.diag = escapeHtml((e && e.message) || String(e));
+    if (st.paint) st.paint();
+  });
 }
 
 function closeSources(restoreFocus = true) {
   document.getElementById('sourcesModal').classList.remove('open');
-  if (restoreFocus) {
+  if (!restoreFocus) return;
+  setTimeout(() => {
+    let t = null;
     if (currentMovie?.type === 'series') {
-      setTimeout(() => document.querySelector('#detEpisodesList .episode-card')?.focus({ preventScroll: true }), 50);
+      t = (currentEpisode != null && document.querySelector(`#detEpisodesList .episode-card[data-ep="${currentEpisode}"]`)) || document.querySelector('#detEpisodesList .episode-card');
     } else {
-      setTimeout(() => document.getElementById('btnPlayMain')?.focus({ preventScroll: true }), 50);
+      t = document.getElementById('btnPlayMain');
     }
-  }
+    if (t) t.focus({ preventScroll: true });
+  }, 50);
 }
 
 function playMovieSource(link) {
   if (!currentMovie) return;
-  closeSources(false);
+  // El modal de embeds queda abierto; solo se abre el de calidades
   openPlayModal({
     kind     : 'movie',
     movie    : currentMovie,
@@ -2878,15 +2976,20 @@ function _restoreFocusAfterFullscreen() {
   if (ae && ae.id === 'playerContainerInline') { try { ae.blur(); } catch (_) {} }
   const apply = () => {
     let target = null;
-    if (currentMode === 'movie') {
+    const sm = document.getElementById('sourcesModal');
+    if (sm && sm.classList.contains('open')) {
+      target = sm.querySelector('.src-item.is-selected') || sm.querySelector('.src-item');
+    }
+    if (!target && currentMode === 'movie') {
       const dv = document.getElementById('detailView');
       if (dv && dv.classList.contains('open')) {
-        if (currentMovie?.type === 'series') target = document.querySelector('#detEpisodesList .episode-card') || document.querySelector('.season-btn');
-        else target = document.getElementById('btnPlayMain');
+        if (currentMovie?.type === 'series') {
+          target = (currentEpisode != null && document.querySelector(`#detEpisodesList .episode-card[data-ep="${currentEpisode}"]`)) || document.querySelector('#detEpisodesList .episode-card') || document.querySelector('.season-btn.active');
+        } else target = document.getElementById('btnPlayMain');
       } else if (currentMovie?.id) { target = document.querySelector(`.poster-card[data-id="${CSS.escape(currentMovie.id)}"]`); }
       if (!target) target = document.querySelector('.poster-card');
-    } else { target = document.querySelector('.poster-card'); }
-    if (target) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'center' }); }
+    } else if (!target) { target = document.querySelector('.poster-card'); }
+    if (target) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'nearest' }); }
     return target;
   };
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -3088,6 +3191,10 @@ function forceExitApp() {
 function handleBackAction() {
   if (_tvFsQualityOpen) { _tvFsQualityClose(); return; }
   if (document.getElementById('exitModal')?.classList.contains('open')) { hideExitModal(); return; }
+  if (document.body.classList.contains('fullscreen-active') || document.fullscreenElement) {
+    _wasFullscreen = false; if (_wasFullscreenTimer) { clearTimeout(_wasFullscreenTimer); _wasFullscreenTimer = null; }
+    _exitFullscreen(); _handleExitFullscreen(); return;
+  }
   if (document.getElementById('pmModal')?.classList.contains('open')) { closePmModal(); return; }
   if (document.getElementById('sourcesModal')?.classList.contains('open')) { closeSources(); return; }
   if (document.getElementById('detailView')?.classList.contains('open')) { closeDetails(); return; }
@@ -3119,11 +3226,20 @@ function gridArrow(dir) {
 
 document.addEventListener('keydown', (e) => {
   if (document.getElementById('pmModal')?.classList.contains('open')) { pmHandleKey(e); return; }
-  if (document.getElementById('sourcesModal')?.classList.contains('open')) {
+  if (!document.body.classList.contains('fullscreen-active') && document.getElementById('sourcesModal')?.classList.contains('open')) {
     const items = Array.from(document.querySelectorAll('#sourcesList .src-item')); const cur = document.activeElement; const idx = items.indexOf(cur);
+    const playerEl = document.getElementById('playerContainerInline');
+    if (cur === playerEl) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); (document.querySelector('#sourcesList .src-item.is-selected') || items[0])?.focus(); }
+      else if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); closeSources(); }
+      else if (e.key.indexOf('Arrow') === 0) e.preventDefault();
+      return;
+    }
     switch (e.key) {
-      case 'ArrowDown': e.preventDefault(); if (idx < items.length - 1) items[idx+1].focus(); break;
-      case 'ArrowUp': e.preventDefault(); if (idx > 0) items[idx-1].focus(); else document.querySelector('.src-close')?.focus(); break;
+      case 'ArrowDown': e.preventDefault(); if (idx < 0) items[0]?.focus(); else if (idx < items.length - 1) items[idx+1].focus(); break;
+      case 'ArrowUp': e.preventDefault(); if (idx < 0) items[0]?.focus(); else if (idx > 0) items[idx-1].focus(); break;
+      case 'ArrowRight': e.preventDefault(); playerEl?.focus({ preventScroll: true }); break;
+      case 'ArrowLeft': e.preventDefault(); break;
       case 'Enter': case ' ': if (cur?.classList.contains('src-item')) { e.preventDefault(); cur.click(); } break;
       case 'Escape': case 'Backspace': e.preventDefault(); closeSources(); break;
     } return;
@@ -3144,59 +3260,101 @@ document.addEventListener('keydown', (e) => {
     const v = document.getElementById('iptv-player'); if (v && !v.paused && !v.ended) { e.preventDefault(); v.pause(); return; }
   }
   const focused = document.activeElement;
+  const playerEl = document.getElementById('playerContainerInline');
+  const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+
+  /* Reproductor: ← vuelve a donde estaba el foco; el resto de flechas no lo pierden */
+  if (focused === playerEl) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); _focusBackToBrowse(); }
+    else if (isArrow) e.preventDefault();
+    return;
+  }
+
   if (focused?.classList.contains('poster-card')) {
     const cards = Array.from(document.querySelectorAll('.poster-card')); const idx = cards.indexOf(focused); const cols = getGridColumns();
     switch (e.key) {
-      case 'ArrowRight': e.preventDefault(); if ((idx + 1) % cols !== 0) gridArrow('right'); break;
-      case 'ArrowLeft': e.preventDefault(); if (idx % cols !== 0) gridArrow('left'); else { const cat = document.querySelector('.category-btn.active') || document.querySelector('.category-btn'); cat?.focus({ preventScroll: true }); } break;
+      case 'ArrowRight': e.preventDefault(); if ((idx + 1) % cols !== 0 && idx + 1 < cards.length) gridArrow('right'); else playerEl?.focus({ preventScroll: true }); break;
+      case 'ArrowLeft': e.preventDefault(); if (idx % cols !== 0) gridArrow('left'); break;
       case 'ArrowDown': e.preventDefault(); gridArrow('down'); break;
       case 'ArrowUp': e.preventDefault(); if (idx < cols) { const cat = document.querySelector('.category-btn.active') || document.querySelector('.category-btn'); cat?.focus({ preventScroll: true }); } else { gridArrow('up'); } break;
       case 'Enter': case ' ': e.preventDefault(); focused.click(); break;
     } return;
   }
   if (focused?.classList.contains('category-btn')) {
+    const bar = document.getElementById('categoriesBar');
     const cats = Array.from(document.querySelectorAll('.category-btn')); const idx = cats.indexOf(focused);
     switch (e.key) {
-      case 'ArrowRight': e.preventDefault(); cats[Math.min(idx + 1, cats.length - 1)]?.focus({ preventScroll: true }); break;
-      case 'ArrowLeft': e.preventDefault(); cats[Math.max(idx - 1, 0)]?.focus({ preventScroll: true }); break;
+      case 'ArrowRight': e.preventDefault(); _focusH(cats[Math.min(idx + 1, cats.length - 1)], bar); break;
+      case 'ArrowLeft': e.preventDefault(); _focusH(cats[Math.max(idx - 1, 0)], bar); break;
       case 'ArrowDown': { e.preventDefault(); const first = document.querySelector('.poster-card'); if (first) { first.focus({ preventScroll: true }); first.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } break; }
       case 'ArrowUp': e.preventDefault(); break;
       case 'Enter': case ' ': e.preventDefault(); focused.click(); break;
     } return;
   }
   if (document.getElementById('detailView')?.classList.contains('open')) {
-    const isSeries = currentMovie?.type === 'series'; const backBtn = document.getElementById('btnBackDetail');
+    const isSeries = currentMovie?.type === 'series';
     if (isSeries) {
-      const activeSeasonBtn = document.querySelector('.season-btn.active'); const seasonBtns = Array.from(document.querySelectorAll('.season-btn')); const eps = Array.from(document.querySelectorAll('.episode-card'));
+      const seasonBtns = Array.from(document.querySelectorAll('.season-btn')); const activeSeasonBtn = document.querySelector('.season-btn.active') || seasonBtns[0];
+      const eps = Array.from(document.querySelectorAll('#detEpisodesList .episode-card')); const epList = document.getElementById('detEpisodesList'); const sBar = document.getElementById('detSeasonsBar');
       if (focused?.classList.contains('episode-card')) {
         const idx = eps.indexOf(focused);
-        if (e.key === 'ArrowRight') { e.preventDefault(); const next = eps[idx + 1]; if (next) { next.focus({ preventScroll: true }); next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } }
-        else if (e.key === 'ArrowLeft') { e.preventDefault(); const prev = eps[idx - 1]; if (prev) { prev.focus({ preventScroll: true }); prev.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } }
+        if (e.key === 'ArrowRight') { e.preventDefault(); if (eps[idx + 1]) _focusH(eps[idx + 1], epList); else playerEl?.focus({ preventScroll: true }); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); if (eps[idx - 1]) _focusH(eps[idx - 1], epList); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); activeSeasonBtn?.focus({ preventScroll: true }); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); }
         else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); }
       } else if (focused?.classList.contains('season-btn')) {
         const idx = seasonBtns.indexOf(focused);
-        if (e.key === 'ArrowRight') { e.preventDefault(); const next = seasonBtns[Math.min(idx+1, seasonBtns.length-1)]; if (next && next !== focused) { next.focus(); next.click(); } }
-        else if (e.key === 'ArrowLeft') { e.preventDefault(); const prev = seasonBtns[Math.max(idx-1, 0)]; if (prev && prev !== focused) { prev.focus(); prev.click(); } }
-        else if (e.key === 'ArrowDown') { e.preventDefault(); eps[0]?.focus({ preventScroll: true }); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); backBtn?.focus({ preventScroll: true }); }
+        /* ↔ solo mueve el foco; los capítulos cambian con OK */
+        if (e.key === 'ArrowRight') { e.preventDefault(); if (seasonBtns[idx + 1]) _focusH(seasonBtns[idx + 1], sBar); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); if (seasonBtns[idx - 1]) _focusH(seasonBtns[idx - 1], sBar); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); _focusH(eps[0], epList); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); }
         else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); }
-      } else if (focused === backBtn) {
-        if (e.key === 'ArrowDown') { e.preventDefault(); activeSeasonBtn?.focus({ preventScroll: true }); }
-        else if (e.key === 'ArrowRight') { e.preventDefault(); activeSeasonBtn?.focus({ preventScroll: true }); }
-        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); }
-      } return;
+      } else if (isArrow) {
+        e.preventDefault(); (eps[0] || activeSeasonBtn)?.focus({ preventScroll: true });
+      }
+      return;
     } else {
       const playBtn = document.getElementById('btnPlayMain');
-      if (e.key === 'ArrowRight' && focused === playBtn) { e.preventDefault(); backBtn?.focus(); }
-      else if (e.key === 'ArrowLeft' && focused === backBtn) { e.preventDefault(); playBtn?.focus(); }
-      else if ((e.key === 'Enter' || e.key === ' ') && (focused === playBtn || focused === backBtn)) { e.preventDefault(); focused.click(); } return;
+      if (focused === playBtn) {
+        if (e.key === 'ArrowRight') { e.preventDefault(); playerEl?.focus({ preventScroll: true }); }
+        else if (isArrow) e.preventDefault();
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playBtn.click(); }
+      } else if (isArrow) { e.preventDefault(); playBtn?.focus({ preventScroll: true }); }
+      return;
     }
   }
-  if (focused?.id === 'playerContainerInline') {
-    if (e.key === 'ArrowLeft') { e.preventDefault(); const playing = document.querySelector('.poster-card.now-playing') || document.querySelector('.poster-card'); playing?.focus({ preventScroll: true }); }
-  }
 });
+
+/* ── Helpers de foco ── */
+let _lastBrowseFocus = null;
+document.addEventListener('focusin', (e) => {
+  const t = e.target;
+  if (t && t.matches && t.matches('.poster-card, .category-btn, .season-btn, .episode-card, #btnPlayMain')) _lastBrowseFocus = t;
+});
+
+/* Enfoca un elemento y lo centra con scroll horizontal dentro de su contenedor */
+function _focusH(el, scroller) {
+  if (!el) return;
+  try { el.focus({ preventScroll: true }); } catch (_) {}
+  const sc = scroller || el.parentElement;
+  if (!sc) return;
+  const r = el.getBoundingClientRect(), c = sc.getBoundingClientRect();
+  const left = sc.scrollLeft + (r.left - c.left) - (c.width - r.width) / 2;
+  try { sc.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); } catch (_) { sc.scrollLeft = Math.max(0, left); }
+}
+
+function _focusBackToBrowse() {
+  let t = _lastBrowseFocus;
+  if (!t || !document.contains(t) || !t.getClientRects().length) {
+    const dv = document.getElementById('detailView');
+    if (dv && dv.classList.contains('open')) {
+      t = currentMovie?.type === 'series' ? (document.querySelector('#detEpisodesList .episode-card') || document.querySelector('.season-btn.active')) : document.getElementById('btnPlayMain');
+    } else t = document.querySelector('.poster-card.now-playing') || document.querySelector('.poster-card');
+  }
+  if (t) t.focus({ preventScroll: true });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   initPlayer(); setupBackButton(); setPlayerLoader('idle', MSG_START);
