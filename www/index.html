@@ -595,17 +595,6 @@ html, body {
 }
 @keyframes rotating { to { transform: rotate(360deg); } }
 
-#loaderTxtInline {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: var(--accent);
-  text-shadow: 0 1px 8px rgba(0,0,0,.8);
-  text-align: center;
-  max-width: 90%;
-}
-
 #bufferSpinner {
   position: absolute; inset: 0;
   display: none;
@@ -1126,18 +1115,28 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   pointer-events: auto;
   transform: translateY(0);
 }
+
+/* Ajustes para hacer los botones más pequeños y compactos */
+.bar-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex; flex-direction: column;
+  justify-content: flex-end; /* Agrupa todo hacia abajo */
+  gap: clamp(4px, 1vmin, 8px); /* Menos espacio entre título, barra y botones */
+}
 .bar-row-title {
   display: flex; align-items: center;
   line-height: 1;
   gap: clamp(6px, 1vmin, 10px);
   font-family: 'Rajdhani', sans-serif;
-  font-size: clamp(.85rem, 1.8vmin, 1.15rem);
+  font-size: clamp(.75rem, 1.4vmin, .95rem); /* Título un poco más pequeño */
   font-weight: 700;
   color: #fff;
   letter-spacing: .5px;
   text-shadow: 0 2px 8px rgba(0,0,0,.7);
   user-select: none;
   pointer-events: none;
+  margin-bottom: 2px;
 }
 .bar-logo {
   position: relative;
@@ -1153,13 +1152,6 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   object-fit: contain;
   display: block;
 }
-.bar-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex; flex-direction: column;
-  justify-content: space-between;
-  gap: clamp(8px, 1.4vmin, 14px);
-}
 .bar-row-controls {
   display: flex; align-items: center;
   gap: clamp(10px, 2vw, 22px);
@@ -1170,17 +1162,17 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   border: 2px solid transparent;
   color: rgba(255,255,255,.92);
   cursor: pointer;
-  padding: clamp(7px, 1vmin, 10px) clamp(10px, 1.6vmin, 14px);
+  padding: clamp(4px, 0.8vmin, 8px); /* Botones más pequeños */
   border-radius: 10px;
   outline: none;
   transition: all .15s ease;
-  min-width: clamp(40px, 4.5vw, 56px);
-  min-height: clamp(40px, 4.5vw, 52px);
+  min-width: clamp(36px, 4vw, 44px);
+  min-height: clamp(36px, 4vw, 44px);
   position: relative;
 }
 .bar-btn svg {
-  width: clamp(20px, 2.8vmin, 28px);
-  height: clamp(20px, 2.8vmin, 28px);
+  width: clamp(16px, 2.2vmin, 22px);
+  height: clamp(16px, 2.2vmin, 22px);
   display: block;
 }
 .bar-btn-quality {
@@ -1199,9 +1191,9 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
 .bar-live-indicator {
   display: flex; align-items: center;
   gap: clamp(5px, .8vmin, 8px);
-  padding: clamp(6px, .9vmin, 9px) clamp(10px, 1.5vmin, 14px);
+  padding: clamp(4px, 0.8vmin, 8px) clamp(8px, 1.2vmin, 12px);
   font-family: 'Rajdhani', sans-serif;
-  font-size: clamp(.65rem, 1.1vmin, .82rem);
+  font-size: clamp(.6rem, 1vmin, .75rem);
   font-weight: 800;
   color: #fff;
   letter-spacing: 1.5px;
@@ -1228,51 +1220,88 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   50%      { opacity: .55; transform: scale(.85); }
 }
 
-#tvFsQualityMenu {
-  position: absolute;
-  bottom: 100%; left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 10px;
-  background: rgba(15,19,25,.97);
-  border: 2px solid var(--accent);
-  border-radius: 12px;
-  padding: 6px;
-  min-width: 150px;
+/* ══════════════════ BARRA DE PROGRESO (ESTILO TV) ══════════════════ */
+.bar-progress-container {
   display: none;
-  flex-direction: column;
-  gap: 2px;
-  z-index: 100;
-  box-shadow: 0 6px 32px rgba(0,0,0,.8), 0 0 20px var(--accent-glow);
+  align-items: center;
+  gap: clamp(8px, 1.5vmin, 14px);
+  width: 100%;
+  margin-bottom: clamp(4px, 0.8vh, 8px);
+  padding: 0 clamp(10px, 2vw, 20px);
+  box-sizing: border-box;
 }
-#tvFsQualityMenu.open { display: flex; }
 
-.tv-fs-q-item {
-  padding: clamp(8px, 1.2vmin, 11px) clamp(14px, 2vmin, 18px);
+/* Textos de tiempo (00:00) */
+.bar-time {
   font-family: 'Rajdhani', sans-serif;
-  font-size: clamp(.78rem, 1.2vmin, .95rem);
+  font-size: clamp(0.8rem, 1.4vmin, 1rem);
   font-weight: 700;
-  color: #fff;
-  border-radius: 7px;
-  cursor: pointer;
-  letter-spacing: .5px;
-  transition: all .12s ease;
-  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
   white-space: nowrap;
+  letter-spacing: 0.5px;
+  width: 45px;
+  text-align: center;
+  transition: color 0.2s ease;
 }
-.tv-fs-q-item.q-active {
-  color: var(--accent);
-  font-weight: 900;
+
+/* Riel de la barra (Fondo gris oscuro) */
+.bar-progress-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
 }
-.tv-fs-q-item.q-active::before {
-  content: '✓  ';
-  font-weight: 900;
+
+/* Relleno verde (Progreso) */
+.bar-progress-fill {
+  height: 100%;
+  background: var(--accent); /* Tu verde #00cc44 */
+  border-radius: 4px;
+  width: 0%;
+  position: absolute;
+  left: 0;
+  top: 0;
 }
-.tv-fs-q-item.q-only::before { content: none; }
-.tv-fs-q-item.focused {
-  background: rgba(0,204,68,.22);
-  border: 1px solid var(--accent);
-  transform: scale(1.05);
-  box-shadow: 0 0 12px var(--accent-glow);
+
+/* La bolita blanca (Thumb) */
+.bar-progress-thumb {
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0); /* Oculto por defecto */
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ══════ ESTADO ENFOCADO (Cuando usas el control remoto) ══════ */
+.bar-progress-track.focused {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: var(--accent); /* Borde verde */
+  box-shadow: 0 0 12px rgba(0, 204, 68, 0.4); /* Brillo verde tenue */
+  transform: scaleY(1.2); /* Un poco más gruesa */
+  margin: 0 8px; /* Evitar que se corte al engrosar */
+}
+
+/* Los tiempos se iluminan cuando la barra tiene el foco */
+.bar-progress-container:has(.bar-progress-track.focused) .bar-time {
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0, 204, 68, 0.8);
+}
+
+/* Al enfocar, la bolita aparece y brilla */
+.bar-progress-track.focused .bar-progress-thumb {
+  transform: translate(-50%, -50%) scale(1);
+  box-shadow: 0 0 10px #fff, 0 2px 8px rgba(0,0,0,0.8);
 }
 
 /* Toast */
@@ -1387,7 +1416,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
       <div class="loader-bg"></div>
       <div class="plyr-loader-content">
         <div class="spin-anim"></div>
-        <span id="loaderTxtInline">Selecciona una película o serie</span>
+        <!-- EL AVISO HA SIDO ELIMINADO POR COMPLETO DE AQUÍ -->
       </div>
     </div>
     <video id="iptv-player" playsinline poster="player_bg.webp"></video>
@@ -1574,7 +1603,6 @@ const HLS_VERIFY_MS          = 12000;
 const FLV_VERIFY_MS          = 7000;
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS     = 4000;
-const MSG_START              = 'Selecciona una película o serie';
 const TV_BAR_HIDE_MS         = 4000;
 const DEFAULT_BAR_LOGO       = '1000439999.webp';
 
@@ -2475,12 +2503,10 @@ function playMovieSource(link) {
 function getActiveVideoEl()       { return document.getElementById('iptv-player'); }
 function getActivePlayerContainer() { return document.getElementById('playerContainerInline'); }
 
-function setPlayerLoader(state, text) {
+function setPlayerLoader(state) {
   const el = document.getElementById('playerLoaderInline');
   if (!el) return;
   el.className = 'plyr-loader ' + state;
-  const txt = document.getElementById('loaderTxtInline');
-  if (txt && text !== undefined && text !== null) txt.textContent = text;
 }
 
 function getStreamFormat(url) {
@@ -2631,7 +2657,7 @@ function startPlayback(ctx, isReconnect = false) {
   const streamId = _currentStreamId;
   window._playingUrl = ctx.url;
   _mediaRecoveries = 0;
-  setPlayerLoader('decoding', 'CONECTANDO…');
+  setPlayerLoader('decoding');
   if (ctx.type === 'flv')         _playFlv(ctx, streamId);
   else if (ctx.type === 'native') _playNative(ctx, streamId);
   else                            _playHls(ctx, streamId);
@@ -3185,6 +3211,7 @@ class TVPlayerBar {
   constructor() {
     this._visible = false; this._currentBtnIdx = 0; this._hideTimer = null; this._barEl = null; this._titleEl = null;
     this._buttons = []; this._qualityMenuEl = null; this._qualityMenuOpen = false; this._qualityMenuIdx = 0; this._qualityItems = [];
+    this._seekFeedbackTimer = null;
     this._build();
   }
   get visible() { return this._visible; } get qualityMenuOpen() { return this._qualityMenuOpen; }
@@ -3196,6 +3223,8 @@ class TVPlayerBar {
     logoImg.addEventListener('error', () => { if (!logoImg.src.endsWith(DEFAULT_BAR_LOGO)) logoImg.src = DEFAULT_BAR_LOGO; });
     logoBox.appendChild(logoImg);
     const rowControls = document.createElement('div'); rowControls.className = 'bar-row-controls';
+    
+    // --- CONTROLES EXISTENTES (Play, Aspecto, Calidad) ---
     const playBtn = document.createElement('div'); playBtn.className = 'bar-btn'; playBtn.dataset.idx = '0'; playBtn.innerHTML = SVG_PLAY;
     playBtn.addEventListener('click', () => this._activateButton(0));
     const aspectBtn = document.createElement('div'); aspectBtn.className = 'bar-btn'; aspectBtn.dataset.idx = '1'; aspectBtn.innerHTML = SVG_ASPECT;
@@ -3205,7 +3234,62 @@ class TVPlayerBar {
     const qualityMenu = document.createElement('div'); qualityMenu.id = 'tvFsQualityMenu'; qualityBtn.appendChild(qualityMenu); this._qualityMenuEl = qualityMenu;
     const live = document.createElement('div'); live.className = 'bar-live-indicator'; live.innerHTML = '<span class="bar-live-dot"></span><span>EN VIVO</span>';
     rowControls.appendChild(playBtn); rowControls.appendChild(aspectBtn); rowControls.appendChild(qualityBtn); rowControls.appendChild(live);
-    const main = document.createElement('div'); main.className = 'bar-main'; main.appendChild(rowTitle); main.appendChild(rowControls);
+
+    // --- NUEVA BARRA DE PROGRESO ---
+    const progressContainer = document.createElement('div');
+    progressContainer.className = 'bar-progress-container';
+    progressContainer.id = 'tvProgressContainer';
+
+    const currentTimeEl = document.createElement('span');
+    currentTimeEl.className = 'bar-time'; currentTimeEl.id = 'tvCurrentTime'; currentTimeEl.textContent = '00:00';
+
+    const trackEl = document.createElement('div');
+    trackEl.className = 'bar-progress-track'; trackEl.id = 'tvProgressTrack'; trackEl.tabIndex = 0;
+    
+    const fillEl = document.createElement('div');
+    fillEl.className = 'bar-progress-fill'; fillEl.id = 'tvProgressFill';
+    
+    const thumbEl = document.createElement('div');
+    thumbEl.className = 'bar-progress-thumb';
+    
+    trackEl.appendChild(fillEl);
+    trackEl.appendChild(thumbEl);
+
+    const totalTimeEl = document.createElement('span');
+    totalTimeEl.className = 'bar-time'; totalTimeEl.id = 'tvTotalTime'; totalTimeEl.textContent = '00:00';
+
+    progressContainer.appendChild(currentTimeEl);
+    progressContainer.appendChild(trackEl);
+    progressContainer.appendChild(totalTimeEl);
+
+    // Guardamos referencias
+    this._progressContainer = progressContainer;
+    this._progressTrack = trackEl;
+    this._progressFill = fillEl;
+    this._currentTimeEl = currentTimeEl;
+    this._totalTimeEl = totalTimeEl;
+
+    // Evento click por si se usa mouse
+    trackEl.addEventListener('click', (e) => {
+      const v = document.getElementById('iptv-player');
+      if (!v || !v.duration) return;
+      const rect = trackEl.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      v.currentTime = pct * v.duration;
+      this.updateProgress();
+    });
+
+    const main = document.createElement('div'); main.className = 'bar-main';
+    
+    // 1. Arriba: El título de la película
+    main.appendChild(rowTitle);          
+    
+    // 2. En el medio: La barra de progreso
+    main.appendChild(progressContainer); 
+    
+    // 3. Abajo: Los botones de control
+    main.appendChild(rowControls);       
+    
     bar.appendChild(logoBox); bar.appendChild(main); document.body.appendChild(bar);
     this._barEl = bar; this._logoEl = logoImg; this._logoBox = logoBox; this._mainEl = main; this._titleEl = rowTitle.querySelector('#newTvBarTitle');
     this._buttons = [playBtn, aspectBtn, qualityBtn];
@@ -3214,17 +3298,115 @@ class TVPlayerBar {
   _attachToFullscreen() { const c = document.getElementById('playerContainerInline'); if (c && this._barEl.parentElement !== c) c.appendChild(this._barEl); }
   _detachFromFullscreen() { if (this._barEl && this._barEl.parentElement !== document.body) { document.body.appendChild(this._barEl); } }
   _fitLogo() { if (!this._logoBox || !this._mainEl) return; const h = this._mainEl.offsetHeight; if (h > 0) this._logoBox.style.width = h + 'px'; }
+  
   show() {
     this._attachToFullscreen(); this._barEl.classList.add('visible'); this._visible = true;
     this._fitLogo(); requestAnimationFrame(() => this._fitLogo());
     this.updatePlayState(); this.updateQualityLabel(); this.updateLiveLabel();
+    this.updateProgress(); // Actualiza la barra al mostrar
     this._focusButton(0); this._resetTimer();
   }
   hide() {
     this._barEl.classList.remove('visible'); this._visible = false; this._buttons.forEach(b => b.classList.remove('focused'));
+    if(this._progressTrack) this._progressTrack.classList.remove('focused');
     this._closeQualityMenu(); if (this._hideTimer) { clearTimeout(this._hideTimer); this._hideTimer = null; }
   }
-  _focusButton(idx) { if (idx < 0 || idx >= this._buttons.length) return; this._buttons.forEach(b => b.classList.remove('focused')); this._currentBtnIdx = idx; this._buttons[idx].classList.add('focused'); }
+  
+  _focusButton(idx) { 
+    if (this._progressTrack) this._progressTrack.classList.remove('focused');
+    if (idx < 0 || idx >= this._buttons.length) return; 
+    this._buttons.forEach(b => b.classList.remove('focused')); 
+    this._currentBtnIdx = idx; 
+    this._buttons[idx].classList.add('focused'); 
+    this._buttons[idx].focus();
+  }
+
+  _focusProgress() {
+    this._buttons.forEach(b => b.classList.remove('focused'));
+    this._currentBtnIdx = -1;
+    this._progressTrack.classList.add('focused');
+    this._progressTrack.focus();
+  }
+
+  updateProgress() {
+    const v = document.getElementById('iptv-player');
+    if (!v || !this._progressFill) return;
+    
+    if (currentMode !== 'movie') {
+      this._progressContainer.style.display = 'none';
+      return;
+    } else {
+      this._progressContainer.style.display = 'flex';
+    }
+
+    const cur = v.currentTime || 0;
+    const dur = v.duration || 0;
+    
+    if (dur > 0) {
+      const pct = (cur / dur) * 100;
+      this._progressFill.style.width = pct + '%';
+      
+      const thumb = this._progressTrack.querySelector('.bar-progress-thumb');
+      if (thumb) thumb.style.left = pct + '%';
+
+      this._currentTimeEl.textContent = this._formatTime(cur);
+      this._totalTimeEl.textContent = this._formatTime(dur);
+    } else {
+      this._progressFill.style.width = '0%';
+      const thumb = this._progressTrack.querySelector('.bar-progress-thumb');
+      if (thumb) thumb.style.left = '0%';
+      
+      this._currentTimeEl.textContent = '00:00';
+      this._totalTimeEl.textContent = '00:00';
+    }
+  }
+
+  _formatTime(seconds) {
+    if (!seconds || isNaN(seconds)) return '00:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  _showSeekFeedback(text) {
+    let fb = document.getElementById('seekFeedback');
+    if (!fb) {
+      fb = document.createElement('div');
+      fb.id = 'seekFeedback';
+      fb.style.cssText = `
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 204, 68, 0.9);
+        color: #fff;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-family: 'Rajdhani', sans-serif;
+        font-weight: 800;
+        font-size: 0.9rem;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s, transform 0.2s;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        z-index: 100;
+      `;
+      this._progressTrack.appendChild(fb);
+    }
+    
+    fb.textContent = text;
+    fb.style.opacity = '1';
+    fb.style.transform = 'translateX(-50%) translateY(-5px)';
+    
+    clearTimeout(this._seekFeedbackTimer);
+    this._seekFeedbackTimer = setTimeout(() => {
+      fb.style.opacity = '0';
+      fb.style.transform = 'translateX(-50%) translateY(0)';
+    }, 800);
+  }
+
   _resetTimer() { if (this._hideTimer) clearTimeout(this._hideTimer); this._hideTimer = setTimeout(() => { if (this._qualityMenuOpen) { this._resetTimer(); return; } this.hide(); }, TV_BAR_HIDE_MS); }
   _openQualityMenu() { if (!this._qualityMenuEl) return; this._qualityMenuOpen = true; _tvFsQualityOpen = true; this._buildQualityItems(); this._qualityMenuEl.classList.add('open'); this._focusQualityItem(0); this._resetTimer(); }
   _closeQualityMenu() { if (!this._qualityMenuEl) return; this._qualityMenuOpen = false; _tvFsQualityOpen = false; this._qualityMenuEl.classList.remove('open'); this._qualityItems = []; }
@@ -3251,6 +3433,7 @@ class TVPlayerBar {
     if (hlsInst && hlsInst.levels && hlsInst.levels.length > 1 && !isNaN(level) && level !== hlsInst.manualLevel) hlsInst.nextLevel = level;
     this._closeQualityMenu(); this.updateQualityLabel(); this._focusButton(2);
   }
+  
   handleKey(key) {
     if (!this._visible) return false; this._resetTimer();
     if (this._qualityMenuOpen) {
@@ -3261,13 +3444,52 @@ class TVPlayerBar {
         case 'Escape': case 'ArrowLeft': case 'ArrowRight': this._closeQualityMenu(); this._focusButton(2); return true;
       } return true;
     }
+
+    const isProgressFocused = document.activeElement === this._progressTrack || this._currentBtnIdx === -1;
+
+    // CONTROL DE LA BARRA DE PROGRESO
+    if (isProgressFocused) {
+      const v = document.getElementById('iptv-player');
+      switch (key) {
+        case 'ArrowLeft':
+          if (v) {
+            v.currentTime = Math.max(0, v.currentTime - 10);
+            this.updateProgress();
+            this._showSeekFeedback('-10s');
+          }
+          return true;
+        case 'ArrowRight':
+          if (v) {
+            v.currentTime = Math.min(v.duration || 0, v.currentTime + 10);
+            this.updateProgress();
+            this._showSeekFeedback('+10s');
+          }
+          return true;
+        case 'ArrowDown':
+          this._focusButton(this._currentBtnIdx >= 0 ? this._currentBtnIdx : 0); 
+          return true;
+        case 'ArrowUp':
+          return true; // Se queda en la barra
+        case 'Enter':
+        case ' ':
+          if (v) { if (v.paused) v.play().catch(()=>{}); else v.pause(); }
+          this.updatePlayState();
+          return true;
+      }
+      return true;
+    }
+
+    // NAVEGACIÓN POR LOS BOTONES INFERIORES
     switch (key) {
       case 'ArrowLeft': this._focusButton(Math.max(0, this._currentBtnIdx - 1)); return true;
       case 'ArrowRight': this._focusButton(Math.min(this._buttons.length - 1, this._currentBtnIdx + 1)); return true;
-      case 'ArrowUp': case 'ArrowDown': return true;
+      case 'ArrowUp': this._focusProgress(); return true; // Sube a la barra
+      case 'ArrowDown': return true;
       case 'Enter': case ' ': this._activateButton(this._currentBtnIdx); return true;
-    } return false;
+    } 
+    return false;
   }
+
   _activateButton(idx) {
     const v = document.getElementById('iptv-player');
     switch (idx) {
@@ -3303,7 +3525,12 @@ function _getQualityLabel() {
 function _tvBarInit() {
   if (tvBar) return; tvBar = new TVPlayerBar();
   const v = document.getElementById('iptv-player');
-  if (v) { v.addEventListener('play', () => tvBar?.updatePlayState()); v.addEventListener('pause', () => tvBar?.updatePlayState()); }
+  if (v) { 
+    v.addEventListener('play', () => tvBar?.updatePlayState()); 
+    v.addEventListener('pause', () => tvBar?.updatePlayState());
+    v.addEventListener('timeupdate', () => tvBar?.updateProgress());
+    v.addEventListener('durationchange', () => tvBar?.updateProgress());
+  }
   document.addEventListener('click', (e) => {
     if (!tvBar) return; const onBar = e.target.closest('#newTvBar');
     if (tvBar.qualityMenuOpen && !e.target.closest('#tvFsQualityMenu') && !e.target.closest('#barBtnQuality')) { tvBar._closeQualityMenu(); return; }
@@ -3530,7 +3757,7 @@ function _focusBackToBrowse() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initPlayer(); setupBackButton(); setPlayerLoader('idle', MSG_START);
+  initPlayer(); setupBackButton(); setPlayerLoader('idle');
   loadPluginsFromManifest().catch(() => {});
   window.addEventListener('online', () => {
     if (_wasOffline && _ctx) {
