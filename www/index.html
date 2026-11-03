@@ -810,6 +810,66 @@ body.fullscreen-active .loader-overlay { display:none !important; }
   0%, 100% { opacity: 1;   transform: scale(1);    box-shadow: 0 0 8px rgba(255,23,68,.7); }
   50%      { opacity: .55; transform: scale(.85);  box-shadow: 0 0 14px rgba(255,23,68,1); }
 }
+#newTvBar.is-vod .bar-live-dot {
+  background: #00b0ff;
+  box-shadow: 0 0 8px rgba(0,176,255,.7);
+  animation-name: barLivePulseBlue;
+}
+@keyframes barLivePulseBlue {
+  0%, 100% { opacity: 1;   transform: scale(1);    box-shadow: 0 0 8px rgba(0,176,255,.7); }
+  50%      { opacity: .55; transform: scale(.85);  box-shadow: 0 0 14px rgba(0,176,255,1); }
+}
+
+/* Barra de progreso (solo películas / series) */
+.bar-row-progress {
+  display: none;
+  align-items: center;
+  gap: clamp(8px, 1.4vmin, 14px);
+  padding: 0 4px;
+  pointer-events: none;
+}
+#newTvBar.is-vod .bar-row-progress { display: flex; }
+.bar-time {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(.55rem, .95vmin, .75rem);
+  font-weight: 700;
+  color: #fff;
+  min-width: clamp(46px, 6.5vmin, 68px);
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0,0,0,.7);
+  transition: color .15s ease;
+}
+.bar-progress-track {
+  position: relative;
+  flex: 1;
+  height: clamp(6px, .9vmin, 9px);
+  background: rgba(255,255,255,.25);
+  border-radius: 8px;
+  transition: height .15s ease, box-shadow .15s ease;
+}
+.bar-progress-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  background: var(--accent2);
+  border-radius: 8px;
+}
+.bar-progress-thumb {
+  position: absolute;
+  top: 50%; left: 0;
+  width: clamp(12px, 1.8vmin, 18px);
+  height: clamp(12px, 1.8vmin, 18px);
+  margin-left: calc(clamp(12px, 1.8vmin, 18px) / -2);
+  transform: translateY(-50%);
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(0,0,0,.6);
+}
+.bar-row-progress.focused .bar-progress-track {
+  height: clamp(9px, 1.4vmin, 14px);
+  box-shadow: 0 0 0 3px rgba(0,176,255,.35), 0 0 16px rgba(0,176,255,.5);
+}
+.bar-row-progress.focused .bar-time { color: var(--accent2); }
 
 #tvFsQualityMenu {
   position: absolute;
@@ -2426,9 +2486,9 @@ html.ss-boot .loader-overlay { display: none !important; }
     <div class="us-card us-legal">
       <div class="us-card-title">Aviso legal</div>
       <div class="us-text">
-        <p>Esta es únicamente una plataforma de streaming no oficial, enfocada en fans de deportes.</p>
-        <p>Todo el contenido se basa en materiales de dominio público alojados en la web, y todos los derechos corresponden a sus autores y plataformas originales.</p>
-        <p>SPORTSTREAM no es propietario, no aloja, no retransmite, no anuncia ni promociona, de ninguna manera, los canales y eventos.</p>
+        <p>Esta es únicamente una plataforma de streaming no oficial, enfocada en transmisióes de la web.</p>
+        <p>Todo el contenido se basa en materiales de dominio público alojados en la internet, y todos los derechos corresponden a sus autores y plataformas originales.</p>
+        <p>SPORTSTREAM no es propietario, no aloja, no retransmite, no anuncia ni promociona, de ninguna manera, los canales, películas,series y eventos.</p>
       </div>
     </div>
     <div class="us-card us-account">
@@ -2462,7 +2522,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   <div class="us-card us-about">
     <div class="us-card-title">¿Qué es SPORTSTREAM?</div>
     <div class="us-text">
-      <p>SportStream es una plataforma referente para mirar canales y eventos deportivos en vivo por internet, totalmente gratis. Agrupamos en un mismo sitio las mejores emisiones deportivas y señales de internet, facilitándote disfrutar sin pausas y con gran estabilidad.</p>
+      <p>SportStream es una plataforma referente para mirar canales, películas ,series y eventos deportivos en vivo por internet, totalmente gratis. Agrupamos en un mismo sitio las mejores emisiones deportivas y señales de internet, facilitándote disfrutar sin pausas y con gran estabilidad.</p>
       <p>Nuestro objetivo es brindarte acceso inmediato a canales en línea gratis de internet en alta definición (HD), mediante una plataforma que asegura una transmisión estable, sin requerir membresías de pago y con múltiples enlaces.</p>
       <p class="us-q">¿Es gratis ver los canales y eventos por SPORTSTREAM?</p>
       <p>Sí, ver el contenido es totalmente gratuito. Puedes disfrutar de todos los canales en vivo y eventos deportivos por internet las 24 horas sin pagar suscripciones.</p>
@@ -2504,8 +2564,8 @@ html.ss-boot .loader-overlay { display: none !important; }
         <rect x="2.5" y="6" width="19" height="13" rx="2.5"/>
         <path d="M8 21.5h8"/>
       </svg>
-      <div class="ss-offline-title">Canal fuera de servicio</div>
-      <div class="ss-offline-sub">No se pudo conectar, seleccione otro canal.</div>
+      <div class="ss-offline-title">Contenido fuera de servicio</div>
+      <div class="ss-offline-sub">No se pudo conectar, seleccione otro.</div>
     </div>
     <div class="ss-reconnect" id="reconnectOverlay">
       <div class="rc-spin"></div>
@@ -2525,7 +2585,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   </div>
   <div id="nowPlayingInfo">
     <div class="np-row"><span class="np-lbl">Categoría:</span><span id="npCat"></span></div>
-    <div class="np-row"><span class="np-lbl">Canal:</span><span id="npName"></span></div>
+    <div class="np-row"><span class="np-lbl">Reproduciendo:</span><span id="npName"></span></div>
   </div>
 </div>
 
@@ -5828,7 +5888,24 @@ let vodSearchSeq        = 0;
 let vodSearchTimer      = null;
 let vodSearchWantFocus  = false;
 let vodSearchCache      = new Map();
-const VOD_MAX_ITEMS     = 150;
+const VOD_MAX_ITEMS     = 60;
+
+/* ── Caché persistente del catálogo (localStorage) ── */
+const VOD_CACHE_PREFIX  = 'ss_vod_cat_v1_';
+const VOD_CACHE_MANIFEST = 'ss_vod_manifest_v1';
+const VOD_CACHE_TTL_MS  = 12 * 60 * 60 * 1000;
+function _vodCacheRead(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (!o || !o.t || Date.now() - o.t > VOD_CACHE_TTL_MS) return null;
+    return o;
+  } catch (_) { return null; }
+}
+function _vodCacheWrite(key, obj) {
+  try { obj.t = Date.now(); localStorage.setItem(key, JSON.stringify(obj)); } catch (_) {}
+}
 
 /* ── Estado de servidores / embeds ── */
 let _vodEmbedState  = null;
@@ -5862,10 +5939,17 @@ async function vodLoadCatalog() {
   grid.innerHTML = '<div class="vod-grid-msg">Cargando catálogo…</div>';
 
   try {
-    const manifest = await vodFetchJSON(VOD_CATALOG_ADDON + '/manifest.json');
-    const cats = (manifest.catalogs || [])
-      .filter(c => c && (c.type === 'movie' || c.type === 'series'))
-      .slice();
+    let cats = null;
+    const cachedManifest = _vodCacheRead(VOD_CACHE_MANIFEST);
+    if (cachedManifest && Array.isArray(cachedManifest.cats) && cachedManifest.cats.length) {
+      cats = cachedManifest.cats;
+    } else {
+      const manifest = await vodFetchJSON(VOD_CATALOG_ADDON + '/manifest.json');
+      cats = (manifest.catalogs || [])
+        .filter(c => c && (c.type === 'movie' || c.type === 'series'))
+        .slice();
+      if (cats.length) _vodCacheWrite(VOD_CACHE_MANIFEST, { cats });
+    }
     if (!cats.length) throw new Error('Sin catálogos disponibles');
 
     vodCategories = cats;
@@ -5915,6 +5999,19 @@ async function vodLoadCategory(cat) {
     vodCheckFill();
     return;
   }
+  const cached = _vodCacheRead(VOD_CACHE_PREFIX + cat.id);
+  if (cached && Array.isArray(cached.metas) && cached.metas.length) {
+    const cm = cached.metas.slice(0, VOD_MAX_ITEMS);
+    vodMoviesByCat[cat.id] = cm;
+    vodCatState[cat.id] = { skip: cached.skip || cm.length, done: !!cached.done || cm.length >= VOD_MAX_ITEMS, loading: false, wait: 0 };
+    cm.forEach(m => { if (m.id) vodMoviesById[m.id] = m; });
+    if (vodCurrentCatObj === cat && !vodSearchMode) {
+      vodRenderPosters(cm);
+      vodGridFooter();
+      vodCheckFill();
+    }
+    return;
+  }
   grid.innerHTML = '<div class="vod-grid-msg">Cargando contenido…</div>';
 
   try {
@@ -5924,6 +6021,7 @@ async function vodLoadCategory(cat) {
     vodMoviesByCat[cat.id] = metas;
     vodCatState[cat.id] = { skip: raw.length, done: !raw.length || metas.length >= VOD_MAX_ITEMS, loading: false, wait: 0 };
     metas.forEach(m => { if (m.id) vodMoviesById[m.id] = m; });
+    if (metas.length) _vodCacheWrite(VOD_CACHE_PREFIX + cat.id, { metas, skip: raw.length, done: vodCatState[cat.id].done });
     if (vodCurrentCatObj === cat && !vodSearchMode) {
       vodRenderPosters(metas);
       vodGridFooter();
@@ -5961,6 +6059,7 @@ async function vodLoadMore() {
     }
     arr.push(...fresh);
     if (arr.length >= VOD_MAX_ITEMS) st.done = true;
+    if (fresh.length) _vodCacheWrite(VOD_CACHE_PREFIX + cat.id, { metas: arr, skip: st.skip, done: st.done });
     if (vodCurrentCatObj === cat && !vodSearchMode) vodAppendPosters(fresh);
   } catch (e) {
     console.error('[VOD Catalog] más', e);
@@ -6676,6 +6775,21 @@ function vodHandleKey(e) {
   return _vodGridKey(e);
 }
 
+/* Enfoca un elemento de la barra de categorías y lo centra (scroll horizontal) */
+function vodFocusInBar(el) {
+  if (!el) return;
+  try { el.focus({ preventScroll: true }); } catch(_) {}
+  const bar = document.getElementById('vodCatBar');
+  if (!bar) return;
+  const r = el.getBoundingClientRect(), c = bar.getBoundingClientRect();
+  const left = bar.scrollLeft + (r.left - c.left) - (c.width - r.width) / 2;
+  try { bar.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); } catch(_) { bar.scrollLeft = Math.max(0, left); }
+}
+function vodActiveCat() {
+  return document.querySelector('#vodCatBar .pcat-btn[data-cat].active') ||
+         document.querySelector('#vodCatBar .pcat-btn[data-cat]');
+}
+
 function _vodGridKey(e) {
   const focused = document.activeElement;
   const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
@@ -6683,7 +6797,7 @@ function _vodGridKey(e) {
   // Botón buscar de VOD
   if (focused?.classList.contains('vod-search-btn')) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); return true; }
-    if (e.key === 'ArrowRight') { e.preventDefault(); const firstCat = document.querySelector('#vodCatBar .pcat-btn[data-cat]'); if (firstCat) firstCat.focus({ preventScroll: true }); return true; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); const firstCat = document.querySelector('#vodCatBar .pcat-btn[data-cat]'); if (firstCat) vodFocusInBar(firstCat); return true; }
     if (e.key === 'ArrowDown') { e.preventDefault(); const first = document.querySelector('#vodPosterGrid .vod-poster-card'); if (first) { first.focus({ preventScroll: true }); first.scrollIntoView({ block: 'nearest' }); } return true; }
     if (e.key === 'ArrowUp') { e.preventDefault(); const nav = document.getElementById('navPeliculas'); if (nav) nav.focus({ preventScroll: true }); return true; }
     if (e.key === 'ArrowLeft') { e.preventDefault(); return true; }
@@ -6695,8 +6809,8 @@ function _vodGridKey(e) {
     const cats = Array.from(document.querySelectorAll('#vodCatBar .pcat-btn[data-cat]'));
     const idx = cats.indexOf(focused);
     switch (e.key) {
-      case 'ArrowRight': e.preventDefault(); if (cats[idx + 1]) cats[idx + 1].focus({ preventScroll: true }); else document.getElementById('vodSearchBtn')?.focus({ preventScroll: true }); return true;
-      case 'ArrowLeft': e.preventDefault(); if (idx > 0) cats[idx - 1].focus({ preventScroll: true }); else document.getElementById('vodSearchBtn')?.focus({ preventScroll: true }); return true;
+      case 'ArrowRight': e.preventDefault(); if (cats[idx + 1]) vodFocusInBar(cats[idx + 1]); else vodFocusInBar(document.getElementById('vodSearchBtn')); return true;
+      case 'ArrowLeft': e.preventDefault(); if (idx > 0) vodFocusInBar(cats[idx - 1]); else vodFocusInBar(document.getElementById('vodSearchBtn')); return true;
       case 'ArrowDown': e.preventDefault(); { const first = document.querySelector('#vodPosterGrid .vod-poster-card'); if (first) { first.focus({ preventScroll: true }); first.scrollIntoView({ block: 'nearest' }); } return true; }
       case 'ArrowUp': e.preventDefault(); { const nav = document.getElementById('navPeliculas'); if (nav) nav.focus({ preventScroll: true }); return true; }
       case 'Enter': case ' ': e.preventDefault(); focused.click(); return true;
@@ -6716,7 +6830,7 @@ function _vodGridKey(e) {
       case 'ArrowRight': e.preventDefault(); if ((idx + 1) % cols !== 0 && idx + 1 < cards.length) next(idx + 1); else document.getElementById('playerContainerInline')?.focus({ preventScroll: true }); return true;
       case 'ArrowLeft': e.preventDefault(); if (idx % cols !== 0) next(idx - 1); return true;
       case 'ArrowDown': e.preventDefault(); next(Math.min(idx + cols, cards.length - 1)); return true;
-      case 'ArrowUp': e.preventDefault(); if (idx < cols) { document.getElementById('navPeliculas')?.focus({ preventScroll: true }); } else next(Math.max(idx - cols, 0)); return true;
+      case 'ArrowUp': e.preventDefault(); if (idx < cols) { const cat = vodActiveCat(); if (cat) vodFocusInBar(cat); else document.getElementById('navPeliculas')?.focus({ preventScroll: true }); } else next(Math.max(idx - cols, 0)); return true;
       case 'Enter': case ' ': e.preventDefault(); focused.click(); return true;
     }
     return false;
@@ -6841,6 +6955,9 @@ function _vodSourcesKey(e) {
 /* ── Hook del keydown global ── */
 (function vodInstallKeyHandler() {
   document.addEventListener('keydown', (e) => {
+    // En pantalla completa las teclas son de la barra del reproductor
+    if (document.body.classList.contains('fullscreen-active') ||
+        document.body.classList.contains('fs-pending')) return;
     // Solo cuando la sección activa es 'peliculas'
     if (typeof activeSection !== 'undefined' && activeSection === 'peliculas') {
       if (typeof vodHandleKey === 'function' && vodHandleKey(e)) {
@@ -7426,7 +7543,17 @@ class TVPlayerBar {
 
     const live = document.createElement('div');
     live.className = 'bar-live-indicator';
-    live.innerHTML = '<span class="bar-live-dot"></span><span>EN VIVO</span>';
+    live.innerHTML = '<span class="bar-live-dot"></span><span id="barLiveLbl">EN VIVO</span>';
+
+    const rowProgress = document.createElement('div');
+    rowProgress.className = 'bar-row-progress';
+    rowProgress.innerHTML =
+      '<span class="bar-time" id="barTimeCur">0:00</span>' +
+      '<div class="bar-progress-track"><div class="bar-progress-fill" id="barProgFill"></div><div class="bar-progress-thumb" id="barProgThumb"></div></div>' +
+      '<span class="bar-time" id="barTimeDur">--:--</span>';
+    this._progRow = rowProgress;
+    this._row = 'controls';
+    this._seekTarget = null;
 
     rowControls.appendChild(playBtn);
     rowControls.appendChild(aspectBtn);
@@ -7437,6 +7564,7 @@ class TVPlayerBar {
     const main = document.createElement('div');
     main.className = 'bar-main';
     main.appendChild(rowTitle);
+    main.appendChild(rowProgress);
     main.appendChild(rowControls);
 
     bar.appendChild(logoBox);
@@ -7477,11 +7605,67 @@ class TVPlayerBar {
     this._visible = true;
     this._fitLogo();
     requestAnimationFrame(() => this._fitLogo());
+    this._applyMode();
     this.updatePlayState();
     this.updateQualityLabel();
     this.updateFavState();
+    this.updateProgress();
     this._focusButton(0);
     this._resetTimer();
+  }
+
+  _isVod() { return currentMode === 'movie'; }
+
+  _applyMode() {
+    const vod = this._isVod();
+    this._barEl.classList.toggle('is-vod', vod);
+    const lbl = document.getElementById('barLiveLbl');
+    if (lbl) lbl.textContent = vod ? 'VIDEO' : 'EN VIVO';
+    this._fitLogo();
+    requestAnimationFrame(() => this._fitLogo());
+  }
+
+  _fmtTime(s) {
+    if (!isFinite(s) || s < 0) return '--:--';
+    s = Math.floor(s);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    const mm = (h > 0 && m < 10 ? '0' : '') + m, ss = (sec < 10 ? '0' : '') + sec;
+    return h > 0 ? h + ':' + mm + ':' + ss : m + ':' + ss;
+  }
+
+  updateProgress(forceTime) {
+    if (!this._isVod() || !this._barEl) return;
+    const v = document.getElementById('iptv-player');
+    if (!v) return;
+    const dur = v.duration;
+    const t = (typeof forceTime === 'number') ? forceTime : (v.currentTime || 0);
+    const hasDur = isFinite(dur) && dur > 0;
+    const pct = hasDur ? Math.max(0, Math.min(100, (t / dur) * 100)) : 0;
+    const cur = document.getElementById('barTimeCur');
+    const dd  = document.getElementById('barTimeDur');
+    const fill = document.getElementById('barProgFill');
+    const thumb = document.getElementById('barProgThumb');
+    if (cur) cur.textContent = this._fmtTime(t);
+    if (dd)  dd.textContent  = hasDur ? this._fmtTime(dur) : '--:--';
+    if (fill) fill.style.width = pct + '%';
+    if (thumb) thumb.style.left = pct + '%';
+  }
+
+  _focusProgress() {
+    if (!this._isVod()) return;
+    this._clearAllFocus();
+    this._row = 'progress';
+    this._progRow.classList.add('focused');
+  }
+
+  _seek(delta) {
+    const v = document.getElementById('iptv-player');
+    if (!v || !isFinite(v.duration) || v.duration <= 0) return;
+    const base = (v.seeking && this._seekTarget != null) ? this._seekTarget : (v.currentTime || 0);
+    const t = Math.max(0, Math.min(v.duration - 0.5, base + delta));
+    this._seekTarget = t;
+    try { v.currentTime = t; } catch(_) {}
+    this.updateProgress(t);
   }
 
   hide() {
@@ -7494,10 +7678,12 @@ class TVPlayerBar {
 
   _clearAllFocus() {
     this._buttons.forEach(b => b.classList.remove('focused'));
+    this._progRow?.classList.remove('focused');
   }
   _focusButton(idx) {
     if (idx < 0 || idx >= this._buttons.length) return;
     this._clearAllFocus();
+    this._row = 'controls';
     this._currentBtnIdx = idx;
     this._buttons[idx].classList.add('focused');
   }
@@ -7636,6 +7822,19 @@ class TVPlayerBar {
       return true;
     }
 
+    if (this._row === 'progress') {
+      switch (key) {
+        case 'ArrowLeft':  this._seek(-10); return true;
+        case 'ArrowRight': this._seek(10);  return true;
+        case 'ArrowDown':  this._focusButton(this._currentBtnIdx); return true;
+        case 'ArrowUp':
+        case 'Enter':
+        case ' ':
+          return true;
+      }
+      return false;
+    }
+
     switch (key) {
       case 'ArrowLeft':
         this._focusButton(Math.max(0, this._currentBtnIdx - 1));
@@ -7644,6 +7843,8 @@ class TVPlayerBar {
         this._focusButton(Math.min(this._visibleCount() - 1, this._currentBtnIdx + 1));
         return true;
       case 'ArrowUp':
+        if (this._isVod()) this._focusProgress();
+        return true;
       case 'ArrowDown':
         return true;
       case 'Enter':
@@ -7719,6 +7920,8 @@ function _tvBarInit() {
   if (v) {
     v.addEventListener('play',  () => tvBar?.updatePlayState());
     v.addEventListener('pause', () => tvBar?.updatePlayState());
+    ['timeupdate', 'durationchange', 'loadedmetadata', 'seeked'].forEach(ev =>
+      v.addEventListener(ev, () => { if (tvBar?.visible) tvBar.updateProgress(); }));
   }
 
   document.addEventListener('click', (e) => {
