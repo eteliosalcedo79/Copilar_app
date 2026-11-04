@@ -2731,6 +2731,8 @@ if (document.documentElement.classList.contains('ss-boot')) {
 <script src="hls.min.js"></script>
 <script src="mpegts.min.js"></script>
 <script src="crypto-js.min.js"></script>
+<script src="axios.min.js"></script>
+<script src="cheerio.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
@@ -5850,13 +5852,8 @@ const VOD_PROXY         = 'https://api.allorigins.win/raw?url=';
 const VOD_MANIFEST_URL = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/manifest.json';
 const VOD_REPO_BASE    = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/';
 
-const VOD_PLUGIN_WHITELIST = [
-  'embed69', 'sololatino', 'peliculasflix', 'cinecalidad', 'lamovie',
-  'allcalidad', 'areadocumental', 'cinehdplus', 'cuevana_unbuendato', 'documaniatv',
-  'doramasflix', 'doramasyt', 'gnula', 'henaojara', 'moviebox',
-  'pelisgo', 'pelisplus', 'plutotv', 'rcn', 'seriesflix',
-  'tioanime', 'vimeus', 'vitaminagg'
-];
+// La whitelist está vacía para que cargue TODOS los plugins del manifest
+const VOD_PLUGIN_WHITELIST = []; 
 
 let VOD_PLUGINS = [];
 let _vodPluginsPromise = null;
@@ -5878,9 +5875,13 @@ function vodLoadPluginsFromManifest() {
 
       for (const s of list) {
         if (!s || s.enabled === false) continue;
-        const idKey = _vodNormKey(s.id);
-        const nameKey = _vodNormKey(s.name);
-        if (!wanted.has(idKey) && !wanted.has(nameKey)) continue;
+        
+        // Si la whitelist no está vacía, filtramos. Si está vacía, cargamos todo.
+        if (wanted.size > 0) {
+          const idKey = _vodNormKey(s.id);
+          const nameKey = _vodNormKey(s.name);
+          if (!wanted.has(idKey) && !wanted.has(nameKey)) continue;
+        }
 
         let file = s.filename || s.file || s.path || '';
         if (!file) continue;
@@ -6626,13 +6627,24 @@ function vodEjecutarPlugin(plugin, meta, season, episode) {
           try { var r = await __f0(u, o); window.__log.push(m + ' ' + n + ' → ' + r.status); return r; }
           catch (e) { window.__log.push(m + ' ' + n + ' ✗ ' + ((e && e.message) || e)); throw e; }
         };
+        
+        // ESTO ES LO NUEVO PARA LOS PLUGINS QUE USAN __NATIVE_FETCH:
+        window.__native_fetch = window.fetch; 
+        window.__f0 = window.fetch;
+
         window.CryptoJS = window.parent.CryptoJS;
+        window.axios = window.parent.axios;
+        window.cheerio = window.parent.cheerio;
+
         var module = { exports: {} };
         var exports = module.exports;
         function require(nombre) {
           if (nombre === 'crypto-js') return window.parent.CryptoJS;
+          if (nombre === 'axios') return window.parent.axios;
+          if (nombre === 'cheerio' || nombre === 'cheerio-without-node-native') return window.parent.cheerio;
           throw new Error('require no soportado: ' + nombre);
         }
+        
         try {
           ${codigoJS}
           (async () => {
@@ -8129,4 +8141,4 @@ function fsHookHls(reused) {
 
 </script>
 </body>
-</html>
+</html>
