@@ -1007,7 +1007,7 @@ html, body {
   box-shadow: 0 4px 15px rgba(255,23,68,.4);
 }
 
-/* ══════════════════ EXIT MODAL ══════════════════ */
+/* ══════════════════ EXIT MODAL & SETTINGS MODAL ══════════════════ */
 .exit-modal-overlay {
   position: fixed; inset: 0;
   background: rgba(6,9,14,.93);
@@ -1072,6 +1072,14 @@ html, body {
   background: var(--red);
   box-shadow: 0 4px 15px rgba(255,23,68,.4);
 }
+
+/* Switch Toggles para Proveedores */
+.switch { position: relative; display: inline-block; width: 46px; height: 24px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 24px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--accent); }
+input:checked + .slider:before { transform: translateX(22px); }
 
 /* ══════════════════ FULLSCREEN / TV BAR ══════════════════ */
 body.fullscreen-active .main-area,
@@ -1371,6 +1379,9 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     <button class="category-btn search-btn" id="searchBtn" aria-label="Buscar" tabindex="0">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/></svg>
     </button>
+    <button class="category-btn" id="btnSettings" aria-label="Ajustes" tabindex="0" style="padding: 8px; font-size: 1.2rem;">
+      ⚙️
+    </button>
     <div class="search-box" id="searchBox">
       <input id="searchInput" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar película, serie, novela o anime…">
       <button class="search-clear" id="searchClose" aria-label="Cerrar búsqueda" tabindex="0">✕</button>
@@ -1476,6 +1487,20 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   </div>
 </div>
 
+<!-- ══════ SETTINGS MODAL (Proveedores) ══════ -->
+<div class="exit-modal-overlay" id="settingsModal">
+  <div class="exit-modal-card" style="max-width: 450px; width: 60%; height: 85vh; align-items: flex-start; padding: 20px; position: relative; background: var(--surface); border: 2px solid var(--accent); box-shadow: 0 0 30px rgba(0,204,68,0.2);">
+    <button onclick="closeSettings()" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--red); font-size: 1.5rem; cursor: pointer;">✕</button>
+    <h2 style="font-family: 'Orbitron', sans-serif; color: var(--accent); margin-bottom: 15px; font-size: 1.2rem;">Proveedores</h2>
+    
+    <!-- Lista de plugins -->
+    <div id="settingsPluginsList" style="flex: 1; width: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px; margin-top: 10px;">
+      <!-- Se llena dinámicamente con JS -->
+      <div style="text-align: center; color: var(--text-sub); padding: 20px;">Cargando proveedores…</div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════ EXIT MODAL ══════ -->
 <div class="exit-modal-overlay" id="exitModal">
   <div class="exit-modal-card">
@@ -1493,8 +1518,6 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 <script src="hls.min.js"></script>
 <script src="mpegts.min.js"></script>
 <script src="crypto-js.min.js"></script>
-<!-- NUEVO: AXIOS -->
-<script src="axios.min.js"></script>
 
 <script>
 /* ── Ocultar splash nativo de Capacitor (launchAutoHide: false) ── */
@@ -1525,11 +1548,11 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 const CATALOG_ADDON  = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22%2C%22region%22%3A%22CO%22%7D';
 const PROXY          = 'https://api.allorigins.win/raw?url=';
 
-/* ── CARGA DE PLUGINS DINÁMICA (SIN SATURAR EL WEBVIEW) ── */
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/manifest.json';
 const REPO_BASE    = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/';
 
-const PLUGIN_WHITELIST = [
+// Los 23 que dejamos por defecto la primera vez que abren la app
+const DEFAULT_ENABLED = [
   'embed69', 'sololatino', 'peliculasflix', 'cinecalidad', 'lamovie',
   'allcalidad', 'areadocumental', 'cinehdplus', 'cuevana_unbuendato', 'documaniatv',
   'doramasflix', 'doramasyt', 'gnula', 'henaojara', 'moviebox',
@@ -1537,13 +1560,15 @@ const PLUGIN_WHITELIST = [
   'tioanime', 'vimeus', 'vitaminagg'
 ];
 
-let PLUGINS = [];
+let allPlugins = []; // Todos los 53 plugins
+let activePlugins = new Set(); // Los que el usuario eligió
 let _pluginsLoadPromise = null;
 
 function _normKey(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 }
 
+// 1. Cargar todos los plugins del manifest
 function loadPluginsFromManifest() {
   if (_pluginsLoadPromise) return _pluginsLoadPromise;
   _pluginsLoadPromise = (async () => {
@@ -1552,43 +1577,86 @@ function loadPluginsFromManifest() {
       if (!res.ok) throw new Error('Manifest HTTP ' + res.status);
       const manifest = await res.json();
       const list = manifest.scrapers || manifest.providers || manifest.plugins || [];
-      const wanted = new Set(PLUGIN_WHITELIST);
-      const out = [], seen = new Set();
+      
+      allPlugins = [];
+      const seen = new Set();
 
       for (const s of list) {
         if (!s || s.enabled === false) continue;
-        const idKey = _normKey(s.id);
-        const nameKey = _normKey(s.name);
-        if (!wanted.has(idKey) && !wanted.has(nameKey)) continue;
-        
         let file = s.filename || s.file || s.path || '';
         if (!file) continue;
 
         let url = file;
         if (!url.startsWith('http')) {
           let cleanPath = url.replace(/^\/+/, '');
-          if (cleanPath.startsWith('providers/')) {
-            url = REPO_BASE + cleanPath;
-          } else {
-            url = REPO_BASE + 'providers/' + cleanPath;
-          }
+          url = cleanPath.startsWith('providers/') ? (REPO_BASE + cleanPath) : (REPO_BASE + 'providers/' + cleanPath);
         }
 
         if (seen.has(url)) continue;
         seen.add(url);
-        out.push({ nombre: s.name || s.id || url.split('/').pop(), url });
+        allPlugins.push({ 
+          id: _normKey(s.id || s.name), 
+          nombre: s.name || s.id || url.split('/').pop(), 
+          url 
+        });
       }
 
-      PLUGINS = out;
-      console.log('[Plugins] Cargados:', PLUGINS.length);
-      return PLUGINS;
+      // 2. Recuperar selección del usuario (localStorage)
+      const saved = localStorage.getItem('user_plugins');
+      if (saved) {
+        activePlugins = new Set(JSON.parse(saved));
+      } else {
+        // Si es la primera vez, activamos los 23 por defecto
+        activePlugins = new Set(DEFAULT_ENABLED);
+      }
+
+      console.log('[Plugins] Total:', allPlugins.length, '| Activos:', activePlugins.size);
+      return allPlugins;
     } catch (e) {
       console.error('[Plugins] Error manifest:', e);
-      PLUGINS = [];
-      return PLUGINS;
+      allPlugins = []; return [];
     }
   })();
   return _pluginsLoadPromise;
+}
+
+// 3. Funciones para el Modal de Ajustes
+async function openSettings() {
+  document.getElementById('settingsModal').classList.add('open');
+  const container = document.getElementById('settingsPluginsList');
+  container.innerHTML = '<div style="text-align:center; padding: 20px;">Cargando…</div>';
+  
+  await loadPluginsFromManifest();
+  container.innerHTML = '';
+
+  allPlugins.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
+    const isChecked = activePlugins.has(p.id) ? 'checked' : '';
+    const item = document.createElement('div');
+    // Estilos optimizados para que quepan más elementos en pantalla
+    item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);';
+    item.innerHTML = `
+      <div style="flex: 1; min-width: 0; text-align: left;">
+        <div style="font-weight: 700; color: #fff; font-size: 0.85rem;">${escapeHtml(p.nombre)}</div>
+        <div style="font-size: 0.65rem; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.url.split('/').pop())}</div>
+      </div>
+      <label class="switch" style="transform: scale(0.85); transform-origin: right center; margin-left: 10px;">
+        <input type="checkbox" data-id="${p.id}" ${isChecked} onchange="togglePlugin('${p.id}', this.checked)">
+        <span class="slider"></span>
+      </label>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+// 4. Guardar selección en el teléfono
+function togglePlugin(id, isChecked) {
+  if (isChecked) activePlugins.add(id);
+  else activePlugins.delete(id);
+  localStorage.setItem('user_plugins', JSON.stringify([...activePlugins]));
 }
 
 /* ⬇️ TIEMPOS ORIGINALES RESTAURADOS (No se tocan) ⬇️ */
@@ -1981,6 +2049,7 @@ function closeSearch() {
   const input = document.getElementById('searchInput');
   document.getElementById('searchBtn').addEventListener('click', openSearch);
   document.getElementById('searchClose').addEventListener('click', closeSearch);
+  document.getElementById('btnSettings').addEventListener('click', openSettings);
 
   input.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -2273,18 +2342,10 @@ function ejecutarPlugin(plugin, meta, season, episode) {
           catch (e) { window.__log.push(m + ' ' + n + ' ✗ ' + ((e && e.message) || e)); throw e; }
         };
         window.CryptoJS = window.parent.CryptoJS;
-        
-        /* --- NUEVO: INYECCIÓN DE AXIOS --- */
-        window.axios = window.parent.axios;
-        /* ---------------------------------- */
-
         var module = { exports: {} };
         var exports = module.exports;
         function require(nombre) {
           if (nombre === 'crypto-js') return window.parent.CryptoJS;
-          /* --- NUEVO: REQUIRED DE AXIOS --- */
-          if (nombre === 'axios') return window.parent.axios;
-          /* ---------------------------------- */
           throw new Error('require no soportado: ' + nombre);
         }
         try {
@@ -2317,21 +2378,24 @@ function ejecutarPlugin(plugin, meta, season, episode) {
 async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   await loadPluginsFromManifest();
 
-  if (!PLUGINS.length) {
+  // Filtramos solo los que el usuario encendió en los ajustes
+  const PLUGINS_TO_USE = allPlugins.filter(p => activePlugins.has(p.id));
+
+  if (!PLUGINS_TO_USE.length) {
     if (alActualizar) alActualizar([], 0);
     return [];
   }
 
   const vistos = new Set();
   const todos = [];
-  let pendientes = PLUGINS.length;
+  let pendientes = PLUGINS_TO_USE.length;
 
   const limit = 3; // Solo 3 peticiones a la vez
   let index = 0;
 
   const runNext = async () => {
-    if (index >= PLUGINS.length) return;
-    const plugin = PLUGINS[index++];
+    if (index >= PLUGINS_TO_USE.length) return;
+    const plugin = PLUGINS_TO_USE[index++];
     
     const res = await ejecutarPlugin(plugin, meta, season, episode);
     pendientes--;
@@ -3599,6 +3663,7 @@ function forceExitApp() {
 function handleBackAction() {
   if (_tvFsQualityOpen) { _tvFsQualityClose(); return; }
   if (document.getElementById('exitModal')?.classList.contains('open')) { hideExitModal(); return; }
+  if (document.getElementById('settingsModal')?.classList.contains('open')) { closeSettings(); return; }
   if (document.body.classList.contains('fullscreen-active') || document.fullscreenElement) {
     _wasFullscreen = false; if (_wasFullscreenTimer) { clearTimeout(_wasFullscreenTimer); _wasFullscreenTimer = null; }
     _exitFullscreen(); _handleExitFullscreen(); return;
@@ -3635,6 +3700,10 @@ function gridArrow(dir) {
 
 document.addEventListener('keydown', (e) => {
   if (e.target && e.target.id === 'searchInput') return;
+  if (document.getElementById('settingsModal')?.classList.contains('open')) {
+    if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); closeSettings(); }
+    return;
+  }
   if (document.getElementById('pmModal')?.classList.contains('open')) { pmHandleKey(e); return; }
   if (!document.body.classList.contains('fullscreen-active') && document.getElementById('sourcesModal')?.classList.contains('open')) {
     const items = Array.from(document.querySelectorAll('#sourcesList .src-item')); const cur = document.activeElement; const idx = items.indexOf(cur);
