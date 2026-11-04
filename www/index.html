@@ -500,6 +500,9 @@ html, body {
 }
 .src-tag.lang { background: rgba(0,176,255,.2); color: var(--accent2); }
 .src-tag.prov { background: rgba(245,197,24,.18); color: #f5c518; }
+/* NUEVO: Estilo para la etiqueta del servidor de alojamiento (Host) */
+.src-tag.domain { background: rgba(255, 255, 255, 0.12); color: #a0aec0; text-transform: capitalize; }
+
 .src-item:focus-visible .src-tag,
 .src-item.focused .src-tag { background: rgba(0,0,0,.35); color: #fff; }
 .src-item.is-selected { border-color: rgba(0,204,68,.6); }
@@ -2440,22 +2443,47 @@ function _srcLang(link) {
 }
 function _srcProv(link) { return String(link.__prov || link.provider || link.proveedor || ''); }
 
+/* NUEVA FUNCIÓN: Extrae el dominio del servidor de alojamiento */
+function _getDomain(url) {
+  if (!url) return '';
+  try {
+    const hostname = new URL(url).hostname;
+    let domain = hostname.replace(/^www\./, '').split('.')[0];
+    return domain.charAt(0).toUpperCase() + domain.slice(1);
+  } catch (e) {
+    return '';
+  }
+}
+
 function _srcAddItem(list, link, before) {
   const btn = document.createElement('button');
   btn.className = 'src-item';
   btn.tabIndex = 0;
   btn.dataset.url = link.url || '';
   if (_selectedEmbedUrl && link.url === _selectedEmbedUrl) btn.classList.add('is-selected');
-  const lang = _srcLang(link), prov = _srcProv(link);
+  
+  const lang = _srcLang(link);
+  const prov = _srcProv(link);
+  const host = _getDomain(link.url); // <-- Extrae el nombre del host
+
   btn.innerHTML = `
     <span class="src-ic">${PM_VIDEO_SVG}</span>
     <div class="src-info">
+      <!-- Línea 1: Título -->
       <div class="src-name">${escapeHtml(link.title || link.name || 'Servidor')}</div>
-      <div class="src-tags">
+      
+      <!-- Línea 2: Idioma y Calidad -->
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
         ${lang ? `<span class="src-tag lang">${escapeHtml(lang)}</span>` : ''}
-        ${prov ? `<span class="src-tag prov">${escapeHtml(prov)}</span>` : ''}
-        <span class="src-quality">${escapeHtml(link.quality || 'Auto')}</span>
+        <span class="src-quality" style="margin-top: 0;">Calidad: ${escapeHtml(link.quality || 'Auto')}</span>
       </div>
+      
+      <!-- Línea 3: Host y Proveedor -->
+      <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px;">
+        ${host ? `<span class="src-tag domain">${escapeHtml(host)}</span>` : ''}
+        ${prov ? `<span class="src-tag prov">${escapeHtml(prov)}</span>` : ''}
+      </div>
+      
     </div>
   `;
   btn.addEventListener('click', () => {
