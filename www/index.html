@@ -2071,6 +2071,27 @@ html.ss-boot .loader-overlay { display: none !important; }
   box-shadow: 0 0 0 3px rgba(0,176,255,.35), 0 0 18px rgba(0,176,255,.5);
 }
 
+.vod-btn-fav {
+  display: flex; align-items: center; justify-content: center;
+  width: clamp(42px, 5.2vh, 52px); height: clamp(42px, 5.2vh, 52px);
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all .2s ease;
+  outline: none;
+  padding: 0;
+}
+.vod-btn-fav svg { width: 55%; height: 55%; display: block; }
+.vod-btn-fav.fav-on { color: #ff3d6e; background: rgba(255,61,110,0.16); }
+.vod-btn-fav:focus-visible {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(0,176,255,.35), 0 0 18px rgba(0,176,255,.5);
+  transform: scale(1.08);
+}
+
 /* Temporadas dentro de detail-actions */
 .vod-seasons-bar {
   display: flex;
@@ -2470,6 +2491,7 @@ html.ss-boot .loader-overlay { display: none !important; }
           <button class="vod-btn-play" id="vodBtnPlayMain" onclick="vodOpenSources()">
             ▶ Reproducir
           </button>
+          <button class="vod-btn-fav" id="vodBtnFav" tabindex="0" aria-label="Agregar a favoritos" onclick="vodToggleFav()"></button>
           <div class="vod-seasons-bar" id="vodDetSeasonsBar"></div>
         </div>
 
@@ -2525,7 +2547,7 @@ html.ss-boot .loader-overlay { display: none !important; }
       <p>SportStream es una plataforma referente para mirar canales, películas ,series y eventos deportivos en vivo por internet, totalmente gratis. Agrupamos en un mismo sitio las mejores emisiones deportivas y señales de internet, facilitándote disfrutar sin pausas y con gran estabilidad.</p>
       <p>Nuestro objetivo es brindarte acceso inmediato a canales en línea gratis de internet en alta definición (HD), mediante una plataforma que asegura una transmisión estable, sin requerir membresías de pago y con múltiples enlaces.</p>
       <p class="us-q">¿Es gratis ver los canales y eventos por SPORTSTREAM?</p>
-      <p>Sí, ver el contenido es totalmente gratuito. Puedes disfrutar de todos los canales en vivo y eventos deportivos por internet las 24 horas sin pagar suscripciones.</p>
+      <p>Sí, ver el contenido es totalmente gratuito. Puedes disfrutar de todos los canales en vivo, películas ,series y eventos deportivos por internet las 24 horas sin pagar suscripciones.</p>
     </div>
   </div>
 </div>
@@ -2859,6 +2881,11 @@ let currentMovie   = null;
 let currentSeason  = null;
 let currentEpisode = null;
 let seriesEpisodesData = [];
+/* Lo que REALMENTE se está reproduciendo (independiente del detalle que se esté mirando) */
+let playingMovie   = null;
+let playingSeason  = null;
+let playingEpisode = null;
+let vodDetailCardId = null;   // póster desde el que se abrió el detalle
 
 /* ══════════ Favoritos ══════════ */
 const FAV_CAT = 'Favoritos';
@@ -3210,9 +3237,9 @@ function _handleEnterFullscreen() {
 
   let nameToShow = '';
   let logoToShow = '';
-  if (currentMode === 'movie' && currentMovie) {
-    nameToShow = currentMovie.name || '—';
-    logoToShow = currentMovie.logo || '';
+  if (currentMode === 'movie' && playingMovie) {
+    nameToShow = playingMovie.name || '—';
+    logoToShow = playingMovie.logo || '';
   } else if (currentMode === 'event' && currentEvent) {
     nameToShow = currentEvent.match || currentEvent.title || '—';
   } else if (currentChannel) {
@@ -3258,14 +3285,15 @@ function _restoreFocusAfterFullscreen() {
       const dv = document.getElementById('vodDetail');
       if (dv && dv.classList.contains('open')) {
         if (currentMovie?.type === 'series') {
-          target = (currentEpisode != null && document.querySelector(`#vodEpisodesList .vod-episode-card[data-ep="${currentEpisode}"]`))
+          const sameSerie = playingMovie && playingMovie.id === currentMovie.id;
+          target = (sameSerie && playingEpisode != null && document.querySelector(`#vodEpisodesList .vod-episode-card[data-season="${playingSeason}"][data-ep="${playingEpisode}"]`))
                 || document.querySelector('#vodEpisodesList .vod-episode-card')
                 || document.querySelector('.vod-season-btn.active');
         } else {
           target = document.getElementById('vodBtnPlayMain');
         }
-      } else if (currentMovie?.id) {
-        target = document.querySelector(`.vod-poster-card[data-id="${CSS.escape(currentMovie.id)}"]`);
+      } else if (playingMovie?.id) {
+        target = document.querySelector(`.vod-poster-card[data-id="${CSS.escape(playingMovie.id)}"]`);
       }
       if (!target) target = document.querySelector('.vod-poster-card');
       if (!target) target = document.querySelector('.pcat-btn[data-cat]');
@@ -3697,11 +3725,11 @@ function _updateNowPlayingInfo() {
   const box = document.getElementById('nowPlayingInfo');
   if (!box) return;
   let cat = '', name = '';
-  if (currentMode === 'movie' && currentMovie) {
-    cat = currentMovie.type === 'series' ? 'Serie' : 'Película';
-    name = currentMovie.name || '';
-    if (currentMovie.type === 'series' && currentSeason && currentEpisode) {
-      name += '  ·  T' + currentSeason + ' E' + currentEpisode;
+  if (currentMode === 'movie' && playingMovie) {
+    cat = playingMovie.type === 'series' ? 'Serie' : 'Película';
+    name = playingMovie.name || '';
+    if (playingMovie.type === 'series' && playingSeason && playingEpisode) {
+      name += '  ·  T' + playingSeason + ' E' + playingEpisode;
     }
   } else if (currentMode === 'event' && currentEvent) {
     cat  = 'Eventos';
@@ -3726,10 +3754,13 @@ function _applyNowPlayingUi(ctx) {
     currentMovie   = ctx.movie || currentMovie;
     currentSeason  = (ctx.season  != null) ? ctx.season  : null;
     currentEpisode = (ctx.episode != null) ? ctx.episode : null;
+    playingMovie   = ctx.movie || playingMovie;
+    playingSeason  = (ctx.season  != null) ? ctx.season  : null;
+    playingEpisode = (ctx.episode != null) ? ctx.episode : null;
     currentChannel = null;
     currentEvent   = null;
-    if (currentMovie?.id) {
-      document.querySelector(`.vod-poster-card[data-id="${CSS.escape(currentMovie.id)}"]`)?.classList.add('now-playing');
+    if (playingMovie?.id) {
+      document.querySelector(`.vod-poster-card[data-id="${CSS.escape(playingMovie.id)}"]`)?.classList.add('now-playing');
     }
   } else if (ctx.kind === 'event') {
     currentMode    = 'event';
@@ -3738,6 +3769,7 @@ function _applyNowPlayingUi(ctx) {
     currentMovie   = null;
     currentSeason  = null;
     currentEpisode = null;
+    playingMovie = null; playingSeason = null; playingEpisode = null;
     const idx = events.indexOf(ctx.ev);
     if (idx >= 0) {
       const evItem = document.querySelector(`.event-item[data-idx="${idx}"]`);
@@ -3757,6 +3789,7 @@ function _applyNowPlayingUi(ctx) {
     currentMovie   = null;
     currentSeason  = null;
     currentEpisode = null;
+    playingMovie = null; playingSeason = null; playingEpisode = null;
     try { localStorage.setItem('lastChannel', ctx.ch.url); } catch(_) {}
     document.querySelector(`#channelsList .channel-item[data-url="${CSS.escape(ctx.ch.url)}"]`)?.classList.add('active');
     lastChannelByCat[ctx.ch.category] = ctx.ch.url;
@@ -4650,6 +4683,7 @@ function _forceLogout(reason) {
   currentMovie    = null;
   currentSeason   = null;
   currentEpisode  = null;
+  playingMovie = null; playingSeason = null; playingEpisode = null;
   channelsData    = [];
   categories      = [];
   stopConfigSync();
@@ -5727,6 +5761,7 @@ function closeEmbedPlayer() {
   if (currentMode === 'movie') {
     currentMode = null; _updateNowPlayingInfo();
     currentMovie = null; currentSeason = null; currentEpisode = null;
+    playingMovie = null; playingSeason = null; playingEpisode = null;
     document.querySelectorAll('.vod-poster-card').forEach(el => el.classList.remove('now-playing'));
   } else if (currentMode === 'event') {
     currentMode  = null; _updateNowPlayingInfo();
@@ -5792,6 +5827,7 @@ function handleLogout() {
   currentMovie    = null;
   currentSeason   = null;
   currentEpisode  = null;
+  playingMovie = null; playingSeason = null; playingEpisode = null;
   channelsData    = [];
   categories      = [];
   stopConfigSync();
@@ -5874,6 +5910,51 @@ function vodLoadPluginsFromManifest() {
     }
   })();
   return _vodPluginsPromise;
+}
+
+/* ══════════ Favoritos VOD/Series ══════════ */
+const VOD_FAV_KEY = 'ss_vod_favs_v1';
+const VOD_FAV_CAT = { id: '__fav__', name: 'Favoritos', type: 'fav' };
+function vodFavList() { const a = _lsGet(VOD_FAV_KEY); return Array.isArray(a) ? a.filter(m => m && m.id) : []; }
+function vodIsFav(id) { return !!id && vodFavList().some(m => m.id === id); }
+function vodHasFavs() { return vodFavList().length > 0; }
+function vodSlimMeta(m) {
+  const o = {};
+  ['id','type','name','poster','background','logo','description','genres','releaseInfo','year','runtime','imdbRating']
+    .forEach(k => { if (m[k] !== undefined && m[k] !== null) o[k] = m[k]; });
+  return o;
+}
+function vodUpdateFavBtn() {
+  const b = document.getElementById('vodBtnFav');
+  if (!b || !currentMovie) return;
+  const on = vodIsFav(currentMovie.id);
+  b.classList.toggle('fav-on', on);
+  b.innerHTML = on ? SVG_HEART_ON : SVG_HEART_OFF;
+  b.setAttribute('aria-label', on ? 'Quitar de favoritos' : 'Agregar a favoritos');
+}
+function vodToggleFav() {
+  const meta = currentMovie;
+  if (!meta || !meta.id) return;
+  let list = vodFavList();
+  const was = list.some(m => m.id === meta.id);
+  list = was ? list.filter(m => m.id !== meta.id) : list.concat([vodSlimMeta(meta)]);
+  _lsSet(VOD_FAV_KEY, list);
+  vodUpdateFavBtn();
+  vodRefreshFavUi();
+  showToast(was ? 'Quitado de favoritos' : 'Agregado a favoritos', 'info', 1800);
+}
+function vodRefreshFavUi() {
+  const viewingFav = vodCurrentCatObj && vodCurrentCatObj.id === VOD_FAV_CAT.id;
+  if (viewingFav && !vodHasFavs()) {
+    // se quitó el último favorito: la sección desaparece y se vuelve a la primera categoría
+    vodCurrentCatObj  = vodCategories[0] || null;
+    vodCurrentCatName = vodCurrentCatObj ? (vodCurrentCatObj.name || '') : '';
+    vodRenderCategories();
+    if (vodCurrentCatObj && !vodSearchMode) vodLoadCategory(vodCurrentCatObj);
+    return;
+  }
+  vodRenderCategories();
+  if (viewingFav && !vodSearchMode) vodRenderPosters(vodFavList(), 'Aún no tienes favoritos.');
 }
 
 /* ── Estado del catálogo VOD ── */
@@ -5968,14 +6049,15 @@ function vodRenderCategories() {
   const bar = document.getElementById('vodCatBar');
   if (!bar) return;
   bar.querySelectorAll('.pcat-btn[data-cat]').forEach(b => b.remove());
-  vodCategories.forEach(cat => {
+  const allCats = (vodHasFavs() ? [VOD_FAV_CAT] : []).concat(vodCategories);
+  allCats.forEach(cat => {
     const btn = document.createElement('button');
     btn.className = 'pcat-btn';
     btn.dataset.cat = cat.id;
     btn.dataset.catName = cat.name || '';
     btn.textContent = cat.name || (cat.type === 'series' ? 'Series' : 'Películas');
     btn.tabIndex = 0;
-    if (vodCurrentCatName === cat.name) btn.classList.add('active');
+    if (vodCurrentCatObj ? vodCurrentCatObj.id === cat.id : vodCurrentCatName === cat.name) btn.classList.add('active');
     btn.addEventListener('click', () => {
       bar.querySelectorAll('.pcat-btn[data-cat]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -5984,7 +6066,8 @@ function vodRenderCategories() {
     bar.appendChild(btn);
   });
   if (!vodCurrentCatName && vodCategories.length) {
-    bar.querySelector('.pcat-btn[data-cat]')?.classList.add('active');
+    const firstReal = bar.querySelector(`.pcat-btn[data-cat="${CSS.escape(vodCategories[0].id)}"]`);
+    (firstReal || bar.querySelector('.pcat-btn[data-cat]'))?.classList.add('active');
   }
 }
 
@@ -5992,6 +6075,13 @@ async function vodLoadCategory(cat) {
   vodCurrentCatObj = cat;
   vodCurrentCatName = cat.name || '';
   const grid = document.getElementById('vodPosterGrid');
+
+  if (cat.id === VOD_FAV_CAT.id) {
+    const favs = vodFavList();
+    favs.forEach(m => { vodMoviesById[m.id] = m; });
+    if (!vodSearchMode) { vodRenderPosters(favs, 'Aún no tienes favoritos.'); vodGridFooter(); }
+    return;
+  }
 
   if (vodMoviesByCat[cat.id]) {
     vodRenderPosters(vodMoviesByCat[cat.id]);
@@ -6097,7 +6187,7 @@ function vodMakeCard(meta) {
   card.className = 'vod-poster-card';
   card.tabIndex = 0;
   card.dataset.id = meta.id || '';
-  if (currentMovie?.id === meta.id) card.classList.add('now-playing');
+  if (playingMovie?.id === meta.id) card.classList.add('now-playing');
   card.innerHTML = `
     <div class="vod-poster-img-wrap">
       <img src="${vodEscapeHtml(meta.poster || '')}" alt="" loading="lazy"
@@ -6281,8 +6371,7 @@ function vodShowDetails(meta, cardEl) {
   currentMovie = meta;
   currentSeason = null;
   currentEpisode = null;
-  document.querySelectorAll('.vod-poster-card').forEach(c => c.classList.remove('now-playing'));
-  if (cardEl) cardEl.classList.add('now-playing');
+  vodDetailCardId = meta.id || null;   // solo para devolver el foco; NO marca el póster como activo
 
   const dv = document.getElementById('vodDetail');
   dv.classList.add('open');
@@ -6318,6 +6407,15 @@ function vodShowDetails(meta, cardEl) {
   document.getElementById('vodDetSeasonsBar').innerHTML = '';
   document.getElementById('vodEpisodesList').innerHTML = '';
 
+  const _actions = document.getElementById('vodDetailActions');
+  const _favBtn  = document.getElementById('vodBtnFav');
+  const _playBtn = document.getElementById('vodBtnPlayMain');
+  if (_actions && _favBtn && _playBtn) {
+    if (meta.type === 'series') _actions.insertBefore(_favBtn, _actions.firstChild);   // antes de "Temporada 1"
+    else _actions.insertBefore(_favBtn, _playBtn.nextSibling);                          // a la derecha de Reproducir
+  }
+  vodUpdateFavBtn();
+
   if (meta.type === 'series') {
     document.getElementById('vodBtnPlayMain').style.display = 'none';
     document.getElementById('vodInlineEpisodes').style.display = 'block';
@@ -6333,8 +6431,11 @@ function vodCloseDetails() {
   const dv = document.getElementById('vodDetail');
   dv.classList.remove('open');
   dv.style.backgroundImage = '';
-  const playing = document.querySelector('.vod-poster-card.now-playing');
-  if (playing) playing.focus({ preventScroll: true });
+  let back = null;
+  if (vodDetailCardId) back = document.querySelector(`#vodPosterGrid .vod-poster-card[data-id="${CSS.escape(vodDetailCardId)}"]`);
+  if (!back) back = document.querySelector('#vodPosterGrid .vod-poster-card');
+  if (!back && typeof vodActiveCat === 'function') back = vodActiveCat();
+  if (back) back.focus({ preventScroll: true });
 }
 
 async function vodLoadInlineEpisodes(meta) {
@@ -6747,6 +6848,10 @@ function vodPlayMovieSource(link) {
 
 /* ── Navegación por control remoto dentro de VOD ── */
 function vodHandleKey(e) {
+  // Modal de calidad (pmModal) o de salida abiertos: el handler global los maneja
+  if (document.getElementById('pmModal')?.classList.contains('open')) return false;
+  if (document.getElementById('exitModal')?.classList.contains('open')) return false;
+
   // Nav-btn enfocado: dejar que el handler global lo maneje
   if (document.activeElement?.classList.contains('nav-btn')) return false;
 
@@ -6762,12 +6867,40 @@ function vodHandleKey(e) {
 
   // 3. Input de búsqueda
   if (document.activeElement?.id === 'vodSearchInput') {
+    const inp = document.getElementById('vodSearchInput');
     if (e.key === 'ArrowDown') {
+      e.preventDefault();
       const first = document.querySelector('#vodPosterGrid .vod-poster-card');
-      if (first) { e.preventDefault(); document.getElementById('vodSearchInput').blur(); first.focus({ preventScroll: true }); }
+      if (first) { inp.blur(); first.focus({ preventScroll: true }); }
+      return true;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      inp.blur();
+      document.getElementById('navPeliculas')?.focus({ preventScroll: true });
+      return true;
+    }
+    if (e.key === 'ArrowLeft' && inp.selectionStart === 0 && inp.selectionEnd === 0) {
+      e.preventDefault(); inp.blur();
+      document.getElementById('vodSearchBtn')?.focus({ preventScroll: true });
+      return true;
+    }
+    if (e.key === 'ArrowRight' && inp.selectionStart === inp.value.length && inp.selectionEnd === inp.value.length) {
+      e.preventDefault(); inp.blur();
+      document.getElementById('vodSearchClose')?.focus({ preventScroll: true });
       return true;
     }
     if (e.key === 'Escape') { e.preventDefault(); vodCloseSearch(); return true; }
+    return false;
+  }
+
+  // Botón ✕ del buscador
+  if (document.activeElement?.id === 'vodSearchClose') {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); vodCloseSearch(); return true; }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('vodSearchInput')?.focus(); return true; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); const f = document.querySelector('#vodPosterGrid .vod-poster-card'); if (f) f.focus({ preventScroll: true }); return true; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); document.getElementById('navPeliculas')?.focus({ preventScroll: true }); return true; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); return true; }
     return false;
   }
 
@@ -6786,6 +6919,8 @@ function vodFocusInBar(el) {
   try { bar.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); } catch(_) { bar.scrollLeft = Math.max(0, left); }
 }
 function vodActiveCat() {
+  // En modo búsqueda las categorías están ocultas: el "punto de entrada" de la barra es la lupa
+  if (vodSearchMode) return document.getElementById('vodSearchBtn');
   return document.querySelector('#vodCatBar .pcat-btn[data-cat].active') ||
          document.querySelector('#vodCatBar .pcat-btn[data-cat]');
 }
@@ -6797,7 +6932,11 @@ function _vodGridKey(e) {
   // Botón buscar de VOD
   if (focused?.classList.contains('vod-search-btn')) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); return true; }
-    if (e.key === 'ArrowRight') { e.preventDefault(); const firstCat = document.querySelector('#vodCatBar .pcat-btn[data-cat]'); if (firstCat) vodFocusInBar(firstCat); return true; }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (vodSearchMode) { document.getElementById('vodSearchInput')?.focus(); return true; }
+      const firstCat = document.querySelector('#vodCatBar .pcat-btn[data-cat]'); if (firstCat) vodFocusInBar(firstCat); return true;
+    }
     if (e.key === 'ArrowDown') { e.preventDefault(); const first = document.querySelector('#vodPosterGrid .vod-poster-card'); if (first) { first.focus({ preventScroll: true }); first.scrollIntoView({ block: 'nearest' }); } return true; }
     if (e.key === 'ArrowUp') { e.preventDefault(); const nav = document.getElementById('navPeliculas'); if (nav) nav.focus({ preventScroll: true }); return true; }
     if (e.key === 'ArrowLeft') { e.preventDefault(); return true; }
@@ -6853,8 +6992,8 @@ function _vodGridKey(e) {
   // Foco nulo: primer elemento
   if (!focused || focused === document.body) {
     if (isArrow || e.key === 'Enter') {
-      const first = document.querySelector('#vodCatBar .pcat-btn[data-cat]') || document.querySelector('#vodPosterGrid .vod-poster-card');
-      if (first) { e.preventDefault(); first.focus({ preventScroll: true }); return true; }
+      const first = vodActiveCat() || document.querySelector('#vodPosterGrid .vod-poster-card');
+      if (first) { e.preventDefault(); vodFocusInBar(first); return true; }
     }
   }
 
@@ -6886,10 +7025,22 @@ function _vodDetailKey(e) {
     if (focused?.classList.contains('vod-episode-card')) {
       const idx = eps.indexOf(focused);
       switch (e.key) {
-        case 'ArrowRight': e.preventDefault(); if (eps[idx + 1]) focusH(eps[idx + 1], epList); else document.getElementById('playerContainerInline')?.focus({ preventScroll: true }); return true;
+        case 'ArrowRight': e.preventDefault(); if (eps[idx + 1]) focusH(eps[idx + 1], epList); return true;
         case 'ArrowLeft': e.preventDefault(); if (eps[idx - 1]) focusH(eps[idx - 1], epList); return true;
         case 'ArrowUp': e.preventDefault(); activeSeasonBtn?.focus({ preventScroll: true }); return true;
         case 'ArrowDown': e.preventDefault(); return true;
+        case 'Enter': case ' ': e.preventDefault(); focused.click(); return true;
+      }
+      return false;
+    }
+
+    const favBtnS = document.getElementById('vodBtnFav');
+    if (focused === favBtnS) {
+      switch (e.key) {
+        case 'ArrowRight': e.preventDefault(); (activeSeasonBtn || seasonBtns[0])?.focus({ preventScroll: true }); return true;
+        case 'ArrowLeft': e.preventDefault(); return true;
+        case 'ArrowUp': e.preventDefault(); return true;
+        case 'ArrowDown': e.preventDefault(); if (eps[0]) focusH(eps[0], epList); return true;
         case 'Enter': case ' ': e.preventDefault(); focused.click(); return true;
       }
       return false;
@@ -6899,7 +7050,7 @@ function _vodDetailKey(e) {
       const idx = seasonBtns.indexOf(focused);
       switch (e.key) {
         case 'ArrowRight': e.preventDefault(); if (seasonBtns[idx + 1]) focusH(seasonBtns[idx + 1], sBar); return true;
-        case 'ArrowLeft': e.preventDefault(); if (seasonBtns[idx - 1]) focusH(seasonBtns[idx - 1], sBar); return true;
+        case 'ArrowLeft': e.preventDefault(); if (seasonBtns[idx - 1]) focusH(seasonBtns[idx - 1], sBar); else favBtnS?.focus({ preventScroll: true }); return true;
         case 'ArrowDown': e.preventDefault(); if (eps[0]) focusH(eps[0], epList); return true;
         case 'ArrowUp': e.preventDefault(); return true;
         case 'Enter': case ' ': e.preventDefault(); focused.click(); return true;
@@ -6915,10 +7066,18 @@ function _vodDetailKey(e) {
     return false;
   } else {
     const playBtn = document.getElementById('vodBtnPlayMain');
+    const favBtnM = document.getElementById('vodBtnFav');
     if (focused === playBtn) {
-      if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('playerContainerInline')?.focus({ preventScroll: true }); return true; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); favBtnM?.focus({ preventScroll: true }); return true; }
       if (isArrow) { e.preventDefault(); return true; }
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playBtn.click(); return true; }
+      return false;
+    }
+    if (focused === favBtnM) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); playBtn?.focus({ preventScroll: true }); return true; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('playerContainerInline')?.focus({ preventScroll: true }); return true; }
+      if (isArrow) { e.preventDefault(); return true; }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); favBtnM.click(); return true; }
       return false;
     }
     if (isArrow) { e.preventDefault(); playBtn?.focus({ preventScroll: true }); return true; }
@@ -6991,6 +7150,7 @@ function handleLogout() {
   currentMovie    = null;
   currentSeason   = null;
   currentEpisode  = null;
+  playingMovie = null; playingSeason = null; playingEpisode = null;
   channelsData    = [];
   categories      = [];
   stopConfigSync();
@@ -7136,8 +7296,8 @@ document.addEventListener('keydown', (e) => {
   if (focused?.classList.contains('nav-btn') && e.key === 'ArrowDown') {
     e.preventDefault();
     if (focused.id === 'navPeliculas') {
-      const firstCat = document.querySelector('#vodCatBar .pcat-btn[data-cat]');
-      if (firstCat) { firstCat.focus({ preventScroll: true }); return; }
+      const entry = (typeof vodActiveCat === 'function') ? vodActiveCat() : document.querySelector('#vodCatBar .pcat-btn[data-cat]');
+      if (entry) { (typeof vodFocusInBar === 'function') ? vodFocusInBar(entry) : entry.focus({ preventScroll: true }); return; }
       const firstCard = document.querySelector('#vodPosterGrid .vod-poster-card');
       if (firstCard) { firstCard.focus({ preventScroll: true }); return; }
     }
@@ -7969,4 +8129,4 @@ function fsHookHls(reused) {
 
 </script>
 </body>
-</html>
+</html>
