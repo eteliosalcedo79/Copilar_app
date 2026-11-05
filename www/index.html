@@ -408,7 +408,6 @@ html, body {
   box-shadow: 0 0 20px rgba(0,176,255,0.5);
 }
 
-/* Imagen de fondo ocupando toda la tarjeta */
 .ep-bg {
   position: absolute;
   inset: 0;
@@ -423,7 +422,6 @@ html, body {
   background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 45%, rgba(0,0,0,0.15) 100%);
 }
 
-/* Información DENTRO de la tarjeta, sobre la imagen */
 .ep-details {
   position: absolute;
   left: 0; right: 0; bottom: 0;
@@ -482,15 +480,12 @@ html, body {
   font-size: 0.65rem;
 }
 
-
-/* Temporadas a la altura de "Reproducir" */
 .detail-actions .seasons-bar {
   flex: 1 1 0; min-width: 0;
   border-bottom: none; margin: 0; padding: 8px 8px;
 }
 .detail-actions .seasons-bar:empty { display: none; }
 
-/* Modal de embeds: idioma + proveedor */
 .src-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
 .src-tags .src-quality { margin-top: 0; }
 .src-tag {
@@ -500,7 +495,6 @@ html, body {
 }
 .src-tag.lang { background: rgba(0,176,255,.2); color: var(--accent2); }
 .src-tag.prov { background: rgba(245,197,24,.18); color: #f5c518; }
-/* NUEVO: Estilo para la etiqueta del servidor de alojamiento (Host) */
 .src-tag.domain { background: rgba(255, 255, 255, 0.12); color: #a0aec0; text-transform: capitalize; }
 
 .src-item:focus-visible .src-tag,
@@ -1127,20 +1121,19 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   transform: translateY(0);
 }
 
-/* Ajustes para hacer los botones más pequeños y compactos */
 .bar-main {
   flex: 1 1 auto;
   min-width: 0;
   display: flex; flex-direction: column;
-  justify-content: flex-end; /* Agrupa todo hacia abajo */
-  gap: clamp(4px, 1vmin, 8px); /* Menos espacio entre título, barra y botones */
+  justify-content: flex-end;
+  gap: clamp(4px, 1vmin, 8px);
 }
 .bar-row-title {
   display: flex; align-items: center;
   line-height: 1;
   gap: clamp(6px, 1vmin, 10px);
   font-family: 'Rajdhani', sans-serif;
-  font-size: clamp(.75rem, 1.4vmin, .95rem); /* Título un poco más pequeño */
+  font-size: clamp(.75rem, 1.4vmin, .95rem);
   font-weight: 700;
   color: #fff;
   letter-spacing: .5px;
@@ -1173,7 +1166,7 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   border: 2px solid transparent;
   color: rgba(255,255,255,.92);
   cursor: pointer;
-  padding: clamp(4px, 0.8vmin, 8px); /* Botones más pequeños */
+  padding: clamp(4px, 0.8vmin, 8px);
   border-radius: 10px;
   outline: none;
   transition: all .15s ease;
@@ -1231,7 +1224,6 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   50%      { opacity: .55; transform: scale(.85); }
 }
 
-/* ══════════════════ BARRA DE PROGRESO (ESTILO TV) ══════════════════ */
 .bar-progress-container {
   display: none;
   align-items: center;
@@ -1241,8 +1233,6 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   padding: 0 clamp(10px, 2vw, 20px);
   box-sizing: border-box;
 }
-
-/* Textos de tiempo (00:00) */
 .bar-time {
   font-family: 'Rajdhani', sans-serif;
   font-size: clamp(0.8rem, 1.4vmin, 1rem);
@@ -1254,8 +1244,6 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   text-align: center;
   transition: color 0.2s ease;
 }
-
-/* Riel de la barra (Fondo gris oscuro) */
 .bar-progress-track {
   flex: 1;
   height: 8px;
@@ -1267,19 +1255,15 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   transition: all 0.2s ease;
   border: 2px solid transparent;
 }
-
-/* Relleno verde (Progreso) */
 .bar-progress-fill {
   height: 100%;
-  background: var(--accent); /* Tu verde #00cc44 */
+  background: var(--accent);
   border-radius: 4px;
   width: 0%;
   position: absolute;
   left: 0;
   top: 0;
 }
-
-/* La bolita blanca (Thumb) */
 .bar-progress-thumb {
   width: 16px;
   height: 16px;
@@ -1287,35 +1271,28 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   border-radius: 50%;
   position: absolute;
   top: 50%;
-  transform: translate(-50%, -50%) scale(0); /* Oculto por defecto */
+  transform: translate(-50%, -50%) scale(0);
   transition: transform 0.15s ease, box-shadow 0.2s ease;
   box-shadow: 0 2px 6px rgba(0,0,0,0.8);
   pointer-events: none;
   z-index: 2;
 }
-
-/* ══════ ESTADO ENFOCADO (Cuando usas el control remoto) ══════ */
 .bar-progress-track.focused {
   background: rgba(255, 255, 255, 0.25);
-  border-color: var(--accent); /* Borde verde */
-  box-shadow: 0 0 12px rgba(0, 204, 68, 0.4); /* Brillo verde tenue */
-  transform: scaleY(1.2); /* Un poco más gruesa */
-  margin: 0 8px; /* Evitar que se corte al engrosar */
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(0, 204, 68, 0.4);
+  transform: scaleY(1.2);
+  margin: 0 8px;
 }
-
-/* Los tiempos se iluminan cuando la barra tiene el foco */
 .bar-progress-container:has(.bar-progress-track.focused) .bar-time {
   color: #fff;
   text-shadow: 0 0 8px rgba(0, 204, 68, 0.8);
 }
-
-/* Al enfocar, la bolita aparece y brilla */
 .bar-progress-track.focused .bar-progress-thumb {
   transform: translate(-50%, -50%) scale(1);
   box-shadow: 0 0 10px #fff, 0 2px 8px rgba(0,0,0,0.8);
 }
 
-/* Toast */
 #ssToastBox {
   position: absolute;
   left: 50%; transform: translateX(-50%);
@@ -1430,7 +1407,6 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
       <div class="loader-bg"></div>
       <div class="plyr-loader-content">
         <div class="spin-anim"></div>
-        <!-- EL AVISO HA SIDO ELIMINADO POR COMPLETO DE AQUÍ -->
       </div>
     </div>
     <video id="iptv-player" playsinline poster="player_bg.webp"></video>
@@ -1544,7 +1520,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 </script>
 <script>
 /* ════════════════════════════════════════════════════════════════
-   PELÍCULAS Y SERIES · Test standalone
+   PELÍCULAS Y SERIES · Extractores Puros (Sin Iframe)
 ════════════════════════════════════════════════════════════════ */
 
 /* ── CONSTANTES ── */
@@ -1554,24 +1530,22 @@ const PROXY          = 'https://api.allorigins.win/raw?url=';
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/manifest.json';
 const REPO_BASE    = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/';
 
-// Los 23 que dejamos por defecto la primera vez que abren la app
 const DEFAULT_ENABLED = [
   'embed69', 'sololatino', 'peliculasflix', 'cinecalidad', 'lamovie',
   'allcalidad', 'areadocumental', 'cinehdplus', 'cuevana_unbuendato', 'documaniatv',
-  'doramasflix', 'doramasyt', 'gnula', 'henaojara', 'moviebox',
+  'doramasflix', 'doramasytv', 'gnula', 'henaojara', 'moviebox',
   'pelisgo', 'pelisplus', 'plutotv', 'rcn', 'seriesflix',
   'tioanime', 'vimeus', 'vitaminagg'
 ];
 
-let allPlugins = []; // Todos los 53 plugins
-let activePlugins = new Set(); // Los que el usuario eligió
+let allPlugins = [];
+let activePlugins = new Set();
 let _pluginsLoadPromise = null;
 
 function _normKey(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 }
 
-// 1. Cargar todos los plugins del manifest
 function loadPluginsFromManifest() {
   if (_pluginsLoadPromise) return _pluginsLoadPromise;
   _pluginsLoadPromise = (async () => {
@@ -1604,12 +1578,10 @@ function loadPluginsFromManifest() {
         });
       }
 
-      // 2. Recuperar selección del usuario (localStorage)
       const saved = localStorage.getItem('user_plugins');
       if (saved) {
         activePlugins = new Set(JSON.parse(saved));
       } else {
-        // Si es la primera vez, activamos los 23 por defecto
         activePlugins = new Set(DEFAULT_ENABLED);
       }
 
@@ -1623,7 +1595,6 @@ function loadPluginsFromManifest() {
   return _pluginsLoadPromise;
 }
 
-// 3. Funciones para el Modal de Ajustes
 async function openSettings() {
   document.getElementById('settingsModal').classList.add('open');
   const container = document.getElementById('settingsPluginsList');
@@ -1635,7 +1606,6 @@ async function openSettings() {
   allPlugins.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
     const isChecked = activePlugins.has(p.id) ? 'checked' : '';
     const item = document.createElement('div');
-    // Estilos optimizados para que quepan más elementos en pantalla
     item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);';
     item.innerHTML = `
       <div style="flex: 1; min-width: 0; text-align: left;">
@@ -1655,31 +1625,12 @@ function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
 }
 
-// 4. Guardar selección en el teléfono
 function togglePlugin(id, isChecked) {
   if (isChecked) activePlugins.add(id);
   else activePlugins.delete(id);
   localStorage.setItem('user_plugins', JSON.stringify([...activePlugins]));
 }
 
-/* ⬇️ TIEMPOS ORIGINALES RESTAURADOS (No se tocan) ⬇️ */
-const EMBED_TIMEOUT_MS       = 7500;
-const EMBED_LOAD_GRACE_MS    = 5000;
-const EMBED_MAX_TOTAL_MS     = 15000;
-/* Timeout por host (cada intento). Se busca por coincidencia en el hostname.
-   Rápidos: 7.5 s (se extiende hasta 15 s si el iframe carga). Lentos: 30 s. */
-const EMBED_SLOW_TIMEOUT_MS  = 30000;
-const EMBED_SLOW_TOTAL_MS    = 35000;
-const EMBED_SLOW_HOSTS = ['streamtape', 'nupload', 'ok.ru', 'kekl', 'mixdrop', 'yourupload', '2026', 'hqq', 'netu'];
-function _embedTimeouts(host) {
-  const h = String(host || '').toLowerCase();
-  if (EMBED_SLOW_HOSTS.some(k => h.includes(k))) return { timeout: EMBED_SLOW_TIMEOUT_MS, total: EMBED_SLOW_TOTAL_MS };
-  return { timeout: EMBED_TIMEOUT_MS, total: EMBED_MAX_TOTAL_MS };
-}
-const REOPEN_GUARD_MS        = 1500;
-const CLOSED_KEEP_MS         = 10000;
-const STALE_ORIGIN_MS        = 8000;
-const M3U8_INTERCEPT_DEBOUNCE_MS = 250;
 const BUF_SHOW_DELAY_MS      = 800;
 const HLS_VERIFY_MS          = 12000;
 const FLV_VERIFY_MS          = 7000;
@@ -1718,11 +1669,7 @@ let _mediaRecoveries = 0;
 let _wasOffline = false;
 
 let _ctx = null;
-let _embedSeq = 0;
-window._embedWaiting = null;
-window._activeUrl    = null;
 window._playingUrl   = null;
-window._closedAt     = new Map();
 
 let pm = null;
 let _pmSeq = 0;
@@ -1829,11 +1776,9 @@ function renderCategories() {
   }
 }
 
-
-/* ══════════ CATÁLOGO: paginación (scroll infinito, tope 150) y buscador ══════════ */
 const MAX_ITEMS = 150;
 let currentCatObj = null;
-let catState = {};          // id -> { skip, done, loading, wait }
+let catState = {};          
 let searchMode = false;
 let searchSeq = 0;
 let searchTimer = null;
@@ -1874,7 +1819,6 @@ async function loadCategory(cat) {
   }
 }
 
-/* Carga la siguiente página de la categoría actual (de a una, hasta MAX_ITEMS) */
 async function loadMore() {
   const cat = currentCatObj;
   if (!cat || searchMode) return;
@@ -1899,7 +1843,7 @@ async function loadMore() {
     if (currentCatObj === cat && !searchMode) appendPosters(fresh);
   } catch (e) {
     console.error('[Catalog] más', e);
-    st.wait = Date.now() + 4000;   // reintenta más tarde, sin insistir en bucle
+    st.wait = Date.now() + 4000;
   }
   st.loading = false;
   if (currentCatObj === cat && !searchMode) { _gridFooter(); _checkFill(); }
@@ -1919,7 +1863,6 @@ function _gridFooter() {
   grid.appendChild(d);
 }
 
-/* Si la cuadrícula no llena la pantalla, pide la siguiente página */
 function _checkFill() {
   setTimeout(() => {
     const grid = document.getElementById('posterGrid');
@@ -1952,7 +1895,6 @@ function _makeCard(meta) {
   return card;
 }
 
-/* Agrega pósters al final sin redibujar los existentes */
 function appendPosters(metas) {
   const grid = document.getElementById('posterGrid');
   grid.querySelectorAll('.grid-more').forEach(n => n.remove());
@@ -1978,7 +1920,6 @@ function renderPosters(metas, emptyMsg) {
   }, 100);
 }
 
-/* ── Buscador ── */
 async function _searchOne(type, id, q) {
   try {
     const data = await fetchJSON(`${CATALOG_ADDON}/catalog/${type}/${id}/search=${encodeURIComponent(q)}.json`);
@@ -2094,7 +2035,6 @@ function closeSearch() {
     });
   }, { passive: true });
 
-  /* Con el control remoto: al acercarse a las últimas filas, carga más */
   grid.addEventListener('focusin', (e) => {
     if (searchMode || !e.target.classList || !e.target.classList.contains('poster-card')) return;
     const cards = grid.querySelectorAll('.poster-card');
@@ -2102,7 +2042,6 @@ function closeSearch() {
     if (idx >= cards.length - getGridColumns() * 2) loadMore();
   });
 })();
-
 
 /* ══════════════════ DETALLE ══════════════════ */
 function showDetails(meta, cardEl) {
@@ -2318,7 +2257,7 @@ function ejecutarPlugin(plugin, meta, season, episode) {
       try { log = (iframe && iframe.contentWindow.__log || []).slice(0, 6); } catch (_) {}
       if (listener) window.removeEventListener('message', listener);
       if (timeoutId) clearTimeout(timeoutId);
-      if (iframe && document.body.contains(iframe)) iframe.remove(); // IMPORTANTE: Eliminar iframe al terminar
+      if (iframe && document.body.contains(iframe)) iframe.remove();
       resolve({ links: Array.isArray(links) ? links : [], error: error || '', log });
     };
 
@@ -2386,11 +2325,9 @@ function ejecutarPlugin(plugin, meta, season, episode) {
   });
 }
 
-/* ⬇️ CARGA EN LOTES DE 3 EN 3 PARA NO SATURAR EL WEBVIEW DE ANDROID ⬇️ */
 async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   await loadPluginsFromManifest();
 
-  // Filtramos solo los que el usuario encendió en los ajustes
   const PLUGINS_TO_USE = allPlugins.filter(p => activePlugins.has(p.id));
 
   if (!PLUGINS_TO_USE.length) {
@@ -2402,7 +2339,7 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   const todos = [];
   let pendientes = PLUGINS_TO_USE.length;
 
-  const limit = 3; // Solo 3 peticiones a la vez
+  const limit = 3; 
   let index = 0;
 
   const runNext = async () => {
@@ -2433,8 +2370,8 @@ async function openSources() {
   openSourcesWithEpisode(null, null);
 }
 
-/* ── Caché: solo la última verificación de embeds (por película o por episodio) ── */
-let _embedState = null;      // { key, links, pendientes, done, paint }
+/* ── Caché ── */
+let _embedState = null;      
 let _srcRendered = 0;
 let _srcFocused = false;
 let _selectedEmbedUrl = null;
@@ -2452,11 +2389,6 @@ function _srcLang(link) {
 }
 function _srcProv(link) { return String(link.__prov || link.provider || link.proveedor || ''); }
 
-/* ── HOST (dónde está alojado el video) ──
-   Prioridad: 1) texto entre paréntesis del nombre -> "SoloLatino (StreamWish)"
-              2) campos host/hoster/server del link
-              3) hosters conocidos detectados por la URL
-              4) dominio de la URL, solo si no parece un CDN con nombre raro */
 const _HOSTERS = [
   ['streamwish','StreamWish'],['hlswish','StreamWish'],['wishembed','StreamWish'],['awish','StreamWish'],
   ['voe','Voe'],['nupload','Nupload'],['yourupload','YourUpload'],['hqq','Hqq'],['netu','Hqq'],
@@ -2485,7 +2417,6 @@ function _getDomain(url) {
     for (const [key, nice] of _HOSTERS) {
       if (labels.some(l => l === key || l.startsWith(key) || (key.length >= 6 && l.includes(key)))) return nice;
     }
-    // dominio registrable (penúltima etiqueta), no la primera (que suele ser subdominio/CDN)
     const sld = labels.length >= 2 ? labels[labels.length - 2] : labels[0];
     if (_looksLikeJunk(sld)) return '';
     return sld.charAt(0).toUpperCase() + sld.slice(1);
@@ -2517,7 +2448,6 @@ function _srcAddItem(list, link, before) {
   const lang = _srcLang(link);
   const prov = _srcProv(link);
   const host = _srcHost(link);
-  // Línea 1: nombre del proveedor sin el "(Host)"; si no hay name, cae al título
   const base = _splitName(link.name).base || _splitName(link.title).base || 'Servidor';
   const showProv = prov && prov.toLowerCase().replace(/[^a-z0-9]/g, '') !== base.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -2544,7 +2474,6 @@ function _srcAddItem(list, link, before) {
   list.insertBefore(btn, before || null);
 }
 
-/* Agrega solo los embeds nuevos debajo de los que ya están; no reconstruye la lista */
 function _srcPaint(st) {
   if (st !== _embedState) return;
   const list = document.getElementById('sourcesList');
@@ -2591,7 +2520,6 @@ async function openSourcesWithEpisode(season, episode) {
   _srcRendered = 0; _srcFocused = false;
   document.getElementById('sourcesModal').classList.add('open');
 
-  // Mismo contenido (película o episodio): se reutiliza la caché o la búsqueda en curso, sin volver a buscar
   const prev = _embedState;
   if (prev && prev.key === key && (!prev.done || prev.links.length)) {
     list.innerHTML = '';
@@ -2601,7 +2529,6 @@ async function openSourcesWithEpisode(season, episode) {
     return;
   }
 
-  // Contenido distinto: la caché anterior se descarta y se guarda solo esta
   const st = { key, links: [], pendientes: 0, done: false, paint: null };
   _embedState = st;
   _selectedEmbedUrl = null;
@@ -2638,7 +2565,7 @@ function closeSources(restoreFocus = true) {
 
 function playMovieSource(link) {
   if (!currentMovie) return;
-  // El modal de embeds queda abierto; solo se abre el de calidades
+  
   openPlayModal({
     kind     : 'movie',
     movie    : currentMovie,
@@ -2648,6 +2575,43 @@ function playMovieSource(link) {
     key      : 'mv:' + currentMovie.id + ':' + link.url,
     restoreEl: document.activeElement
   });
+}
+
+/* ══════════════════ SISTEMA DE EXTRACTORES PUROS ══════════════════ */
+async function resolverEnlace(url) {
+    // 1. VOE
+    if (url.includes('voe.sx') || url.includes('voe.')) {
+        try {
+            const res = await nativeFetch(url);
+            const html = await res.text();
+            const match = html.match(/"hls"\s*:\s*"([^"]+\.m3u8[^"]*)"/i) || 
+                          html.match(/"source"\s*:\s*"([^"]+\.m3u8[^"]*)"/i) ||
+                          html.match(/['"]([^"']+\.m3u8[^"']*)['"]/i);
+            if (match && match[1]) {
+                let finalUrl = match[1].replace(/\\/g, '');
+                if (window.SSNative) window.SSNative.setHeaders(finalUrl, JSON.stringify({ 'Referer': url }));
+                return { url: finalUrl, type: 'hls' };
+            }
+        } catch (e) { console.warn('VOE falló', e); }
+    }
+
+    // 2. STREAMWISH / EMBED69
+    if (url.includes('streamwish') || url.includes('hlswish') || url.includes('awish')) {
+        try {
+            const res = await nativeFetch(url);
+            const html = await res.text();
+            const match = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i) || 
+                          html.match(/"hls"\s*:\s*"([^"]+\.m3u8[^"]*)"/i) ||
+                          html.match(/['"]([^"']+\.m3u8[^"']*)['"]/i);
+            if (match && match[1]) {
+                let finalUrl = match[1];
+                if (window.SSNative) window.SSNative.setHeaders(finalUrl, JSON.stringify({ 'Referer': url }));
+                return { url: finalUrl, type: 'hls' };
+            }
+        } catch (e) { console.warn('StreamWish falló', e); }
+    }
+
+    return null; 
 }
 
 /* ══════════════════ PLAYER · NÚCLEO ══════════════════ */
@@ -2918,204 +2882,6 @@ function _playFlv(ctx, streamId) {
   _armStartTimeout(ctx, streamId, 15000);
 }
 
-function _captureGuard(on) {
-  try {
-    if (window.SSNative && typeof window.SSNative.capture === 'function') {
-      window.SSNative.capture(on);
-    } else if (on) { console.warn('[Capture] SSNative no disponible.'); }
-  } catch (_) {}
-}
-
-function _markClosed(url) {
-  if (!url) return;
-  const now = Date.now();
-  window._closedAt.set(url, now);
-  for (const [u, t] of window._closedAt) { if (now - t > CLOSED_KEEP_MS) window._closedAt.delete(u); }
-}
-function _reopenWait(url) {
-  const t = window._closedAt.get(url);
-  return t ? Math.max(0, REOPEN_GUARD_MS - (Date.now() - t)) : 0;
-}
-function _isFromPrevEmbed(referer, currentUrl) {
-  if (!referer) return false;
-  let ro, co;
-  try { ro = new URL(referer).origin; co = new URL(currentUrl).origin; } catch (_) { return false; }
-  if (ro === co) return false;
-  const now = Date.now();
-  for (const [u, t] of window._closedAt) {
-    if (u === currentUrl || now - t > STALE_ORIGIN_MS) continue;
-    try { if (new URL(u).origin === ro) return true; } catch (_) {}
-  }
-  return false;
-}
-
-function _cancelCapture() {
-  _captureGuard(false);
-  try { const w = window._embedWaiting; if (w && typeof w.cancelProbe === 'function') { w.cancelProbe(); w.cancelProbe = null; } } catch (_) {}
-  clearTimeout(window._embedTimer);
-  clearTimeout(window._m3u8InterceptDebounce);
-  window._embedWaiting = null;
-  document.getElementById('embedWrapper')?.remove();
-  if (window._activeUrl) { _markClosed(window._activeUrl); window._activeUrl = null; }
-}
-
-window.onEmbedBlocked = function (u) {
-  const w = window._embedWaiting;
-  if (!w || w.blocked) return;
-  w.blocked = true;
-  setTimeout(() => { if (window._embedWaiting === w && w.expire) w.expire(); }, 400);
-};
-
-const EMBED_SANDBOX_FIRST = true;
-function _embedSbGet(host) {
-  try { const m = JSON.parse(localStorage.getItem('ss_embed_sb') || '{}'); if (typeof m[host] === 'boolean') return m[host]; } catch (_) {}
-  return EMBED_SANDBOX_FIRST;
-}
-function _embedSbSave(host, v) {
-  try {
-    const m = JSON.parse(localStorage.getItem('ss_embed_sb') || '{}');
-    if (m[host] === v) return; m[host] = v;
-    localStorage.setItem('ss_embed_sb', JSON.stringify(m));
-  } catch (_) {}
-}
-
-function _captureEmbed(url, seq, cb) {
-  if (typeof window.SSNative === 'undefined' || !window.SSNative.capture) {
-    setTimeout(() => cb(null), 1500); return;
-  }
-  const container = getActivePlayerContainer();
-  const host = (() => { try { return new URL(url).hostname; } catch (_) { return url; } })();
-  let useSandbox = _embedSbGet(host);
-  const triedModes = new Set();          // modos de sandbox ya probados: máximo 1 intento por modo
-  const tmo = _embedTimeouts(host);
-
-  const attempt = (delayed) => {
-    if (!pm || pm.seq !== seq) return;
-    if (!delayed) {
-      const wait = _reopenWait(url);
-      if (wait > 0) { setTimeout(() => attempt(true), wait); return; }
-    }
-    _cancelCapture(); window._lastInterceptedM3u8 = null;
-    triedModes.add(useSandbox);
-
-    const waiting = { id: ++_embedSeq, sid: seq, url, candidate: null, candidateType: null, rejected: new Set(), pendingExpire: false, cancelProbe: null, onCaptured: cb, blocked: false, expire: null, host, sandbox: useSandbox };
-    window._embedWaiting = waiting; _captureGuard(true); window._activeUrl = url;
-
-    const wrapper = document.createElement('div');
-    wrapper.id = 'embedWrapper';
-    wrapper.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;background:transparent;z-index:10;opacity:0.01;pointer-events:none;';
-
-    const iframe = document.createElement('iframe');
-    iframe.id = 'embedFrame'; iframe.src = url;
-    iframe.setAttribute('allowfullscreen','');
-    iframe.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
-    iframe.setAttribute('scrolling','no');
-    if (useSandbox) iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-forms allow-pointer-lock');
-    iframe.style.cssText = 'position:absolute;top:-55px;left:-1px;width:calc(100% + 2px);height:calc(100% + 55px);border:none;background:transparent;pointer-events:none;';
-
-    const _tOpen = Date.now();
-    let _iframeLoadMs = null;
-
-    const expire = () => {
-      if (window._embedWaiting !== waiting) return;
-      if (waiting.candidate) { waiting.pendingExpire = true; return; }   // se está validando un candidato
-      const wasBlocked = waiting.blocked;
-      _cancelCapture();
-      // Invertir el modo solo si el inverso aún no se probó; si ya se probaron ambos, termina
-      if (!triedModes.has(!useSandbox)) { useSandbox = !useSandbox; attempt(wasBlocked); return; }
-      cb(null);
-    };
-    waiting.expire = expire;
-
-    const armTimer = (ms) => { clearTimeout(window._embedTimer); window._embedTimer = setTimeout(expire, ms); };
-
-    iframe.addEventListener('load', () => {
-      if (window._embedWaiting !== waiting) return;
-      _iframeLoadMs = Date.now() - _tOpen;
-      const wanted = Math.min(tmo.total, _iframeLoadMs + EMBED_LOAD_GRACE_MS);
-      const remaining = Math.max(0, wanted - _iframeLoadMs);
-      if (_iframeLoadMs + remaining > tmo.timeout) armTimer(remaining);
-    });
-
-    wrapper.appendChild(iframe); container.appendChild(wrapper); armTimer(tmo.timeout);
-  };
-  attempt(false);
-}
-
-window.onM3u8Intercepted = function (m3u8Url, referer) {
-  if (!m3u8Url || !m3u8Url.includes('.m3u8')) return;
-  if (window._ignoreM3u8Intercept) return;
-  const waiting = window._embedWaiting;
-  if (!waiting || !pm || waiting.sid !== pm.seq) return;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
-  if (window._lastInterceptedM3u8 === m3u8Url) return;
-  if (_isFromPrevEmbed(referer, waiting.url)) return;
-  if (waiting.candidate) return;
-
-  waiting.candidate = m3u8Url;
-  clearTimeout(window._m3u8InterceptDebounce);
-  window._m3u8InterceptDebounce = setTimeout(() => {
-    if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
-    _processInterceptedM3u8(m3u8Url, referer);
-  }, M3U8_INTERCEPT_DEBOUNCE_MS);
-};
-
-/* Media directa (mp4/dash/flv) detectada por Java. Mismos filtros que el camino .m3u8,
-   pero se valida ANTES de cerrar la captura; si falla se trata como anuncio y se sigue esperando. */
-window.onMediaIntercepted = function (mediaUrl, referer, tipo) {
-  if (!mediaUrl) return;
-  let t = String(tipo || '').toLowerCase();
-  if (t === 'mpd') t = 'dash';
-  if (t === 'm4v' || t === 'webm') t = 'mp4';
-  if (t !== 'mp4' && t !== 'dash' && t !== 'flv') return;   // hls va por onM3u8Intercepted
-  if (window._ignoreM3u8Intercept) return;
-  const waiting = window._embedWaiting;
-  if (!waiting || !pm || waiting.sid !== pm.seq) return;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
-  if (window._lastInterceptedM3u8 === mediaUrl) return;
-  if (waiting.rejected.has(mediaUrl)) return;
-  if (_isFromPrevEmbed(referer, waiting.url)) return;
-  if (waiting.candidate) return;
-
-  waiting.candidate = mediaUrl; waiting.candidateType = t;
-  clearTimeout(window._m3u8InterceptDebounce);
-  window._m3u8InterceptDebounce = setTimeout(() => {
-    if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
-
-    // 1) Headers primero: sin Referer muchos MP4 dan 403 al probar
-    if (pm.src && pm.src.kind === 'movie' && window.SSNative && window.SSNative.setHeaders) {
-      try {
-        const hd = {};
-        if (referer) { hd['Referer'] = referer; try { hd['Origin'] = new URL(referer).origin; } catch (_) {} }
-        window.SSNative.setHeaders(mediaUrl, JSON.stringify(hd));
-      } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
-    }
-
-    // 2) Validar con la sonda que corresponde al tipo
-    const onResult = (ok) => {
-      waiting.cancelProbe = null;
-      if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
-      if (ok) { _processInterceptedM3u8(mediaUrl, referer, t); return; }
-      // Falló: anuncio u otro recurso. Se descarta el candidato y se sigue esperando
-      waiting.rejected.add(mediaUrl);
-      waiting.candidate = null; waiting.candidateType = null;
-      if (waiting.pendingExpire) { waiting.pendingExpire = false; if (waiting.expire) waiting.expire(); }
-    };
-    waiting.cancelProbe = (t === 'flv') ? probeFlv(mediaUrl, onResult) : probeNative(mediaUrl, onResult);
-  }, M3U8_INTERCEPT_DEBOUNCE_MS);
-};
-
-function _processInterceptedM3u8(m3u8Url, referer, tipo) {
-  const waiting = window._embedWaiting;
-  if (!waiting) return;
-  window._embedWaiting = null; window._lastInterceptedM3u8 = m3u8Url;
-  clearTimeout(window._embedTimer); _captureGuard(false);
-  if (waiting.host) _embedSbSave(waiting.host, !!waiting.sandbox);
-  document.getElementById('embedWrapper')?.remove();
-  _markClosed(waiting.url); window._activeUrl = null;
-  if (typeof waiting.onCaptured === 'function') waiting.onCaptured(m3u8Url, referer, tipo || 'hls');
-}
-
 function prepareHls(url, referer, cb) {
   if (typeof Hls === 'undefined' || !Hls.isSupported()) { setTimeout(() => cb(null), 0); return () => {}; }
   const cfg = buildHlsConfig(); cfg.autoStartLoad = false;
@@ -3175,7 +2941,6 @@ function probeNative(url, cb) {
 function cancelPmWork() {
   _pmSeq++;
   if (pm && typeof pm.cancel === 'function') { try { pm.cancel(); } catch (_) {} pm.cancel = null; }
-  _cancelCapture();
   if (_pmMutedPrevVideo) { const v = getActiveVideoEl(); if (v) v.muted = false; _pmMutedPrevVideo = false; }
 }
 
@@ -3189,7 +2954,7 @@ function openPlayModal(src) {
   if (!navigator.onLine) return;
   cancelPmWork();
   const seq = _pmSeq;
-  const type = src.isEmbed ? 'embed' : _detectDirectType(src.url);
+  const type = src.isEmbed ? 'embed' : (src.type || _detectDirectType(src.url));
 
   if (type === 'embed') {
     const v = getActiveVideoEl();
@@ -3209,26 +2974,38 @@ function openPlayModal(src) {
   const finish = (online, levels) => { if (!pm || pm.seq !== seq) return; _pmRender(online, levels); };
 
   if (type === 'embed') {
-    pm.cancel = _cancelCapture;
-    _captureEmbed(src.url, seq, (m3u8, referer, tipo) => {
-      if (!pm || pm.seq !== seq) return;
-      if (!m3u8) { finish(false); return; }
-      pm.playUrl = m3u8; pm.referer = referer || null;
-      // Media directa: ya se validó al capturar, no se hace una segunda sonda
-      if (tipo === 'mp4' || tipo === 'dash') { pm.playType = 'native'; pm.cancel = null; finish(true, null); return; }
-      if (tipo === 'flv') { pm.playType = 'flv'; pm.cancel = null; finish(true, null); return; }
-      pm.playType = 'hls';
-      if (src.kind === 'movie' && window.SSNative && window.SSNative.setHeaders) {
-        try {
-          const hd = {};
-          if (referer) { hd['Referer'] = referer; try { hd['Origin'] = new URL(referer).origin; } catch (_) {} }
-          window.SSNative.setHeaders(m3u8, JSON.stringify(hd));
-        } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
-      }
-      pm.cancel = prepareHls(m3u8, pm.referer, (levels, take) => {
-        if (pm && pm.seq === seq) pm.takeHls = take || null;
-        finish(levels !== null, levels);
-      });
+    pm.cancel = () => {}; 
+    
+    resolverEnlace(src.url).then(result => {
+        if (!pm || pm.seq !== seq) return;
+        
+        if (!result || !result.url) {
+            finish(false); 
+            return;
+        }
+        
+        pm.playUrl = result.url;
+        pm.referer = src.url;
+        
+        if (window.SSNative && window.SSNative.setHeaders) {
+            try {
+                window.SSNative.setHeaders(result.url, JSON.stringify({ 'Referer': src.url }));
+            } catch (e) {}
+        }
+        
+        if (result.type === 'hls') {
+            pm.playType = 'hls';
+            pm.cancel = prepareHls(result.url, pm.referer, (levels, take) => {
+                if (pm && pm.seq === seq) pm.takeHls = take || null;
+                finish(levels !== null, levels);
+            });
+        } else {
+            pm.playType = 'native';
+            pm.cancel = probeNative(result.url, ok => finish(ok, null));
+        }
+    }).catch(e => {
+        if (!pm || pm.seq !== seq) return;
+        finish(false); 
     });
   } else if (type === 'hls') {
     pm.cancel = prepareHls(src.url, null, (levels, take) => {
@@ -3423,7 +3200,6 @@ class TVPlayerBar {
     logoBox.appendChild(logoImg);
     const rowControls = document.createElement('div'); rowControls.className = 'bar-row-controls';
     
-    // --- CONTROLES EXISTENTES (Play, Aspecto, Calidad) ---
     const playBtn = document.createElement('div'); playBtn.className = 'bar-btn'; playBtn.dataset.idx = '0'; playBtn.innerHTML = SVG_PLAY;
     playBtn.addEventListener('click', () => this._activateButton(0));
     const aspectBtn = document.createElement('div'); aspectBtn.className = 'bar-btn'; aspectBtn.dataset.idx = '1'; aspectBtn.innerHTML = SVG_ASPECT;
@@ -3434,7 +3210,6 @@ class TVPlayerBar {
     const live = document.createElement('div'); live.className = 'bar-live-indicator'; live.innerHTML = '<span class="bar-live-dot"></span><span>EN VIVO</span>';
     rowControls.appendChild(playBtn); rowControls.appendChild(aspectBtn); rowControls.appendChild(qualityBtn); rowControls.appendChild(live);
 
-    // --- NUEVA BARRA DE PROGRESO ---
     const progressContainer = document.createElement('div');
     progressContainer.className = 'bar-progress-container';
     progressContainer.id = 'tvProgressContainer';
@@ -3461,14 +3236,12 @@ class TVPlayerBar {
     progressContainer.appendChild(trackEl);
     progressContainer.appendChild(totalTimeEl);
 
-    // Guardamos referencias
     this._progressContainer = progressContainer;
     this._progressTrack = trackEl;
     this._progressFill = fillEl;
     this._currentTimeEl = currentTimeEl;
     this._totalTimeEl = totalTimeEl;
 
-    // Evento click por si se usa mouse
     trackEl.addEventListener('click', (e) => {
       const v = document.getElementById('iptv-player');
       if (!v || !v.duration) return;
@@ -3480,13 +3253,8 @@ class TVPlayerBar {
 
     const main = document.createElement('div'); main.className = 'bar-main';
     
-    // 1. Arriba: El título de la película
     main.appendChild(rowTitle);          
-    
-    // 2. En el medio: La barra de progreso
     main.appendChild(progressContainer); 
-    
-    // 3. Abajo: Los botones de control
     main.appendChild(rowControls);       
     
     bar.appendChild(logoBox); bar.appendChild(main); document.body.appendChild(bar);
@@ -3502,7 +3270,7 @@ class TVPlayerBar {
     this._attachToFullscreen(); this._barEl.classList.add('visible'); this._visible = true;
     this._fitLogo(); requestAnimationFrame(() => this._fitLogo());
     this.updatePlayState(); this.updateQualityLabel(); this.updateLiveLabel();
-    this.updateProgress(); // Actualiza la barra al mostrar
+    this.updateProgress(); 
     this._focusButton(0); this._resetTimer();
   }
   hide() {
@@ -3646,7 +3414,6 @@ class TVPlayerBar {
 
     const isProgressFocused = document.activeElement === this._progressTrack || this._currentBtnIdx === -1;
 
-    // CONTROL DE LA BARRA DE PROGRESO
     if (isProgressFocused) {
       const v = document.getElementById('iptv-player');
       switch (key) {
@@ -3668,7 +3435,7 @@ class TVPlayerBar {
           this._focusButton(this._currentBtnIdx >= 0 ? this._currentBtnIdx : 0); 
           return true;
         case 'ArrowUp':
-          return true; // Se queda en la barra
+          return true; 
         case 'Enter':
         case ' ':
           if (v) { if (v.paused) v.play().catch(()=>{}); else v.pause(); }
@@ -3678,11 +3445,10 @@ class TVPlayerBar {
       return true;
     }
 
-    // NAVEGACIÓN POR LOS BOTONES INFERIORES
     switch (key) {
       case 'ArrowLeft': this._focusButton(Math.max(0, this._currentBtnIdx - 1)); return true;
       case 'ArrowRight': this._focusButton(Math.min(this._buttons.length - 1, this._currentBtnIdx + 1)); return true;
-      case 'ArrowUp': this._focusProgress(); return true; // Sube a la barra
+      case 'ArrowUp': this._focusProgress(); return true; 
       case 'ArrowDown': return true;
       case 'Enter': case ' ': this._activateButton(this._currentBtnIdx); return true;
     } 
@@ -3867,7 +3633,6 @@ document.addEventListener('keydown', (e) => {
   const playerEl = document.getElementById('playerContainerInline');
   const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
 
-  /* Reproductor: ← vuelve a donde estaba el foco; el resto de flechas no lo pierden */
   if (focused === playerEl) {
     if (e.key === 'ArrowLeft') { e.preventDefault(); _focusBackToBrowse(); }
     else if (isArrow) e.preventDefault();
@@ -3909,7 +3674,6 @@ document.addEventListener('keydown', (e) => {
         else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); }
       } else if (focused?.classList.contains('season-btn')) {
         const idx = seasonBtns.indexOf(focused);
-        /* ↔ solo mueve el foco; los capítulos cambian con OK */
         if (e.key === 'ArrowRight') { e.preventDefault(); if (seasonBtns[idx + 1]) _focusH(seasonBtns[idx + 1], sBar); }
         else if (e.key === 'ArrowLeft') { e.preventDefault(); if (seasonBtns[idx - 1]) _focusH(seasonBtns[idx - 1], sBar); }
         else if (e.key === 'ArrowDown') { e.preventDefault(); _focusH(eps[0], epList); }
@@ -3931,14 +3695,12 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-/* ── Helpers de foco ── */
 let _lastBrowseFocus = null;
 document.addEventListener('focusin', (e) => {
   const t = e.target;
   if (t && t.matches && t.matches('.poster-card, .category-btn, .season-btn, .episode-card, #btnPlayMain')) _lastBrowseFocus = t;
 });
 
-/* Enfoca un elemento y lo centra con scroll horizontal dentro de su contenedor */
 function _focusH(el, scroller) {
   if (!el) return;
   try { el.focus({ preventScroll: true }); } catch (_) {}
