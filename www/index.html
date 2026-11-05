@@ -1664,9 +1664,18 @@ function togglePlugin(id, isChecked) {
 
 /* ⬇️ TIEMPOS ORIGINALES RESTAURADOS (No se tocan) ⬇️ */
 const EMBED_TIMEOUT_MS       = 7500;
-const EMBED_MAX_RETRY        = 2;
 const EMBED_LOAD_GRACE_MS    = 5000;
 const EMBED_MAX_TOTAL_MS     = 15000;
+/* Timeout por host (cada intento). Se busca por coincidencia en el hostname.
+   Rápidos: 7.5 s (se extiende hasta 15 s si el iframe carga). Lentos: 30 s. */
+const EMBED_SLOW_TIMEOUT_MS  = 30000;
+const EMBED_SLOW_TOTAL_MS    = 35000;
+const EMBED_SLOW_HOSTS = ['streamtape', 'nupload', 'ok.ru', 'kekl', 'mixdrop', 'yourupload', '2026', 'hqq', 'netu'];
+function _embedTimeouts(host) {
+  const h = String(host || '').toLowerCase();
+  if (EMBED_SLOW_HOSTS.some(k => h.includes(k))) return { timeout: EMBED_SLOW_TIMEOUT_MS, total: EMBED_SLOW_TOTAL_MS };
+  return { timeout: EMBED_TIMEOUT_MS, total: EMBED_MAX_TOTAL_MS };
+}
 const REOPEN_GUARD_MS        = 1500;
 const CLOSED_KEEP_MS         = 10000;
 const STALE_ORIGIN_MS        = 8000;
@@ -2942,6 +2951,7 @@ function _isFromPrevEmbed(referer, currentUrl) {
 
 function _cancelCapture() {
   _captureGuard(false);
+  try { const w = window._embedWaiting; if (w && typeof w.cancelProbe === 'function') { w.cancelProbe(); w.cancelProbe = null; } } catch (_) {}
   clearTimeout(window._embedTimer);
   clearTimeout(window._m3u8InterceptDebounce);
   window._embedWaiting = null;
@@ -2974,10 +2984,10 @@ function _captureEmbed(url, seq, cb) {
     setTimeout(() => cb(null), 1500); return;
   }
   const container = getActivePlayerContainer();
-  let retry = 0;
   const host = (() => { try { return new URL(url).hostname; } catch (_) { return url; } })();
   let useSandbox = _embedSbGet(host);
-  let blockedSwitches = 0;
+  const triedModes = new Set();          // modos de sandbox ya probados: máximo 1 intento por modo
+  const tmo = _embedTimeouts(host);
 
   const attempt = (delayed) => {
     if (!pm || pm.seq !== seq) return;
@@ -2986,8 +2996,9 @@ function _captureEmbed(url, seq, cb) {
       if (wait > 0) { setTimeout(() => attempt(true), wait); return; }
     }
     _cancelCapture(); window._lastInterceptedM3u8 = null;
+    triedModes.add(useSandbox);
 
-    const waiting = { id: ++_embedSeq, sid: seq, url, candidate: null, onCaptured: cb, blocked: false, expire: null, host, sandbox: useSandbox };
+    const waiting = { id: ++_embedSeq, sid: seq, url, candidate: null, candidateType: null, rejected: new Set(), pendingExpire: false, cancelProbe: null, onCaptured: cb, blocked: false, expire: null, host, sandbox: useSandbox };
     window._embedWaiting = waiting; _captureGuard(true); window._activeUrl = url;
 
     const wrapper = document.createElement('div');
@@ -3007,14 +3018,11 @@ function _captureEmbed(url, seq, cb) {
 
     const expire = () => {
       if (window._embedWaiting !== waiting) return;
-      if (waiting.candidate) return;
+      if (waiting.candidate) { waiting.pendingExpire = true; return; }   // se está validando un candidato
       const wasBlocked = waiting.blocked;
       _cancelCapture();
-      if (wasBlocked) {
-        if (blockedSwitches < 1) { blockedSwitches++; useSandbox = !useSandbox; attempt(true); return; }
-        cb(null); return;
-      }
-      if (retry < EMBED_MAX_RETRY) { retry++; useSandbox = !useSandbox; attempt(false); return; }
+      // Invertir el modo solo si el inverso aún no se probó; si ya se probaron ambos, termina
+      if (!triedModes.has(!useSandbox)) { useSandbox = !useSandbox; attempt(wasBlocked); return; }
       cb(null);
     };
     waiting.expire = expire;
@@ -3024,12 +3032,12 @@ function _captureEmbed(url, seq, cb) {
     iframe.addEventListener('load', () => {
       if (window._embedWaiting !== waiting) return;
       _iframeLoadMs = Date.now() - _tOpen;
-      const wanted = Math.min(EMBED_MAX_TOTAL_MS, _iframeLoadMs + EMBED_LOAD_GRACE_MS);
+      const wanted = Math.min(tmo.total, _iframeLoadMs + EMBED_LOAD_GRACE_MS);
       const remaining = Math.max(0, wanted - _iframeLoadMs);
-      if (_iframeLoadMs + remaining > EMBED_TIMEOUT_MS) armTimer(remaining);
+      if (_iframeLoadMs + remaining > tmo.timeout) armTimer(remaining);
     });
 
-    wrapper.appendChild(iframe); container.appendChild(wrapper); armTimer(EMBED_TIMEOUT_MS);
+    wrapper.appendChild(iframe); container.appendChild(wrapper); armTimer(tmo.timeout);
   };
   attempt(false);
 }
@@ -3052,7 +3060,52 @@ window.onM3u8Intercepted = function (m3u8Url, referer) {
   }, M3U8_INTERCEPT_DEBOUNCE_MS);
 };
 
-function _processInterceptedM3u8(m3u8Url, referer) {
+/* Media directa (mp4/dash/flv) detectada por Java. Mismos filtros que el camino .m3u8,
+   pero se valida ANTES de cerrar la captura; si falla se trata como anuncio y se sigue esperando. */
+window.onMediaIntercepted = function (mediaUrl, referer, tipo) {
+  if (!mediaUrl) return;
+  let t = String(tipo || '').toLowerCase();
+  if (t === 'mpd') t = 'dash';
+  if (t === 'm4v' || t === 'webm') t = 'mp4';
+  if (t !== 'mp4' && t !== 'dash' && t !== 'flv') return;   // hls va por onM3u8Intercepted
+  if (window._ignoreM3u8Intercept) return;
+  const waiting = window._embedWaiting;
+  if (!waiting || !pm || waiting.sid !== pm.seq) return;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
+  if (window._lastInterceptedM3u8 === mediaUrl) return;
+  if (waiting.rejected.has(mediaUrl)) return;
+  if (_isFromPrevEmbed(referer, waiting.url)) return;
+  if (waiting.candidate) return;
+
+  waiting.candidate = mediaUrl; waiting.candidateType = t;
+  clearTimeout(window._m3u8InterceptDebounce);
+  window._m3u8InterceptDebounce = setTimeout(() => {
+    if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
+
+    // 1) Headers primero: sin Referer muchos MP4 dan 403 al probar
+    if (pm.src && pm.src.kind === 'movie' && window.SSNative && window.SSNative.setHeaders) {
+      try {
+        const hd = {};
+        if (referer) { hd['Referer'] = referer; try { hd['Origin'] = new URL(referer).origin; } catch (_) {} }
+        window.SSNative.setHeaders(mediaUrl, JSON.stringify(hd));
+      } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
+    }
+
+    // 2) Validar con la sonda que corresponde al tipo
+    const onResult = (ok) => {
+      waiting.cancelProbe = null;
+      if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
+      if (ok) { _processInterceptedM3u8(mediaUrl, referer, t); return; }
+      // Falló: anuncio u otro recurso. Se descarta el candidato y se sigue esperando
+      waiting.rejected.add(mediaUrl);
+      waiting.candidate = null; waiting.candidateType = null;
+      if (waiting.pendingExpire) { waiting.pendingExpire = false; if (waiting.expire) waiting.expire(); }
+    };
+    waiting.cancelProbe = (t === 'flv') ? probeFlv(mediaUrl, onResult) : probeNative(mediaUrl, onResult);
+  }, M3U8_INTERCEPT_DEBOUNCE_MS);
+};
+
+function _processInterceptedM3u8(m3u8Url, referer, tipo) {
   const waiting = window._embedWaiting;
   if (!waiting) return;
   window._embedWaiting = null; window._lastInterceptedM3u8 = m3u8Url;
@@ -3060,7 +3113,7 @@ function _processInterceptedM3u8(m3u8Url, referer) {
   if (waiting.host) _embedSbSave(waiting.host, !!waiting.sandbox);
   document.getElementById('embedWrapper')?.remove();
   _markClosed(waiting.url); window._activeUrl = null;
-  if (typeof waiting.onCaptured === 'function') waiting.onCaptured(m3u8Url, referer);
+  if (typeof waiting.onCaptured === 'function') waiting.onCaptured(m3u8Url, referer, tipo || 'hls');
 }
 
 function prepareHls(url, referer, cb) {
@@ -3157,10 +3210,14 @@ function openPlayModal(src) {
 
   if (type === 'embed') {
     pm.cancel = _cancelCapture;
-    _captureEmbed(src.url, seq, (m3u8, referer) => {
+    _captureEmbed(src.url, seq, (m3u8, referer, tipo) => {
       if (!pm || pm.seq !== seq) return;
       if (!m3u8) { finish(false); return; }
       pm.playUrl = m3u8; pm.referer = referer || null;
+      // Media directa: ya se validó al capturar, no se hace una segunda sonda
+      if (tipo === 'mp4' || tipo === 'dash') { pm.playType = 'native'; pm.cancel = null; finish(true, null); return; }
+      if (tipo === 'flv') { pm.playType = 'flv'; pm.cancel = null; finish(true, null); return; }
+      pm.playType = 'hls';
       if (src.kind === 'movie' && window.SSNative && window.SSNative.setHeaders) {
         try {
           const hd = {};
