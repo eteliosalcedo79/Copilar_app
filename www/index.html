@@ -1350,22 +1350,24 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 .ss-toast.error   { background: #c62828; }
 
 /* ══════════════════ CONSOLA DE DEPURACIÓN ══════════════════ */
+/* Modo capa: encima del reproductor, solo lectura (no recibe toques ni teclas) */
 .dbg-modal {
   position: fixed;
-  top: var(--tv-topbar-h);
-  left: 0; right: var(--tv-player-w); bottom: 0;
-  background: rgba(6,9,14,.94);
-  z-index: 900;
+  top: 0; right: 0; bottom: 0;
+  width: var(--tv-player-w);
+  background: rgba(4,8,14,.78);
+  z-index: 3000;
   display: none;
-  padding: clamp(10px, 2vh, 24px) 12px;
+  padding: 6px;
+  pointer-events: none;
 }
 .dbg-modal.open { display: flex; animation: fadeInUp .2s ease; }
 .dbg-card {
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: transparent;
+  border: 1px solid rgba(0,204,68,.35);
+  border-radius: 8px;
   overflow: hidden;
 }
 .dbg-header {
@@ -1378,7 +1380,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   color: var(--accent); text-transform: uppercase;
 }
 .dbg-toolbar {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: none; flex-wrap: wrap; gap: 6px;
   padding: 8px;
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
@@ -1403,7 +1405,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   overflow-y: auto;
   padding: 8px 10px;
   font-family: ui-monospace, Menlo, Consolas, monospace;
-  font-size: .68rem; line-height: 1.45;
+  font-size: .62rem; line-height: 1.4;
   color: #c8d4e0;
   word-break: break-all;
   outline: none;
@@ -1411,7 +1413,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   scrollbar-color: var(--accent-dim) transparent;
 }
 .dbg-log:focus { box-shadow: inset 0 0 0 2px var(--accent2); }
-.dbg-line { white-space: pre-wrap; padding: 1px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
+.dbg-line { white-space: pre-wrap; max-height: 2.9em; overflow: hidden; padding: 1px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
 .dbg-line.ok   { color: #4cd964; }
 .dbg-line.warn { color: #ffb74d; }
 .dbg-line.err  { color: #ff5c7a; }
@@ -1429,8 +1431,8 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     border-top: 1px solid var(--border);
   }
   .sources-modal,
-  .dbg-modal,
   .pm-modal { right: 0; bottom: 42vh; }
+  .dbg-modal { top: auto; bottom: 0; left: 0; right: 0; width: 100vw; height: 42vh; }
   .pm-card { width: 90%; }
   .poster-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; padding: 6px; }
   
@@ -1588,10 +1590,221 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   </div>
 </div>
 
+<!-- ══════ CONSOLA DE DEPURACIÓN ══════ -->
+<div class="dbg-modal" id="dbgModal">
+  <div class="dbg-card">
+    <div class="dbg-header"><span>Consola</span><span id="dbgCount">0</span></div>
+    <div class="dbg-toolbar">
+      <button class="dbg-btn" id="dbgCopy" tabindex="0">Copiar</button>
+      <button class="dbg-btn" id="dbgFilter" tabindex="0">Filtro: Todo</button>
+      <button class="dbg-btn" id="dbgNet" tabindex="0">Red: ON</button>
+      <button class="dbg-btn" id="dbgClear" tabindex="0">Limpiar</button>
+      <button class="dbg-btn" id="dbgClose" tabindex="0">Cerrar</button>
+    </div>
+    <div class="dbg-log" id="dbgLog" tabindex="0"></div>
+  </div>
+</div>
+
 <!-- ══════ LIBS ══════ -->
 <script src="hls.min.js"></script>
 <script src="mpegts.min.js"></script>
 <script src="crypto-js.min.js"></script>
+
+<script>
+/* ════════════ CONSOLA DE DEPURACIÓN ════════════
+   Registro en memoria (últimas 600 líneas) con botón "Copiar" para pegarlo en el chat.
+   "Red" pide a la capa nativa que reporte las peticiones del embed durante la captura. */
+(function () {
+  var OVERLAY = true;   // capa de solo lectura sobre el reproductor, visible desde el inicio (para quitarla: false)
+  var MAX = 600, COPY_LAST = 300;
+  var buf = [], open = false, filterIdx = 0, net = true;
+  var FILTERS = [
+    ['Todo', null],
+    ['Capturas', ['m3u8', 'mp4', 'embed', 'tap', 'pm', 'play']],
+    ['Red', ['net']],
+    ['Errores', 'lvl']
+  ];
+  var orig = { log: console.log, warn: console.warn, error: console.error };
+  try { var sv = localStorage.getItem('ss_dbg_net'); if (sv !== null) net = (sv === '1'); } catch (_) {}
+
+  function pad(n, l) { n = String(n); while (n.length < (l || 2)) n = '0' + n; return n; }
+  function ts(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' + pad(d.getMilliseconds(), 3); }
+  window.dbgShort = function (s, n) { s = String(s == null ? '' : s); n = n || 220; return s.length > n ? s.slice(0, n) + '…' : s; };
+
+  function lineText(e) { return e.t + ' [' + e.tag + '] ' + e.msg; }
+  function passes(e) {
+    var f = FILTERS[filterIdx][1];
+    if (!f) return true;
+    if (f === 'lvl') return e.lvl === 'warn' || e.lvl === 'err';
+    return f.indexOf(e.tag) >= 0;
+  }
+  function makeLine(e) {
+    var d = document.createElement('div');
+    d.className = 'dbg-line ' + e.lvl;
+    d.textContent = lineText(e);
+    return d;
+  }
+  function count() { var c = document.getElementById('dbgCount'); if (c) c.textContent = buf.length; }
+
+  window.dbg = function (tag, msg, lvl) {
+    try {
+      var e = { t: ts(new Date()), tag: String(tag), msg: window.dbgShort(msg, 400), lvl: lvl || 'info' };
+      buf.push(e);
+      if (buf.length > MAX) buf.shift();
+      if (open) {
+        var box = document.getElementById('dbgLog');
+        if (box && passes(e)) {
+          var stick = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+          box.appendChild(makeLine(e));
+          while (box.childNodes.length > MAX) box.removeChild(box.firstChild);
+          if (stick) box.scrollTop = box.scrollHeight;
+        }
+        count();
+      }
+    } catch (_) {}
+  };
+
+  /* console.log/warn/error también van al registro */
+  ['log', 'warn', 'error'].forEach(function (k) {
+    console[k] = function () {
+      try { orig[k].apply(console, arguments); } catch (_) {}
+      try {
+        var parts = Array.prototype.map.call(arguments, function (a) {
+          if (a && a.message) return a.message;
+          if (a && typeof a === 'object') { try { return JSON.stringify(a); } catch (_) { return String(a); } }
+          return String(a);
+        });
+        window.dbg('console', parts.join(' '), k === 'error' ? 'err' : (k === 'warn' ? 'warn' : 'info'));
+      } catch (_) {}
+    };
+  });
+  window.addEventListener('error', function (e) {
+    window.dbg('js', (e.message || 'error') + ' @' + String(e.filename || '').split('/').pop() + ':' + e.lineno, 'err');
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e.reason;
+    window.dbg('js', 'promesa rechazada: ' + ((r && r.message) || r), 'err');
+  });
+
+  /* Peticiones que reporta la capa nativa durante la captura */
+  window.onNetSniff = function (url, method) { window.dbg('net', method + ' ' + url); };
+
+  function pushNet() {
+    try { if (window.SSNative && typeof window.SSNative.debugSniff === 'function') window.SSNative.debugSniff(net); } catch (_) {}
+  }
+
+  function header() {
+    var n = window.SSNative, h = [];
+    h.push('SportStream consola · ' + new Date().toISOString());
+    h.push('UA: ' + navigator.userAgent);
+    h.push('Pantalla: ' + screen.width + 'x' + screen.height + ' dpr=' + window.devicePixelRatio + ' · viewport ' + innerWidth + 'x' + innerHeight);
+    h.push('SSNative: ' + (n ? ['capture', 'setHeaders', 'tap', 'debugSniff'].map(function (k) {
+      return k + '=' + (typeof n[k] === 'function' ? 'sí' : 'no');
+    }).join(' ') : 'NO DISPONIBLE'));
+    h.push('Hls: ' + (typeof Hls !== 'undefined' && Hls.isSupported() ? 'sí' : 'no') + ' · mpegts: ' + (typeof mpegts !== 'undefined' ? 'sí' : 'no'));
+    try { h.push('Proveedores activos: ' + activePlugins.size + '/' + allPlugins.length); } catch (_) {}
+    return h.join('\n');
+  }
+
+  function copyText(text) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:-9999px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (_) {}
+      ta.remove();
+      return ok;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return fallback(); });
+    }
+    return Promise.resolve(fallback());
+  }
+
+  function render() {
+    var box = document.getElementById('dbgLog');
+    if (!box) return;
+    box.innerHTML = '';
+    var frag = document.createDocumentFragment();
+    buf.forEach(function (e) { if (passes(e)) frag.appendChild(makeLine(e)); });
+    box.appendChild(frag);
+    box.scrollTop = box.scrollHeight;
+    count();
+  }
+  function labels() {
+    var f = document.getElementById('dbgFilter'), n = document.getElementById('dbgNet');
+    if (f) f.textContent = 'Filtro: ' + FILTERS[filterIdx][0];
+    if (n) n.textContent = 'Red: ' + (net ? 'ON' : 'OFF');
+  }
+
+  window.dbgIsOpen = function () { return open && !OVERLAY; };
+  window.dbgOpen = function () {
+    open = true;
+    document.getElementById('dbgModal').classList.add('open');
+    labels(); render();
+    if (!OVERLAY) setTimeout(function () { var b = document.getElementById('dbgCopy'); if (b) b.focus({ preventScroll: true }); }, 30);
+  };
+  window.dbgClose = function () {
+    open = false;
+    document.getElementById('dbgModal').classList.remove('open');
+    if (!OVERLAY) { var b = document.getElementById('btnDebug'); if (b) b.focus({ preventScroll: true }); }
+  };
+
+  function bind() {
+    var $ = function (id) { return document.getElementById(id); };
+    $('btnDebug').addEventListener('click', function () { if (open) window.dbgClose(); else window.dbgOpen(); });
+    $('dbgClose').addEventListener('click', window.dbgClose);
+    $('dbgClear').addEventListener('click', function () { buf.length = 0; render(); });
+    $('dbgFilter').addEventListener('click', function () { filterIdx = (filterIdx + 1) % FILTERS.length; labels(); render(); });
+    $('dbgNet').addEventListener('click', function () {
+      net = !net;
+      try { localStorage.setItem('ss_dbg_net', net ? '1' : '0'); } catch (_) {}
+      pushNet(); labels();
+      window.dbg('console', 'Sniff de red nativo: ' + (net ? 'ON' : 'OFF') + (window.SSNative && typeof window.SSNative.debugSniff === 'function' ? '' : ' (APK sin debugSniff)'), 'info');
+    });
+    $('dbgCopy').addEventListener('click', function () {
+      var btn = $('dbgCopy');
+      var lines = buf.slice(-COPY_LAST).map(lineText).join('\n');
+      var text = header() + '\n' + '────────────────────\n' + lines;
+      copyText(text).then(function (ok) {
+        try { btn.focus({ preventScroll: true }); } catch (_) {}
+        if (typeof showToast === 'function') showToast(ok ? 'Copiado (' + Math.min(buf.length, COPY_LAST) + ' líneas)' : 'No se pudo copiar', ok ? 'success' : 'error', 2500);
+      });
+    });
+    pushNet();
+    window.dbg('console', 'Consola lista · Sniff de red ' + (net ? 'ON' : 'OFF'), 'info');
+    if (OVERLAY) window.dbgOpen();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
+
+  /* Teclado / control remoto: se atiende antes que el resto de la app mientras la consola está abierta */
+  document.addEventListener('keydown', function (e) {
+    if (!open || OVERLAY) return;
+    var k = e.key, ae = document.activeElement;
+    var btns = Array.prototype.slice.call(document.querySelectorAll('#dbgModal .dbg-btn'));
+    var log = document.getElementById('dbgLog');
+    e.stopPropagation();
+    if (k === 'Escape' || k === 'Backspace') { e.preventDefault(); window.dbgClose(); return; }
+    if (ae === log) {
+      if (k === 'ArrowDown') log.scrollTop += 100;
+      else if (k === 'ArrowUp') { if (log.scrollTop <= 0) btns[0].focus({ preventScroll: true }); else log.scrollTop -= 100; }
+      else if (k === 'PageDown') log.scrollTop += log.clientHeight - 40;
+      else if (k === 'PageUp') log.scrollTop -= log.clientHeight - 40;
+      e.preventDefault();
+      return;
+    }
+    var i = btns.indexOf(ae);
+    if (k === 'ArrowRight') btns[Math.min(i + 1, btns.length - 1)].focus({ preventScroll: true });
+    else if (k === 'ArrowLeft') btns[Math.max(i - 1, 0)].focus({ preventScroll: true });
+    else if (k === 'ArrowDown') log.focus({ preventScroll: true });
+    else if ((k === 'Enter' || k === ' ') && i >= 0) btns[i].click();
+    e.preventDefault();
+  }, true);
+})();
+</script>
 
 <script>
 /* ── Ocultar splash nativo de Capacitor (launchAutoHide: false) ── */
@@ -2863,6 +3076,7 @@ function _applyNowPlayingUi(ctx) {
 function startPlayback(ctx, isReconnect = false) {
   if (!isSafeUrl(ctx.url)) { _dropPreHls(ctx); showToast('Dirección no permitida', 'error'); return; }
   _ctx = ctx;
+  dbg('play', 'iniciar ' + ctx.type + (isReconnect ? ' (reconexión ' + (reconnectAttempts + 1) + ')' : '') + ' · ' + dbgShort(ctx.url));
   if (!navigator.onLine) { _dropPreHls(ctx); return; }
   if (!isReconnect) { reconnectAttempts = 0; _applyNowPlayingUi(ctx); }
   hideOfflineOverlay(); hideReconnectOverlay();
@@ -2901,6 +3115,7 @@ function scheduleReconnect(ctx, streamId) {
 }
 
 function failPlayback() {
+  dbg('play', 'fallo definitivo · ' + (window._lastHlsErr || 'sin detalle') + ' · ' + dbgShort(window._playingUrl || ''), 'err');
   try {
     const sub = document.querySelector('.ss-offline-sub');
     if (sub) sub.textContent = 'No se pudo conectar. Probá con otro servidor.' + (window._lastHlsErr ? ' [' + window._lastHlsErr + ']' : '') + (window._playingUrl ? ' · ' + String(window._playingUrl).split('://').pop().slice(0, 40) : '');
@@ -2928,6 +3143,7 @@ function _playHls(ctx, streamId) {
     };
     hls.on(Hls.Events.ERROR, (_, d) => {
       if (d && d.details) window._lastHlsErr = d.details + (d.response && d.response.code ? ' ' + d.response.code : '') + (d.fatal ? ' (fatal)' : '');
+      if (d && d.fatal) dbg('play', 'hls ' + window._lastHlsErr, 'err');
       if (!d.fatal || stale() || hlsInst !== hls) return;
       if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
         try { hls.stopLoad(); } catch (_) {} retry();
@@ -2953,7 +3169,12 @@ function _playNative(ctx, streamId) {
   const stale = () => streamId !== _currentStreamId;
   const retry = () => scheduleReconnect(ctx, streamId);
   video.muted = false; video.volume = 1;
-  video.addEventListener('error', () => { if (!stale()) retry(); }, { once: true });
+  video.addEventListener('error', () => {
+    if (stale()) return;
+    const er = video.error;
+    dbg('play', 'error de <video> · code=' + (er ? er.code : '?') + (er && er.message ? ' · ' + er.message : ''), 'err');
+    retry();
+  }, { once: true });
   video.src = ctx.url; _safePlay(video, stale, retry, 'native'); fsApplyAspect(true);
   _armStartTimeout(ctx, streamId, 15000);
 }
@@ -3022,6 +3243,7 @@ function _cancelCapture() {
 
 window.onEmbedBlocked = function (u) {
   const w = window._embedWaiting;
+  dbg('embed', 'block.html detectado · ' + dbgShort(u), 'warn');
   if (!w || w.blocked) return;
   w.blocked = true;
   setTimeout(() => { if (window._embedWaiting === w && w.expire) w.expire(); }, 400);
@@ -3060,6 +3282,7 @@ function _captureEmbed(url, seq, cb) {
 
     const waiting = { id: ++_embedSeq, sid: seq, url, candidate: null, onCaptured: cb, blocked: false, expire: null, host, sandbox: useSandbox };
     window._embedWaiting = waiting; _captureGuard(true); window._activeUrl = url;
+    dbg('embed', 'abrir iframe · ' + dbgShort(url) + ' · sandbox=' + useSandbox + ' · reintento ' + retry + '/' + EMBED_MAX_RETRY);
 
     const wrapper = document.createElement('div');
     wrapper.id = 'embedWrapper';
@@ -3080,6 +3303,7 @@ function _captureEmbed(url, seq, cb) {
       if (window._embedWaiting !== waiting) return;
       if (waiting.candidate) return;
       const wasBlocked = waiting.blocked;
+      dbg('embed', 'expiró sin captura · bloqueado=' + wasBlocked + ' · reintento ' + retry + '/' + EMBED_MAX_RETRY, 'warn');
       _cancelCapture();
       if (wasBlocked) {
         if (blockedSwitches < 1) { blockedSwitches++; useSandbox = !useSandbox; attempt(true); return; }
@@ -3095,6 +3319,7 @@ function _captureEmbed(url, seq, cb) {
     iframe.addEventListener('load', () => {
       if (window._embedWaiting !== waiting) return;
       _iframeLoadMs = Date.now() - _tOpen;
+      dbg('embed', 'iframe cargado en ' + _iframeLoadMs + ' ms');
       const wanted = Math.min(EMBED_MAX_TOTAL_MS, _iframeLoadMs + EMBED_LOAD_GRACE_MS);
       const remaining = Math.max(0, wanted - _iframeLoadMs);
       if (_iframeLoadMs + remaining > EMBED_TIMEOUT_MS) armTimer(remaining);
@@ -3115,14 +3340,19 @@ const EMBED_TAP_DELAYS_MS = [1200, 2800, 4500];
 const EMBED_TAP_HOLD_MS   = 250;
 
 function _scheduleEmbedTaps(waiting, wrapper, iframe) {
-  if (!window.SSNative || typeof window.SSNative.tap !== 'function') return;
+  if (!window.SSNative || typeof window.SSNative.tap !== 'function') {
+    dbg('tap', 'SSNative.tap no disponible (¿APK sin recompilar?)', 'warn');
+    return;
+  }
   EMBED_TAP_DELAYS_MS.forEach(ms => setTimeout(() => {
-    if (window._embedWaiting !== waiting || waiting.candidate || waiting.blocked) return;
+    if (window._embedWaiting !== waiting) return;
+    if (waiting.candidate || waiting.blocked) { dbg('tap', 'omitido a los ' + ms + ' ms · candidate=' + !!waiting.candidate + ' blocked=' + !!waiting.blocked); return; }
     if (!document.body.contains(wrapper)) return;
     const r = wrapper.getBoundingClientRect();
-    if (!r.width || !r.height) return;
+    if (!r.width || !r.height) { dbg('tap', 'omitido a los ' + ms + ' ms · wrapper sin tamaño', 'warn'); return; }
     const x = r.left + r.width / 2;
     const y = r.top + r.height / 2;
+    dbg('tap', 'toque a los ' + ms + ' ms en (' + Math.round(x) + ', ' + Math.round(y) + ') css px');
     wrapper.style.pointerEvents = 'auto';
     iframe.style.pointerEvents = 'auto';
     try { window.SSNative.tap(x, y); } catch (e) { console.warn('[Tap] falló:', e); }
@@ -3137,6 +3367,7 @@ window.onM3u8Intercepted = function (m3u8Url, referer) {
   if (!m3u8Url || !m3u8Url.includes('.m3u8')) return;
   if (window._ignoreM3u8Intercept) return;
   const waiting = window._embedWaiting;
+  dbg('m3u8', 'llegó · ' + dbgShort(m3u8Url) + ' · referer=' + dbgShort(referer || '-', 80) + ' · esperando=' + !!waiting);
   if (!waiting || !pm || waiting.sid !== pm.seq) return;
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
   if (window._lastInterceptedM3u8 === m3u8Url) return;
@@ -3146,6 +3377,7 @@ window.onM3u8Intercepted = function (m3u8Url, referer) {
 
   waiting.candidate = m3u8Url;
   waiting.candidateIsMp4 = false;
+  dbg('m3u8', 'aceptado como candidato', 'ok');
   clearTimeout(window._m3u8InterceptDebounce);
   window._m3u8InterceptDebounce = setTimeout(() => {
     if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
@@ -3171,6 +3403,11 @@ const MP4_SETTLE_MS = 1500;   // espera extra: si en ese lapso llega un .m3u8, e
 const _AD_HOST_RE = /(doubleclick|googlesyndication|googleadservices|adservice|adsystem|adnxs|adsterra|adskeeper|exoclick|exosrv|juicyads|trafficjunky|trafficstars|popads|popcash|propeller|onclickads|clickadu|hilltopads|tsyndicate|mgid|taboola|outbrain|revcontent|yllix|a-ads|bidvertiser|adcash|adform|criteo|pubmatic|rubiconproject|openx|smartadserver|teads|vidazoo|adtng|admaven|richads|monetag|realsrv|plugrush|adspyglass)/i;
 const _AD_PATH_RE = /(^|[\/_\-.])(ads?|adv|advert\w*|banner|preroll|pre-roll|midroll|postroll|promo|sponsor\w*|teaser|trailer|preview|vast|vpaid|popunder|thumb\w*|sprite|poster)([\/_\-.]|$)/i;
 
+/* Video directo (no HLS): por extensión, o el /get_video de StreamTape (sin extensión) */
+function _isDirectVideoUrl(u) {
+  return /\.(mp4|mkv|webm)([?#]|$)/i.test(u) || /\/get_video([?#]|$)/i.test(u);
+}
+
 function _isAdMp4(url) {
   let u;
   try { u = new URL(url); } catch (_) { return true; }
@@ -3183,14 +3420,16 @@ function _isAdMp4(url) {
 window.onMp4Intercepted = function (mp4Url, referer) {
   if (!mp4Url) return;
   const waiting = window._embedWaiting;
+  dbg('mp4', 'llegó · ' + dbgShort(mp4Url) + ' · referer=' + dbgShort(referer || '-', 80) + ' · esperando=' + !!waiting);
   if (!waiting || !pm || waiting.sid !== pm.seq) return;
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
   if (_isFromPrevEmbed(referer, waiting.url)) return;
   if (waiting.candidate) return;
-  if (_isAdMp4(mp4Url)) { console.log('[Mp4] ignorado (anuncio):', mp4Url); return; }
+  if (_isAdMp4(mp4Url)) { dbg('mp4', 'ignorado (anuncio)', 'warn'); return; }
 
   waiting.candidate = mp4Url;
   waiting.candidateIsMp4 = true;
+  dbg('mp4', 'aceptado como candidato · espera ' + MP4_SETTLE_MS + ' ms por si llega un .m3u8', 'ok');
   clearTimeout(window._m3u8InterceptDebounce);
   window._m3u8InterceptDebounce = setTimeout(() => {
     if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
@@ -3306,8 +3545,9 @@ function openPlayModal(src) {
     pm.cancel = _cancelCapture;
     _captureEmbed(src.url, seq, (capturedUrl, referer) => {
       if (!pm || pm.seq !== seq) return;
-      if (!capturedUrl) { finish(false); return; }
+      if (!capturedUrl) { dbg('pm', 'no se capturó ninguna URL', 'err'); finish(false); return; }
       pm.playUrl = capturedUrl; pm.referer = referer || null;
+      dbg('pm', 'capturado · ' + dbgShort(capturedUrl) + ' · referer=' + dbgShort(referer || '-', 80), 'ok');
 
       if (window.SSNative && window.SSNative.setHeaders) {
         try {
@@ -3317,7 +3557,8 @@ function openPlayModal(src) {
         } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
       }
 
-      if (/\.(mp4|mkv|webm)([?#]|$)/i.test(capturedUrl)) {
+      if (_isDirectVideoUrl(capturedUrl)) {
+        dbg('pm', 'video directo → reproducción native');
         pm.playType = 'native';
         finish(true, null);
         return;
@@ -3353,10 +3594,12 @@ function _pmRender(online, levels) {
   const name = pm.src.name;
 
   if (!online) {
+    dbg('pm', 'verificación fallida (offline) · tipo=' + pm.playType, 'err');
     if (header) header.className = 'pm-header offline';
     chan.textContent = name; list.innerHTML = PM_CLOSE_HTML; _pmFocusFirst(); return;
   }
 
+  dbg('pm', 'verificación OK · tipo=' + pm.playType + ' · niveles=' + (Array.isArray(levels) ? levels.length : '-'), 'ok');
   if (header) header.className = 'pm-header online';
   chan.textContent = name;
 
@@ -3884,6 +4127,7 @@ function forceExitApp() {
 }
 
 function handleBackAction() {
+  if (window.dbgIsOpen && window.dbgIsOpen()) { window.dbgClose(); return; }
   if (_tvFsQualityOpen) { _tvFsQualityClose(); return; }
   if (document.getElementById('exitModal')?.classList.contains('open')) { hideExitModal(); return; }
   if (document.getElementById('settingsModal')?.classList.contains('open')) { closeSettings(); return; }
