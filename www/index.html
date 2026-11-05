@@ -2435,7 +2435,7 @@ function _embedKey(season, episode) {
 }
 
 function _srcLang(link) {
-  const t = [link.language, link.lang, link.idioma, link.title, link.name, link.quality].filter(Boolean).join(' ').toLowerCase();
+  const t = [link.language, link.lang, link.idioma, link.audio, link.name, link.quality].filter(Boolean).join(' ').toLowerCase();
   if (/\bsub(s|t[ií]tul\w*)?\b|\bvose\b|\bvos\b/.test(t)) return 'Subtitulada';
   if (/\blat(ino|ina|am)?\b|latinoam\w*|🇲🇽/.test(t)) return 'Latino';
   if (/espa[ñn]ol|castellano|\bcast\b|\besp\b|\bspa(nish)?\b|🇪🇸/.test(t)) return 'Español';
@@ -2443,16 +2443,59 @@ function _srcLang(link) {
 }
 function _srcProv(link) { return String(link.__prov || link.provider || link.proveedor || ''); }
 
-/* NUEVA FUNCIÓN: Extrae el dominio del servidor de alojamiento */
+/* ── HOST (dónde está alojado el video) ──
+   Prioridad: 1) texto entre paréntesis del nombre -> "SoloLatino (StreamWish)"
+              2) campos host/hoster/server del link
+              3) hosters conocidos detectados por la URL
+              4) dominio de la URL, solo si no parece un CDN con nombre raro */
+const _HOSTERS = [
+  ['streamwish','StreamWish'],['hlswish','StreamWish'],['wishembed','StreamWish'],['awish','StreamWish'],
+  ['voe','Voe'],['nupload','Nupload'],['yourupload','YourUpload'],['hqq','Hqq'],['netu','Hqq'],
+  ['filemoon','Filemoon'],['moonplayer','Filemoon'],['doodstream','DoodStream'],['dood','DoodStream'],
+  ['vidhide','VidHide'],['mixdrop','MixDrop'],['streamtape','StreamTape'],['uqload','Uqload'],
+  ['mp4upload','Mp4Upload'],['okru','OK.ru'],['fembed','Fembed'],['upstream','Upstream'],
+  ['vimeo','Vimeo'],['pixeldrain','Pixeldrain'],['morencius','Morencius'],['sendvid','Sendvid'],
+  ['lulustream','LuluStream'],['vidguard','VidGuard'],['listeamed','VidGuard'],['megaup','MegaUp'],
+  ['burstcloud','BurstCloud'],['vidmoly','Vidmoly'],['streamhub','StreamHub'],['filelions','FileLions']
+];
+
+function _splitName(name) {
+  const n = String(name || '').trim();
+  const m = n.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+  return m ? { base: m[1].trim(), host: m[2].trim() } : { base: n, host: '' };
+}
+
+function _looksLikeJunk(label) {
+  return !label || label.length > 16 || (/\d/.test(label) && label.length > 3) || (label.match(/-/g) || []).length >= 2;
+}
+
 function _getDomain(url) {
   if (!url) return '';
   try {
-    const hostname = new URL(url).hostname;
-    let domain = hostname.replace(/^www\./, '').split('.')[0];
-    return domain.charAt(0).toUpperCase() + domain.slice(1);
+    const labels = new URL(url).hostname.toLowerCase().replace(/^www\./, '').split('.');
+    for (const [key, nice] of _HOSTERS) {
+      if (labels.some(l => l === key || l.startsWith(key) || (key.length >= 6 && l.includes(key)))) return nice;
+    }
+    // dominio registrable (penúltima etiqueta), no la primera (que suele ser subdominio/CDN)
+    const sld = labels.length >= 2 ? labels[labels.length - 2] : labels[0];
+    if (_looksLikeJunk(sld)) return '';
+    return sld.charAt(0).toUpperCase() + sld.slice(1);
   } catch (e) {
     return '';
   }
+}
+
+function _srcHost(link) {
+  const fromName = _splitName(link.name).host || _splitName(link.title).host;
+  if (fromName) return fromName;
+  const direct = link.host || link.hoster || link.server || link.servidor || link.source;
+  if (direct && typeof direct === 'string' && !/^https?:/i.test(direct)) return direct.trim();
+  return _getDomain(link.url);
+}
+
+function _srcQuality(link) {
+  const q = String(link.quality || '').replace(/^\s*calidad\s*:?\s*/i, '').trim();
+  return q || 'Auto';
 }
 
 function _srcAddItem(list, link, before) {
@@ -2461,29 +2504,26 @@ function _srcAddItem(list, link, before) {
   btn.tabIndex = 0;
   btn.dataset.url = link.url || '';
   if (_selectedEmbedUrl && link.url === _selectedEmbedUrl) btn.classList.add('is-selected');
-  
+
   const lang = _srcLang(link);
   const prov = _srcProv(link);
-  const host = _getDomain(link.url); // <-- Extrae el nombre del host
+  const host = _srcHost(link);
+  // Línea 1: nombre del proveedor sin el "(Host)"; si no hay name, cae al título
+  const base = _splitName(link.name).base || _splitName(link.title).base || 'Servidor';
+  const showProv = prov && prov.toLowerCase().replace(/[^a-z0-9]/g, '') !== base.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   btn.innerHTML = `
     <span class="src-ic">${PM_VIDEO_SVG}</span>
     <div class="src-info">
-      <!-- Línea 1: Título -->
-      <div class="src-name">${escapeHtml(link.title || link.name || 'Servidor')}</div>
-      
-      <!-- Línea 2: Idioma y Calidad -->
+      <div class="src-name">${escapeHtml(base)}</div>
       <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
         ${lang ? `<span class="src-tag lang">${escapeHtml(lang)}</span>` : ''}
-        <span class="src-quality" style="margin-top: 0;">Calidad: ${escapeHtml(link.quality || 'Auto')}</span>
+        <span class="src-quality" style="margin-top: 0;">Calidad: ${escapeHtml(_srcQuality(link))}</span>
       </div>
-      
-      <!-- Línea 3: Host y Proveedor -->
       <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px;">
         ${host ? `<span class="src-tag domain">${escapeHtml(host)}</span>` : ''}
-        ${prov ? `<span class="src-tag prov">${escapeHtml(prov)}</span>` : ''}
+        ${showProv ? `<span class="src-tag prov">${escapeHtml(prov)}</span>` : ''}
       </div>
-      
     </div>
   `;
   btn.addEventListener('click', () => {
