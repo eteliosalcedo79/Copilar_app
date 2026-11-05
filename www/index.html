@@ -408,6 +408,7 @@ html, body {
   box-shadow: 0 0 20px rgba(0,176,255,0.5);
 }
 
+/* Imagen de fondo ocupando toda la tarjeta */
 .ep-bg {
   position: absolute;
   inset: 0;
@@ -422,6 +423,7 @@ html, body {
   background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 45%, rgba(0,0,0,0.15) 100%);
 }
 
+/* Información DENTRO de la tarjeta, sobre la imagen */
 .ep-details {
   position: absolute;
   left: 0; right: 0; bottom: 0;
@@ -498,6 +500,7 @@ html, body {
 }
 .src-tag.lang { background: rgba(0,176,255,.2); color: var(--accent2); }
 .src-tag.prov { background: rgba(245,197,24,.18); color: #f5c518; }
+/* NUEVO: Estilo para la etiqueta del servidor de alojamiento (Host) */
 .src-tag.domain { background: rgba(255, 255, 255, 0.12); color: #a0aec0; text-transform: capitalize; }
 
 .src-item:focus-visible .src-tag,
@@ -1124,19 +1127,20 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   transform: translateY(0);
 }
 
+/* Ajustes para hacer los botones más pequeños y compactos */
 .bar-main {
   flex: 1 1 auto;
   min-width: 0;
   display: flex; flex-direction: column;
-  justify-content: flex-end;
-  gap: clamp(4px, 1vmin, 8px);
+  justify-content: flex-end; /* Agrupa todo hacia abajo */
+  gap: clamp(4px, 1vmin, 8px); /* Menos espacio entre título, barra y botones */
 }
 .bar-row-title {
   display: flex; align-items: center;
   line-height: 1;
   gap: clamp(6px, 1vmin, 10px);
   font-family: 'Rajdhani', sans-serif;
-  font-size: clamp(.75rem, 1.4vmin, .95rem);
+  font-size: clamp(.75rem, 1.4vmin, .95rem); /* Título un poco más pequeño */
   font-weight: 700;
   color: #fff;
   letter-spacing: .5px;
@@ -1169,7 +1173,7 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   border: 2px solid transparent;
   color: rgba(255,255,255,.92);
   cursor: pointer;
-  padding: clamp(4px, 0.8vmin, 8px);
+  padding: clamp(4px, 0.8vmin, 8px); /* Botones más pequeños */
   border-radius: 10px;
   outline: none;
   transition: all .15s ease;
@@ -1238,6 +1242,7 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   box-sizing: border-box;
 }
 
+/* Textos de tiempo (00:00) */
 .bar-time {
   font-family: 'Rajdhani', sans-serif;
   font-size: clamp(0.8rem, 1.4vmin, 1rem);
@@ -1250,6 +1255,7 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   transition: color 0.2s ease;
 }
 
+/* Riel de la barra (Fondo gris oscuro) */
 .bar-progress-track {
   flex: 1;
   height: 8px;
@@ -1262,9 +1268,10 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   border: 2px solid transparent;
 }
 
+/* Relleno verde (Progreso) */
 .bar-progress-fill {
   height: 100%;
-  background: var(--accent);
+  background: var(--accent); /* Tu verde #00cc44 */
   border-radius: 4px;
   width: 0%;
   position: absolute;
@@ -1272,6 +1279,7 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   top: 0;
 }
 
+/* La bolita blanca (Thumb) */
 .bar-progress-thumb {
   width: 16px;
   height: 16px;
@@ -1279,26 +1287,29 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   border-radius: 50%;
   position: absolute;
   top: 50%;
-  transform: translate(-50%, -50%) scale(0);
+  transform: translate(-50%, -50%) scale(0); /* Oculto por defecto */
   transition: transform 0.15s ease, box-shadow 0.2s ease;
   box-shadow: 0 2px 6px rgba(0,0,0,0.8);
   pointer-events: none;
   z-index: 2;
 }
 
+/* ══════ ESTADO ENFOCADO (Cuando usas el control remoto) ══════ */
 .bar-progress-track.focused {
   background: rgba(255, 255, 255, 0.25);
-  border-color: var(--accent);
-  box-shadow: 0 0 12px rgba(0, 204, 68, 0.4);
-  transform: scaleY(1.2);
-  margin: 0 8px;
+  border-color: var(--accent); /* Borde verde */
+  box-shadow: 0 0 12px rgba(0, 204, 68, 0.4); /* Brillo verde tenue */
+  transform: scaleY(1.2); /* Un poco más gruesa */
+  margin: 0 8px; /* Evitar que se corte al engrosar */
 }
 
+/* Los tiempos se iluminan cuando la barra tiene el foco */
 .bar-progress-container:has(.bar-progress-track.focused) .bar-time {
   color: #fff;
   text-shadow: 0 0 8px rgba(0, 204, 68, 0.8);
 }
 
+/* Al enfocar, la bolita aparece y brilla */
 .bar-progress-track.focused .bar-progress-thumb {
   transform: translate(-50%, -50%) scale(1);
   box-shadow: 0 0 10px #fff, 0 2px 8px rgba(0,0,0,0.8);
@@ -1338,6 +1349,73 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 .ss-toast.warn    { background: #f57c00; }
 .ss-toast.error   { background: #c62828; }
 
+/* ══════════════════ CONSOLA DE DEPURACIÓN ══════════════════ */
+.dbg-modal {
+  position: fixed;
+  top: var(--tv-topbar-h);
+  left: 0; right: var(--tv-player-w); bottom: 0;
+  background: rgba(6,9,14,.94);
+  z-index: 900;
+  display: none;
+  padding: clamp(10px, 2vh, 24px) 12px;
+}
+.dbg-modal.open { display: flex; animation: fadeInUp .2s ease; }
+.dbg-card {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.dbg-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-family: 'Orbitron', monospace;
+  font-size: .75rem; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--accent); text-transform: uppercase;
+}
+.dbg-toolbar {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 8px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+.dbg-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: .8rem; font-weight: 700;
+  letter-spacing: .5px; text-transform: uppercase;
+  cursor: pointer; outline: none;
+}
+.dbg-btn:focus, .dbg-btn:focus-visible {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(0,176,255,.3);
+}
+.dbg-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: .68rem; line-height: 1.45;
+  color: #c8d4e0;
+  word-break: break-all;
+  outline: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-dim) transparent;
+}
+.dbg-log:focus { box-shadow: inset 0 0 0 2px var(--accent2); }
+.dbg-line { white-space: pre-wrap; padding: 1px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
+.dbg-line.ok   { color: #4cd964; }
+.dbg-line.warn { color: #ffb74d; }
+.dbg-line.err  { color: #ff5c7a; }
+
 /* ══════════════════ MOBILE ══════════════════ */
 @media (max-width: 640px) {
   :root { --tv-player-w: 100vw; }
@@ -1351,6 +1429,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     border-top: 1px solid var(--border);
   }
   .sources-modal,
+  .dbg-modal,
   .pm-modal { right: 0; bottom: 42vh; }
   .pm-card { width: 90%; }
   .poster-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; padding: 6px; }
@@ -1366,6 +1445,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 
 <!-- ══════ MAIN AREA (izquierda) ══════ -->
 <div id="section-peliculas" class="main-area">
+  <!-- Categorías arriba, scroll horizontal -->
   <div class="categories-bar" id="categoriesBar">
     <button class="category-btn search-btn" id="searchBtn" aria-label="Buscar" tabindex="0">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/></svg>
@@ -1373,16 +1453,21 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     <button class="category-btn" id="btnSettings" aria-label="Ajustes" tabindex="0" style="padding: 8px; font-size: 1.2rem;">
       ⚙️
     </button>
+    <button class="category-btn" id="btnDebug" aria-label="Consola" tabindex="0" style="padding: 8px; font-size: 1.2rem;">
+      🐞
+    </button>
     <div class="search-box" id="searchBox">
       <input id="searchInput" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar película, serie, novela o anime…">
       <button class="search-clear" id="searchClose" aria-label="Cerrar búsqueda" tabindex="0">✕</button>
     </div>
   </div>
 
+  <!-- Grid de pósters debajo -->
   <div class="poster-grid" id="posterGrid">
     <div class="grid-msg">Cargando catálogo…</div>
   </div>
 
+  <!-- Detalle (overlay) -->
   <div id="detailView">
     <div class="detail-content">
       <div class="detail-inner">
@@ -1395,9 +1480,11 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
           <button class="btn-play-large" id="btnPlayMain" onclick="openSources()">
             ▶ Reproducir
           </button>
+          <!-- Temporadas (series): a la misma altura que "Reproducir" -->
           <div class="seasons-bar" id="detSeasonsBar"></div>
         </div>
 
+        <!-- CONTENEDOR INLINE DE EPISODIOS -->
         <div class="inline-episodes-wrap" id="inlineEpisodesContainer">
           <div class="episodes-scroll-area" id="detEpisodesList"></div>
         </div>
@@ -1414,6 +1501,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
       <div class="loader-bg"></div>
       <div class="plyr-loader-content">
         <div class="spin-anim"></div>
+        <!-- EL AVISO HA SIDO ELIMINADO POR COMPLETO DE AQUÍ -->
       </div>
     </div>
     <video id="iptv-player" playsinline poster="player_bg.webp"></video>
@@ -1479,7 +1567,9 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     <button onclick="closeSettings()" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--red); font-size: 1.5rem; cursor: pointer;">✕</button>
     <h2 style="font-family: 'Orbitron', sans-serif; color: var(--accent); margin-bottom: 15px; font-size: 1.2rem;">Proveedores</h2>
     
+    <!-- Lista de plugins -->
     <div id="settingsPluginsList" style="flex: 1; width: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px; margin-top: 10px;">
+      <!-- Se llena dinámicamente con JS -->
       <div style="text-align: center; color: var(--text-sub); padding: 20px;">Cargando proveedores…</div>
     </div>
   </div>
@@ -1504,7 +1594,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 <script src="crypto-js.min.js"></script>
 
 <script>
-/* ── Ocultar splash nativo de Capacitor ── */
+/* ── Ocultar splash nativo de Capacitor (launchAutoHide: false) ── */
 (function () {
   var done = false;
   function hideSplash() {
@@ -1535,6 +1625,7 @@ const PROXY          = 'https://api.allorigins.win/raw?url=';
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/manifest.json';
 const REPO_BASE    = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/';
 
+// Los 23 que dejamos por defecto la primera vez que abren la app
 const DEFAULT_ENABLED = [
   'embed69', 'sololatino', 'peliculasflix', 'cinecalidad', 'lamovie',
   'allcalidad', 'areadocumental', 'cinehdplus', 'cuevana_unbuendato', 'documaniatv',
@@ -1543,14 +1634,15 @@ const DEFAULT_ENABLED = [
   'tioanime', 'vimeus', 'vitaminagg'
 ];
 
-let allPlugins = [];
-let activePlugins = new Set();
+let allPlugins = []; // Todos los 53 plugins
+let activePlugins = new Set(); // Los que el usuario eligió
 let _pluginsLoadPromise = null;
 
 function _normKey(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 }
 
+// 1. Cargar todos los plugins del manifest
 function loadPluginsFromManifest() {
   if (_pluginsLoadPromise) return _pluginsLoadPromise;
   _pluginsLoadPromise = (async () => {
@@ -1583,10 +1675,12 @@ function loadPluginsFromManifest() {
         });
       }
 
+      // 2. Recuperar selección del usuario (localStorage)
       const saved = localStorage.getItem('user_plugins');
       if (saved) {
         activePlugins = new Set(JSON.parse(saved));
       } else {
+        // Si es la primera vez, activamos los 23 por defecto
         activePlugins = new Set(DEFAULT_ENABLED);
       }
 
@@ -1600,6 +1694,7 @@ function loadPluginsFromManifest() {
   return _pluginsLoadPromise;
 }
 
+// 3. Funciones para el Modal de Ajustes
 async function openSettings() {
   document.getElementById('settingsModal').classList.add('open');
   const container = document.getElementById('settingsPluginsList');
@@ -1611,6 +1706,7 @@ async function openSettings() {
   allPlugins.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
     const isChecked = activePlugins.has(p.id) ? 'checked' : '';
     const item = document.createElement('div');
+    // Estilos optimizados para que quepan más elementos en pantalla
     item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);';
     item.innerHTML = `
       <div style="flex: 1; min-width: 0; text-align: left;">
@@ -1630,17 +1726,18 @@ function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
 }
 
+// 4. Guardar selección en el teléfono
 function togglePlugin(id, isChecked) {
   if (isChecked) activePlugins.add(id);
   else activePlugins.delete(id);
   localStorage.setItem('user_plugins', JSON.stringify([...activePlugins]));
 }
 
-/* ⬇️ TIEMPOS AJUSTADOS A 5 SEGUNDOS ⬇️ */
-const EMBED_TIMEOUT_MS       = 5000;
-const EMBED_MAX_RETRY        = 1;
-const EMBED_LOAD_GRACE_MS    = 3000;
-const EMBED_MAX_TOTAL_MS     = 5000;
+/* ⬇️ TIEMPOS ORIGINALES RESTAURADOS (No se tocan) ⬇️ */
+const EMBED_TIMEOUT_MS       = 7500;
+const EMBED_MAX_RETRY        = 2;
+const EMBED_LOAD_GRACE_MS    = 5000;
+const EMBED_MAX_TOTAL_MS     = 15000;
 const REOPEN_GUARD_MS        = 1500;
 const CLOSED_KEEP_MS         = 10000;
 const STALE_ORIGIN_MS        = 8000;
@@ -1795,10 +1892,10 @@ function renderCategories() {
 }
 
 
-/* ══════════ CATÁLOGO: paginación ══════════ */
+/* ══════════ CATÁLOGO: paginación (scroll infinito, tope 150) y buscador ══════════ */
 const MAX_ITEMS = 150;
 let currentCatObj = null;
-let catState = {};
+let catState = {};          // id -> { skip, done, loading, wait }
 let searchMode = false;
 let searchSeq = 0;
 let searchTimer = null;
@@ -1839,6 +1936,7 @@ async function loadCategory(cat) {
   }
 }
 
+/* Carga la siguiente página de la categoría actual (de a una, hasta MAX_ITEMS) */
 async function loadMore() {
   const cat = currentCatObj;
   if (!cat || searchMode) return;
@@ -1863,7 +1961,7 @@ async function loadMore() {
     if (currentCatObj === cat && !searchMode) appendPosters(fresh);
   } catch (e) {
     console.error('[Catalog] más', e);
-    st.wait = Date.now() + 4000;
+    st.wait = Date.now() + 4000;   // reintenta más tarde, sin insistir en bucle
   }
   st.loading = false;
   if (currentCatObj === cat && !searchMode) { _gridFooter(); _checkFill(); }
@@ -1883,6 +1981,7 @@ function _gridFooter() {
   grid.appendChild(d);
 }
 
+/* Si la cuadrícula no llena la pantalla, pide la siguiente página */
 function _checkFill() {
   setTimeout(() => {
     const grid = document.getElementById('posterGrid');
@@ -1915,6 +2014,7 @@ function _makeCard(meta) {
   return card;
 }
 
+/* Agrega pósters al final sin redibujar los existentes */
 function appendPosters(metas) {
   const grid = document.getElementById('posterGrid');
   grid.querySelectorAll('.grid-more').forEach(n => n.remove());
@@ -1940,6 +2040,7 @@ function renderPosters(metas, emptyMsg) {
   }, 100);
 }
 
+/* ── Buscador ── */
 async function _searchOne(type, id, q) {
   try {
     const data = await fetchJSON(`${CATALOG_ADDON}/catalog/${type}/${id}/search=${encodeURIComponent(q)}.json`);
@@ -2055,6 +2156,7 @@ function closeSearch() {
     });
   }, { passive: true });
 
+  /* Con el control remoto: al acercarse a las últimas filas, carga más */
   grid.addEventListener('focusin', (e) => {
     if (searchMode || !e.target.classList || !e.target.classList.contains('poster-card')) return;
     const cards = grid.querySelectorAll('.poster-card');
@@ -2278,7 +2380,7 @@ function ejecutarPlugin(plugin, meta, season, episode) {
       try { log = (iframe && iframe.contentWindow.__log || []).slice(0, 6); } catch (_) {}
       if (listener) window.removeEventListener('message', listener);
       if (timeoutId) clearTimeout(timeoutId);
-      if (iframe && document.body.contains(iframe)) iframe.remove();
+      if (iframe && document.body.contains(iframe)) iframe.remove(); // IMPORTANTE: Eliminar iframe al terminar
       resolve({ links: Array.isArray(links) ? links : [], error: error || '', log });
     };
 
@@ -2346,9 +2448,11 @@ function ejecutarPlugin(plugin, meta, season, episode) {
   });
 }
 
+/* ⬇️ CARGA EN LOTES DE 3 EN 3 PARA NO SATURAR EL WEBVIEW DE ANDROID ⬇️ */
 async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   await loadPluginsFromManifest();
 
+  // Filtramos solo los que el usuario encendió en los ajustes
   const PLUGINS_TO_USE = allPlugins.filter(p => activePlugins.has(p.id));
 
   if (!PLUGINS_TO_USE.length) {
@@ -2360,7 +2464,7 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   const todos = [];
   let pendientes = PLUGINS_TO_USE.length;
 
-  const limit = 3;
+  const limit = 3; // Solo 3 peticiones a la vez
   let index = 0;
 
   const runNext = async () => {
@@ -2391,8 +2495,8 @@ async function openSources() {
   openSourcesWithEpisode(null, null);
 }
 
-/* ── Caché de embeds ── */
-let _embedState = null;
+/* ── Caché: solo la última verificación de embeds (por película o por episodio) ── */
+let _embedState = null;      // { key, links, pendientes, done, paint }
 let _srcRendered = 0;
 let _srcFocused = false;
 let _selectedEmbedUrl = null;
@@ -2410,6 +2514,11 @@ function _srcLang(link) {
 }
 function _srcProv(link) { return String(link.__prov || link.provider || link.proveedor || ''); }
 
+/* ── HOST (dónde está alojado el video) ──
+   Prioridad: 1) texto entre paréntesis del nombre -> "SoloLatino (StreamWish)"
+              2) campos host/hoster/server del link
+              3) hosters conocidos detectados por la URL
+              4) dominio de la URL, solo si no parece un CDN con nombre raro */
 const _HOSTERS = [
   ['streamwish','StreamWish'],['hlswish','StreamWish'],['wishembed','StreamWish'],['awish','StreamWish'],
   ['voe','Voe'],['nupload','Nupload'],['yourupload','YourUpload'],['hqq','Hqq'],['netu','Hqq'],
@@ -2438,6 +2547,7 @@ function _getDomain(url) {
     for (const [key, nice] of _HOSTERS) {
       if (labels.some(l => l === key || l.startsWith(key) || (key.length >= 6 && l.includes(key)))) return nice;
     }
+    // dominio registrable (penúltima etiqueta), no la primera (que suele ser subdominio/CDN)
     const sld = labels.length >= 2 ? labels[labels.length - 2] : labels[0];
     if (_looksLikeJunk(sld)) return '';
     return sld.charAt(0).toUpperCase() + sld.slice(1);
@@ -2469,6 +2579,7 @@ function _srcAddItem(list, link, before) {
   const lang = _srcLang(link);
   const prov = _srcProv(link);
   const host = _srcHost(link);
+  // Línea 1: nombre del proveedor sin el "(Host)"; si no hay name, cae al título
   const base = _splitName(link.name).base || _splitName(link.title).base || 'Servidor';
   const showProv = prov && prov.toLowerCase().replace(/[^a-z0-9]/g, '') !== base.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -2495,6 +2606,7 @@ function _srcAddItem(list, link, before) {
   list.insertBefore(btn, before || null);
 }
 
+/* Agrega solo los embeds nuevos debajo de los que ya están; no reconstruye la lista */
 function _srcPaint(st) {
   if (st !== _embedState) return;
   const list = document.getElementById('sourcesList');
@@ -2525,6 +2637,7 @@ function _srcPaint(st) {
     more.innerHTML = '<div class="spin-anim"></div><div>Buscando en ' + st.pendientes + (st.pendientes === 1 ? ' sitio más…' : ' sitios más…') + '</div>';
   } else if (more) { more.remove(); }
 
+
   if (!_srcFocused) {
     const target = list.querySelector('.src-item.is-selected') || list.querySelector('.src-item');
     if (target) { _srcFocused = true; setTimeout(() => target.focus({ preventScroll: true }), 100); }
@@ -2540,6 +2653,7 @@ async function openSourcesWithEpisode(season, episode) {
   _srcRendered = 0; _srcFocused = false;
   document.getElementById('sourcesModal').classList.add('open');
 
+  // Mismo contenido (película o episodio): se reutiliza la caché o la búsqueda en curso, sin volver a buscar
   const prev = _embedState;
   if (prev && prev.key === key && (!prev.done || prev.links.length)) {
     list.innerHTML = '';
@@ -2549,6 +2663,7 @@ async function openSourcesWithEpisode(season, episode) {
     return;
   }
 
+  // Contenido distinto: la caché anterior se descarta y se guarda solo esta
   const st = { key, links: [], pendientes: 0, done: false, paint: null };
   _embedState = st;
   _selectedEmbedUrl = null;
@@ -2585,6 +2700,7 @@ function closeSources(restoreFocus = true) {
 
 function playMovieSource(link) {
   if (!currentMovie) return;
+  // El modal de embeds queda abierto; solo se abre el de calidades
   openPlayModal({
     kind     : 'movie',
     movie    : currentMovie,
@@ -2985,8 +3101,36 @@ function _captureEmbed(url, seq, cb) {
     });
 
     wrapper.appendChild(iframe); container.appendChild(wrapper); armTimer(EMBED_TIMEOUT_MS);
+    _scheduleEmbedTaps(waiting, wrapper, iframe);
   };
   attempt(false);
+}
+
+/* ── Toque simulado sobre el embed ──
+   Muchos hosts (StreamTape, MixDrop, OK.ru, YourUpload) no cargan el video hasta
+   que alguien hace clic en el reproductor. El iframe es de otro origen, así que el
+   clic lo hace la capa nativa (SSNative.tap) en el centro del iframe oculto.
+   El iframe solo es "tocable" durante el instante del toque. */
+const EMBED_TAP_DELAYS_MS = [1200, 2800, 4500];
+const EMBED_TAP_HOLD_MS   = 250;
+
+function _scheduleEmbedTaps(waiting, wrapper, iframe) {
+  if (!window.SSNative || typeof window.SSNative.tap !== 'function') return;
+  EMBED_TAP_DELAYS_MS.forEach(ms => setTimeout(() => {
+    if (window._embedWaiting !== waiting || waiting.candidate || waiting.blocked) return;
+    if (!document.body.contains(wrapper)) return;
+    const r = wrapper.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    wrapper.style.pointerEvents = 'auto';
+    iframe.style.pointerEvents = 'auto';
+    try { window.SSNative.tap(x, y); } catch (e) { console.warn('[Tap] falló:', e); }
+    setTimeout(() => {
+      wrapper.style.pointerEvents = 'none';
+      iframe.style.pointerEvents = 'none';
+    }, EMBED_TAP_HOLD_MS);
+  }, ms));
 }
 
 window.onM3u8Intercepted = function (m3u8Url, referer) {
@@ -2997,9 +3141,11 @@ window.onM3u8Intercepted = function (m3u8Url, referer) {
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
   if (window._lastInterceptedM3u8 === m3u8Url) return;
   if (_isFromPrevEmbed(referer, waiting.url)) return;
-  if (waiting.candidate) return;
+  /* Un .m3u8 puede reemplazar a un .mp4 que aún esté pendiente; entre dos .m3u8 gana el primero */
+  if (waiting.candidate && !waiting.candidateIsMp4) return;
 
   waiting.candidate = m3u8Url;
+  waiting.candidateIsMp4 = false;
   clearTimeout(window._m3u8InterceptDebounce);
   window._m3u8InterceptDebounce = setTimeout(() => {
     if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
@@ -3016,6 +3162,52 @@ function _processInterceptedM3u8(m3u8Url, referer) {
   document.getElementById('embedWrapper')?.remove();
   _markClosed(waiting.url); window._activeUrl = null;
   if (typeof waiting.onCaptured === 'function') waiting.onCaptured(m3u8Url, referer);
+}
+
+/* ── Captura de .mp4 / .mkv / .webm (StreamTape, MixDrop, OK.ru, YourUpload…) ── */
+const MP4_SETTLE_MS = 1500;   // espera extra: si en ese lapso llega un .m3u8, el .m3u8 gana
+
+/* Filtro de anuncios: dominios de ads/trackers y rutas típicas de publicidad o previews */
+const _AD_HOST_RE = /(doubleclick|googlesyndication|googleadservices|adservice|adsystem|adnxs|adsterra|adskeeper|exoclick|exosrv|juicyads|trafficjunky|trafficstars|popads|popcash|propeller|onclickads|clickadu|hilltopads|tsyndicate|mgid|taboola|outbrain|revcontent|yllix|a-ads|bidvertiser|adcash|adform|criteo|pubmatic|rubiconproject|openx|smartadserver|teads|vidazoo|adtng|admaven|richads|monetag|realsrv|plugrush|adspyglass)/i;
+const _AD_PATH_RE = /(^|[\/_\-.])(ads?|adv|advert\w*|banner|preroll|pre-roll|midroll|postroll|promo|sponsor\w*|teaser|trailer|preview|vast|vpaid|popunder|thumb\w*|sprite|poster)([\/_\-.]|$)/i;
+
+function _isAdMp4(url) {
+  let u;
+  try { u = new URL(url); } catch (_) { return true; }
+  if (_AD_HOST_RE.test(u.hostname)) return true;
+  if (_AD_PATH_RE.test(u.pathname)) return true;
+  if (/[?&](vast|vpaid|adtag|adunit|ad_?id)=/i.test(u.search)) return true;
+  return false;
+}
+
+window.onMp4Intercepted = function (mp4Url, referer) {
+  if (!mp4Url) return;
+  const waiting = window._embedWaiting;
+  if (!waiting || !pm || waiting.sid !== pm.seq) return;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
+  if (_isFromPrevEmbed(referer, waiting.url)) return;
+  if (waiting.candidate) return;
+  if (_isAdMp4(mp4Url)) { console.log('[Mp4] ignorado (anuncio):', mp4Url); return; }
+
+  waiting.candidate = mp4Url;
+  waiting.candidateIsMp4 = true;
+  clearTimeout(window._m3u8InterceptDebounce);
+  window._m3u8InterceptDebounce = setTimeout(() => {
+    if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) return;
+    _processInterceptedMp4(mp4Url, referer);
+  }, MP4_SETTLE_MS);
+};
+
+function _processInterceptedMp4(mp4Url, referer) {
+  const waiting = window._embedWaiting;
+  if (!waiting) return;
+  window._embedWaiting = null;
+  clearTimeout(window._embedTimer);
+  _captureGuard(false);
+  if (waiting.host) _embedSbSave(waiting.host, !!waiting.sandbox);
+  document.getElementById('embedWrapper')?.remove();
+  _markClosed(waiting.url); window._activeUrl = null;
+  if (typeof waiting.onCaptured === 'function') waiting.onCaptured(mp4Url, referer);
 }
 
 function prepareHls(url, referer, cb) {
@@ -3086,204 +3278,6 @@ function _detectDirectType(url) {
   return f === 'flv' ? 'flv' : (f === 'hls' ? 'hls' : 'native');
 }
 
-/* ══════════════════ MEDIAFLOW PROXY · FALLBACK EN CADENA ══════════════════ */
-const MEDIAFLOW_INSTANCES = [
-  'https://mediaflow.chasekeating.com',
-  // 'https://segunda-instancia.example',   // ← aquí agregas la #2 si consigues otra
-];
-const MEDIAFLOW_TIMEOUT_MS = 5000;
-const MAX_MEDIAFLOW_ATTEMPTS = 2; // 1 original + 1 alternativo
-
-function _mediaflowTimeout(ms) {
-  return new Promise(resolve => setTimeout(() => resolve({ __timeout: true }), ms));
-}
-
-async function _mediaflowOneHost(instance, hostName, urlEmbed) {
-  const apiUrl = `${instance}/extractor/video?host=${hostName}&d=${encodeURIComponent(urlEmbed)}`;
-  try {
-    const response = await Promise.race([
-      nativeFetch(apiUrl),
-      _mediaflowTimeout(MEDIAFLOW_TIMEOUT_MS),
-    ]);
-    if (!response || response.__timeout) throw new Error('timeout');
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const data = await response.json();
-
-    let finalUrl = data.url || data.destination_url || data.stream_url || data.source;
-    if (!finalUrl && Array.isArray(data.streams) && data.streams.length > 0) {
-      finalUrl = data.streams[0].url || data.streams[0].destination_url;
-    }
-    if (!finalUrl) throw new Error('sin URL');
-    return finalUrl;
-  } catch (e) {
-    console.warn('[MediaFlow]', instance, '→', e.message || e);
-    return null;
-  }
-}
-
-async function resolverEnlace(urlEmbed) {
-  const hostMap = {
-    'voe.sx': 'voe', 'voe.': 'voe',
-    'streamwish': 'streamwish', 'hlswish': 'streamwish', 'awish': 'streamwish', 'wishembed': 'streamwish',
-    'filemoon': 'filemoon', 'moonplayer': 'filemoon',
-    'streamtape': 'streamtape', 'mixdrop': 'mixdrop', 'nupload': 'nupload',
-    'doodstream': 'doodstream', 'dood': 'doodstream',
-    'vidhide': 'vidhide', 'filelions': 'filelions', 'lulustream': 'lulustream',
-    'okru': 'okru', 'ok.ru': 'okru',
-    'vixcloud': 'vixcloud', 'vidoza': 'vidoza', 'vidmoly': 'vidmoly',
-    'uqload': 'uqload', 'fembed': 'fembed'
-  };
-
-  let hostName = null;
-  const urlLower = String(urlEmbed || '').toLowerCase();
-  for (const [key, val] of Object.entries(hostMap)) {
-    if (urlLower.includes(key)) { hostName = val; break; }
-  }
-  if (!hostName) return null;
-
-  for (const instance of MEDIAFLOW_INSTANCES) {
-    const finalUrl = await _mediaflowOneHost(instance, hostName, urlEmbed);
-    if (finalUrl) {
-      if (window.SSNative && window.SSNative.setHeaders) {
-        try {
-          const origin = new URL(urlEmbed).origin;
-          window.SSNative.setHeaders(finalUrl, JSON.stringify({ 'Referer': urlEmbed, 'Origin': origin }));
-        } catch (_) {}
-      }
-      return { url: finalUrl, type: finalUrl.includes('.m3u8') ? 'hls' : 'mp4', via: instance };
-    }
-  }
-  return null;
-}
-
-function _hostKey(url) {
-  try {
-    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
-    if (/streamwish|hlswish|awish|wishembed/.test(host)) return 'streamwish';
-    if (/voe\./.test(host) || host === 'voe.sx') return 'voe';
-    if (/filemoon|moonplayer/.test(host)) return 'filemoon';
-    if (/dood/.test(host)) return 'doodstream';
-    if (/vidhide/.test(host)) return 'vidhide';
-    if (/filelions/.test(host)) return 'filelions';
-    if (/lulustream/.test(host)) return 'lulustream';
-    if (/ok\.?ru/.test(host)) return 'okru';
-    if (/vidmoly/.test(host)) return 'vidmoly';
-    if (/uqload/.test(host)) return 'uqload';
-    if (/fembed/.test(host)) return 'fembed';
-    if (/streamtape/.test(host)) return 'streamtape';
-    if (/mixdrop/.test(host)) return 'mixdrop';
-    if (/nupload/.test(host)) return 'nupload';
-    if (/vixcloud/.test(host)) return 'vixcloud';
-    if (/vidoza/.test(host)) return 'vidoza';
-    const labels = host.split('.');
-    return labels.length >= 2 ? labels.slice(-2).join('.') : host;
-  } catch (_) { return url; }
-}
-
-/* Actualiza el mensaje del modal para mostrar "Opción X/Y · Nombre" */
-function _pmShowStep(step, total, label) {
-  const chan = document.getElementById('pmChan');
-  const header = document.getElementById('pmHeader');
-  if (header) header.className = 'pm-header checking';
-  if (chan) chan.textContent = `Opción ${step}/${total} · ${label}`;
-  const list = document.getElementById('pmList');
-  if (list) {
-    list.innerHTML = `
-      <div class="pm-loading">
-        <div class="pm-spin"></div>
-        <div>Buscando en opción ${step} de ${total}…</div>
-      </div>`;
-  }
-}
-
-async function _tryPlaybackChain(src, seq, finish) {
-  /* Construir candidatos: fuente elegida + alternativas con host distinto */
-  const candidates = [{ url: src.url, name: src.name || 'Servidor' }];
-  if (_embedState && Array.isArray(_embedState.links)) {
-    const seenHosts = new Set([_hostKey(src.url)]);
-    for (const link of _embedState.links) {
-      if (!link || !link.url || link.url === src.url) continue;
-      const hk = _hostKey(link.url);
-      if (!hk || seenHosts.has(hk)) continue;
-      seenHosts.add(hk);
-      candidates.push({ url: link.url, name: _splitName(link.name).base || link.__prov || 'Servidor alterno' });
-      if (candidates.length >= MAX_MEDIAFLOW_ATTEMPTS) break;
-    }
-  }
-
-  /* Total de opciones: candidatos MediaFlow + 1 paso de "capturador" */
-  const totalSteps = candidates.length + 1;
-
-  /* ══ PASO 1..N: MediaFlow (original → alternativas) ══ */
-  for (let i = 0; i < candidates.length; i++) {
-    if (!pm || pm.seq !== seq) return;
-    const cand = candidates[i];
-
-    _pmShowStep(i + 1, totalSteps, cand.name);
-    if (i > 0) showToast(`Reintentando con ${cand.name}…`, 'warn', 2000);
-
-    const result = await resolverEnlace(cand.url);
-    if (!pm || pm.seq !== seq) return;
-
-    if (result && result.url) {
-      pm.playUrl = result.url;
-      pm.referer = cand.url;
-
-      if (window.SSNative && window.SSNative.setHeaders) {
-        try { window.SSNative.setHeaders(result.url, JSON.stringify({ 'Referer': cand.url })); } catch (_) {}
-      }
-
-      /* Actualizar selección visual si cambiamos de fuente */
-      if (i > 0) {
-        _selectedEmbedUrl = cand.url;
-        document.querySelectorAll('#sourcesList .src-item').forEach(b => {
-          b.classList.toggle('is-selected', b.dataset.url === cand.url);
-        });
-      }
-
-      if (result.type === 'hls') {
-        pm.playType = 'hls';
-        pm.cancel = prepareHls(result.url, pm.referer, (levels, take) => {
-          if (pm && pm.seq === seq) pm.takeHls = take || null;
-          finish(levels !== null, levels);
-        });
-      } else {
-        pm.playType = 'native';
-        pm.cancel = probeNative(result.url, ok => finish(ok, null));
-      }
-      return;
-    }
-  }
-
-  /* ══ ÚLTIMO PASO: iframe con sandbox → sin sandbox ══ */
-  if (!pm || pm.seq !== seq) return;
-  _pmShowStep(candidates.length + 1, totalSteps, 'Capturador');
-  showToast('Extractores caídos, probando método alterno…', 'warn', 3000);
-
-  pm.cancel = _captureEmbed(src.url, seq, (m3u8, referer) => {
-    if (!pm || pm.seq !== seq) return;
-    if (!m3u8) { finish(false); return; }
-    pm.playUrl = m3u8;
-    pm.referer = referer || null;
-
-    if (src.kind === 'movie' && window.SSNative && window.SSNative.setHeaders) {
-      try {
-        const hd = {};
-        if (referer) {
-          hd['Referer'] = referer;
-          try { hd['Origin'] = new URL(referer).origin; } catch (_) {}
-        }
-        window.SSNative.setHeaders(m3u8, JSON.stringify(hd));
-      } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
-    }
-
-    pm.cancel = prepareHls(m3u8, pm.referer, (levels, take) => {
-      if (pm && pm.seq === seq) pm.takeHls = take || null;
-      finish(levels !== null, levels);
-    });
-  });
-}
-
 function openPlayModal(src) {
   if (!isSafeUrl(src.url)) { showToast('Dirección no permitida', 'error'); return; }
   if (!navigator.onLine) return;
@@ -3309,10 +3303,30 @@ function openPlayModal(src) {
   const finish = (online, levels) => { if (!pm || pm.seq !== seq) return; _pmRender(online, levels); };
 
   if (type === 'embed') {
-    pm.cancel = () => {};
-    _tryPlaybackChain(src, seq, finish).catch(() => {
+    pm.cancel = _cancelCapture;
+    _captureEmbed(src.url, seq, (capturedUrl, referer) => {
       if (!pm || pm.seq !== seq) return;
-      finish(false);
+      if (!capturedUrl) { finish(false); return; }
+      pm.playUrl = capturedUrl; pm.referer = referer || null;
+
+      if (window.SSNative && window.SSNative.setHeaders) {
+        try {
+          const hd = {};
+          if (referer) { hd['Referer'] = referer; try { hd['Origin'] = new URL(referer).origin; } catch (_) {} }
+          window.SSNative.setHeaders(capturedUrl, JSON.stringify(hd));
+        } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
+      }
+
+      if (/\.(mp4|mkv|webm)([?#]|$)/i.test(capturedUrl)) {
+        pm.playType = 'native';
+        finish(true, null);
+        return;
+      }
+
+      pm.cancel = prepareHls(capturedUrl, pm.referer, (levels, take) => {
+        if (pm && pm.seq === seq) pm.takeHls = take || null;
+        finish(levels !== null, levels);
+      });
     });
   } else if (type === 'hls') {
     pm.cancel = prepareHls(src.url, null, (levels, take) => {
@@ -3507,6 +3521,7 @@ class TVPlayerBar {
     logoBox.appendChild(logoImg);
     const rowControls = document.createElement('div'); rowControls.className = 'bar-row-controls';
     
+    // --- CONTROLES EXISTENTES (Play, Aspecto, Calidad) ---
     const playBtn = document.createElement('div'); playBtn.className = 'bar-btn'; playBtn.dataset.idx = '0'; playBtn.innerHTML = SVG_PLAY;
     playBtn.addEventListener('click', () => this._activateButton(0));
     const aspectBtn = document.createElement('div'); aspectBtn.className = 'bar-btn'; aspectBtn.dataset.idx = '1'; aspectBtn.innerHTML = SVG_ASPECT;
@@ -3517,6 +3532,7 @@ class TVPlayerBar {
     const live = document.createElement('div'); live.className = 'bar-live-indicator'; live.innerHTML = '<span class="bar-live-dot"></span><span>EN VIVO</span>';
     rowControls.appendChild(playBtn); rowControls.appendChild(aspectBtn); rowControls.appendChild(qualityBtn); rowControls.appendChild(live);
 
+    // --- NUEVA BARRA DE PROGRESO ---
     const progressContainer = document.createElement('div');
     progressContainer.className = 'bar-progress-container';
     progressContainer.id = 'tvProgressContainer';
@@ -3543,12 +3559,14 @@ class TVPlayerBar {
     progressContainer.appendChild(trackEl);
     progressContainer.appendChild(totalTimeEl);
 
+    // Guardamos referencias
     this._progressContainer = progressContainer;
     this._progressTrack = trackEl;
     this._progressFill = fillEl;
     this._currentTimeEl = currentTimeEl;
     this._totalTimeEl = totalTimeEl;
 
+    // Evento click por si se usa mouse
     trackEl.addEventListener('click', (e) => {
       const v = document.getElementById('iptv-player');
       if (!v || !v.duration) return;
@@ -3560,8 +3578,13 @@ class TVPlayerBar {
 
     const main = document.createElement('div'); main.className = 'bar-main';
     
+    // 1. Arriba: El título de la película
     main.appendChild(rowTitle);          
+    
+    // 2. En el medio: La barra de progreso
     main.appendChild(progressContainer); 
+    
+    // 3. Abajo: Los botones de control
     main.appendChild(rowControls);       
     
     bar.appendChild(logoBox); bar.appendChild(main); document.body.appendChild(bar);
@@ -3577,7 +3600,7 @@ class TVPlayerBar {
     this._attachToFullscreen(); this._barEl.classList.add('visible'); this._visible = true;
     this._fitLogo(); requestAnimationFrame(() => this._fitLogo());
     this.updatePlayState(); this.updateQualityLabel(); this.updateLiveLabel();
-    this.updateProgress();
+    this.updateProgress(); // Actualiza la barra al mostrar
     this._focusButton(0); this._resetTimer();
   }
   hide() {
@@ -3721,6 +3744,7 @@ class TVPlayerBar {
 
     const isProgressFocused = document.activeElement === this._progressTrack || this._currentBtnIdx === -1;
 
+    // CONTROL DE LA BARRA DE PROGRESO
     if (isProgressFocused) {
       const v = document.getElementById('iptv-player');
       switch (key) {
@@ -3742,7 +3766,7 @@ class TVPlayerBar {
           this._focusButton(this._currentBtnIdx >= 0 ? this._currentBtnIdx : 0); 
           return true;
         case 'ArrowUp':
-          return true;
+          return true; // Se queda en la barra
         case 'Enter':
         case ' ':
           if (v) { if (v.paused) v.play().catch(()=>{}); else v.pause(); }
@@ -3752,10 +3776,11 @@ class TVPlayerBar {
       return true;
     }
 
+    // NAVEGACIÓN POR LOS BOTONES INFERIORES
     switch (key) {
       case 'ArrowLeft': this._focusButton(Math.max(0, this._currentBtnIdx - 1)); return true;
       case 'ArrowRight': this._focusButton(Math.min(this._buttons.length - 1, this._currentBtnIdx + 1)); return true;
-      case 'ArrowUp': this._focusProgress(); return true;
+      case 'ArrowUp': this._focusProgress(); return true; // Sube a la barra
       case 'ArrowDown': return true;
       case 'Enter': case ' ': this._activateButton(this._currentBtnIdx); return true;
     } 
@@ -3940,6 +3965,7 @@ document.addEventListener('keydown', (e) => {
   const playerEl = document.getElementById('playerContainerInline');
   const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
 
+  /* Reproductor: ← vuelve a donde estaba el foco; el resto de flechas no lo pierden */
   if (focused === playerEl) {
     if (e.key === 'ArrowLeft') { e.preventDefault(); _focusBackToBrowse(); }
     else if (isArrow) e.preventDefault();
@@ -3981,6 +4007,7 @@ document.addEventListener('keydown', (e) => {
         else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); }
       } else if (focused?.classList.contains('season-btn')) {
         const idx = seasonBtns.indexOf(focused);
+        /* ↔ solo mueve el foco; los capítulos cambian con OK */
         if (e.key === 'ArrowRight') { e.preventDefault(); if (seasonBtns[idx + 1]) _focusH(seasonBtns[idx + 1], sBar); }
         else if (e.key === 'ArrowLeft') { e.preventDefault(); if (seasonBtns[idx - 1]) _focusH(seasonBtns[idx - 1], sBar); }
         else if (e.key === 'ArrowDown') { e.preventDefault(); _focusH(eps[0], epList); }
@@ -4002,12 +4029,14 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+/* ── Helpers de foco ── */
 let _lastBrowseFocus = null;
 document.addEventListener('focusin', (e) => {
   const t = e.target;
   if (t && t.matches && t.matches('.poster-card, .category-btn, .season-btn, .episode-card, #btnPlayMain')) _lastBrowseFocus = t;
 });
 
+/* Enfoca un elemento y lo centra con scroll horizontal dentro de su contenedor */
 function _focusH(el, scroller) {
   if (!el) return;
   try { el.focus({ preventScroll: true }); } catch (_) {}
