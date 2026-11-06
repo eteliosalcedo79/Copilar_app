@@ -2354,8 +2354,9 @@ html.ss-boot .loader-overlay { display: none !important; }
   padding: 2px 8px; border-radius: 6px;
   background: rgba(255,255,255,.1); color: #dbe7f3;
 }
-.src-tag.lang { background: rgba(0,176,255,.2); color: var(--accent2); }
-.src-tag.prov { background: rgba(245,197,24,.18); color: #f5c518; }
+.src-tag.lang { background: #0a7fc2; color: #fff; }
+.src-tag.prov { background: #c98f00; color: #fff; }
+.src-tag.domain { background: rgba(255,255,255,.12); color: #a0aec0; text-transform: capitalize; }
 .src-quality {
   font-size: .75rem;
   color: var(--text-sub);
@@ -2364,6 +2365,10 @@ html.ss-boot .loader-overlay { display: none !important; }
 }
 .src-item:focus-visible .src-tag,
 .src-item.focused .src-tag { background: rgba(0,0,0,.35); color: #fff; }
+.src-item:focus-visible .src-tag.lang,
+.src-item.focused .src-tag.lang { background: #0a7fc2; color: #fff; }
+.src-item:focus-visible .src-tag.prov,
+.src-item.focused .src-tag.prov { background: #c98f00; color: #fff; }
 .src-item:focus-visible .src-quality,
 .src-item.focused .src-quality { color: rgba(255,255,255,.85); }
 
@@ -2407,7 +2412,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   width: 20px; height: 20px; border-radius: 50%;
   background: #fff; transition: transform .2s ease;
 }
-.set-item.on .set-switch { background: var(--accent); }
+.set-item.on .set-switch { background: var(--accent2); box-shadow: 0 0 0 2px #fff; }
 .set-item.on .set-switch::after { transform: translateX(20px); }
 
 /* Mobile adaptación mínima para VOD */
@@ -5904,7 +5909,56 @@ function vodProvDefault(key) { return VOD_PROV_DEFAULTS.has(key) || key.indexOf(
 function vodProvMap() { const m = _lsGet(VOD_PROV_LS_KEY); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; }
 function vodProvIsOn(key) { const m = vodProvMap(); return Object.prototype.hasOwnProperty.call(m, key) ? !!m[key] : vodProvDefault(key); }
 function vodActivePlugins() { return VOD_ALL_PLUGINS.filter(p => vodProvIsOn(p.key)); }
-function vodHostAllowed(url) { const u = String(url || '').toLowerCase(); return VOD_ALLOWED_HOSTS.some(h => u.indexOf(h) !== -1); }
+
+/* ── HOST real del enlace (nombre entre paréntesis, campos del link o dominio) ── */
+const VOD_HOSTERS = [
+  ['streamwish','StreamWish'],['hlswish','StreamWish'],['wishembed','StreamWish'],['awish','StreamWish'],
+  ['voe','Voe'],['nupload','Nupload'],['yourupload','YourUpload'],['hqq','Hqq'],['netu','Hqq'],
+  ['filemoon','Filemoon'],['moonplayer','Filemoon'],['doodstream','DoodStream'],['dood','DoodStream'],
+  ['vidhide','VidHide'],['mixdrop','MixDrop'],['streamtape','StreamTape'],['uqload','Uqload'],
+  ['mp4upload','Mp4Upload'],['okru','OK.ru'],['fembed','Fembed'],['upstream','Upstream'],
+  ['vimeo','Vimeo'],['pixeldrain','Pixeldrain'],['morencius','Morencius'],['sendvid','Sendvid'],
+  ['lulustream','LuluStream'],['vidguard','VidGuard'],['listeamed','VidGuard'],['megaup','MegaUp'],
+  ['burstcloud','BurstCloud'],['vidmoly','Vidmoly'],['streamhub','StreamHub'],['filelions','FileLions']
+];
+function vodSplitName(name) {
+  const n = String(name || '').trim();
+  const m = n.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+  if (!m || /^\d{4}$/.test(m[2].trim())) return { base: n, host: '' }; // "(2026)" no es un host
+  return { base: m[1].trim(), host: m[2].trim() };
+}
+function vodLooksLikeJunk(label) {
+  return !label || label.length > 16 || (/\d/.test(label) && label.length > 3) || (label.match(/-/g) || []).length >= 2;
+}
+function vodGetDomain(url) {
+  if (!url) return '';
+  try {
+    const labels = new URL(url).hostname.toLowerCase().replace(/^www\./, '').split('.');
+    for (const [key, nice] of VOD_HOSTERS) {
+      if (labels.some(l => l === key || l.startsWith(key) || (key.length >= 6 && l.includes(key)))) return nice;
+    }
+    const sld = labels.length >= 2 ? labels[labels.length - 2] : labels[0];
+    if (vodLooksLikeJunk(sld)) return '';
+    return sld.charAt(0).toUpperCase() + sld.slice(1);
+  } catch (e) { return ''; }
+}
+function vodSrcHost(link) {
+  const fromName = vodSplitName(link.name).host || vodSplitName(link.title).host;
+  if (fromName) return fromName;
+  const direct = link.host || link.hoster || link.server || link.servidor || link.source;
+  if (direct && typeof direct === 'string' && !/^https?:/i.test(direct)) return direct.trim();
+  return vodGetDomain(link.url);
+}
+/* Filtro 2: pasa solo si el host detectado (o el dominio de la URL) es uno de los permitidos */
+function vodHostAllowed(link) {
+  const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const label = norm(vodSrcHost(link));
+  if (label && VOD_ALLOWED_HOSTS.some(h => label.indexOf(h) !== -1)) return true;
+  try {
+    const hn = new URL(link.url).hostname.toLowerCase();
+    return VOD_ALLOWED_HOSTS.some(h => hn.indexOf(h) !== -1);
+  } catch (_) { return false; }
+}
 
 function vodLoadPluginsFromManifest() {
   if (_vodPluginsPromise) return _vodPluginsPromise;
@@ -6730,7 +6784,7 @@ async function vodBuscarEmbedsReales(meta, season, episode, alActualizar) {
     for (const l of res.links) {
       if (!l || !l.url || vistos.has(l.url)) continue;
       // Filtro 2: solo hosts permitidos
-      if (!vodHostAllowed(l.url)) continue;
+      if (!vodHostAllowed(l)) continue;
       vistos.add(l.url);
       try { if (!l.__prov) l.__prov = plugin.nombre; } catch (_) {}
       todos.push(l);
@@ -6769,15 +6823,18 @@ function vodSrcAddItem(list, link, before) {
   btn.tabIndex = 0;
   btn.dataset.url = link.url || '';
   if (_vodSelectedEmbedUrl && link.url === _vodSelectedEmbedUrl) btn.classList.add('is-selected');
-  const lang = vodSrcLang(link), prov = vodSrcProv(link);
+  const lang = vodSrcLang(link), host = vodSrcHost(link);
+  const base = vodSplitName(link.name).base || vodSplitName(link.title).base || 'Servidor';
+  const q = String(link.quality || '').replace(/^\s*calidad\s*:?\s*/i, '').trim() || 'Auto';
   btn.innerHTML = `
     <span class="src-ic">${PM_VIDEO_SVG}</span>
     <div class="src-info">
-      <div class="src-name">${vodEscapeHtml(link.title || link.name || 'Servidor')}</div>
+      <div class="src-tags" style="margin-top:0;">
+        <span class="src-tag prov">${vodEscapeHtml(base)}</span>${host ? `<span class="src-name">- ${vodEscapeHtml(host)}</span>` : ''}
+      </div>
       <div class="src-tags">
-        ${lang ? `<span class="src-tag lang">${vodEscapeHtml(lang)}</span>` : ''}
-        ${prov ? `<span class="src-tag prov">${vodEscapeHtml(prov)}</span>` : ''}
-        <span class="src-quality">${vodEscapeHtml(link.quality || 'Auto')}</span>
+        ${lang ? `<span class="src-tag lang">${vodEscapeHtml(lang)}</span><span class="src-quality">-</span>` : ''}
+        <span class="src-quality">Calidad: ${vodEscapeHtml(q)}</span>
       </div>
     </div>
   `;
