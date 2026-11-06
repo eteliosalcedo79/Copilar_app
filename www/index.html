@@ -78,7 +78,7 @@ html, body {
   background:var(--surface); color:var(--text);
   border:1px solid var(--border); border-radius:10px;
   cursor:pointer; font-size:13px; font-weight:500;
-  transition:all .2s ease; white-space:nowrap; letter-spacing:.3px;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s; white-space:nowrap; letter-spacing:.3px;
   outline: none;
 }
 .category-btn.active {
@@ -103,7 +103,7 @@ html, body {
   background: transparent;
   border: none;
   border-radius: 10px;
-  cursor:pointer; transition:all .2s ease; outline:none;
+  cursor:pointer; transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s; outline:none;
   flex-shrink: 0;
 }
 
@@ -312,7 +312,7 @@ html, body {
   background:transparent; border:none;
   border-radius:10px; cursor:pointer; color:var(--text);
   font-family:'Rajdhani',sans-serif; font-size:.95rem; font-weight:600;
-  gap:14px; transition:all .2s ease; outline:none; text-align:left;
+  gap:14px; transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s; outline:none; text-align:left;
 }
 .channel-btn:active { background:rgba(255,255,255,.04); }
 
@@ -543,7 +543,7 @@ html, body {
   color:var(--text); font-family:'Rajdhani',sans-serif;
   font-size:clamp(.64rem,1.5vmin,.82rem); font-weight:700;
   cursor:pointer; display:flex; align-items:center; justify-content:center;
-  gap:3px; transition:all .1s; outline:none; letter-spacing:.3px;
+  gap:3px; transition: transform .1s, opacity .1s, background-color .1s, border-color .1s, color .1s, box-shadow .1s; outline:none; letter-spacing:.3px;
 }
 .kb-special-inline.focused {
   border-color:var(--accent); color:var(--accent);
@@ -645,7 +645,7 @@ html, body {
   font-family:'Rajdhani',sans-serif;
   font-size:clamp(.82rem,1.3vmin,1rem); font-weight:700;
   letter-spacing:1px; text-transform:uppercase;
-  transition:all .2s ease; outline:none;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s; outline:none;
   display:flex; align-items:center; justify-content:center;
 }
 .exit-modal-btn.confirm:focus,
@@ -748,7 +748,7 @@ body.fullscreen-active .loader-overlay { display:none !important; }
   padding: clamp(7px, 1vmin, 10px) clamp(10px, 1.6vmin, 14px);
   border-radius: 10px;
   outline: none;
-  transition: all .15s ease;
+  transition: transform .15s, opacity .15s, background-color .15s, border-color .15s, color .15s, box-shadow .15s;
   min-width: clamp(40px, 4.5vw, 56px);
   min-height: clamp(40px, 4.5vw, 52px);
   font-family: 'Rajdhani', sans-serif;
@@ -899,7 +899,7 @@ body.fullscreen-active .loader-overlay { display:none !important; }
   border-radius: 7px;
   cursor: pointer;
   letter-spacing: .5px;
-  transition: all .12s ease;
+  transition: transform .12s, opacity .12s, background-color .12s, border-color .12s, color .12s, box-shadow .12s;
   text-align: center;
   white-space: nowrap;
 }
@@ -974,9 +974,7 @@ body.fullscreen-active #bufferSpinner .buf-spin-txt {
   min-width: 0;
   overflow: hidden;
   position: relative;
-  background: rgba(8,13,20,0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(8,13,20,0.88);
 }
 
 .ev-top-bar {
@@ -1021,9 +1019,7 @@ video::-internal-media-controls-overlay-cast-button { display:none !important; o
   border-bottom: 1px solid rgba(255,255,255,0.05);
   border-right: none;
   gap: 4px;
-  background: rgba(15,19,25,0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(15,19,25,0.92);
   z-index: 50;
 }
 
@@ -1064,7 +1060,7 @@ video::-internal-media-controls-overlay-cast-button { display:none !important; o
   color: var(--text-sub);
   background: transparent;
   cursor: pointer;
-  transition: all .2s;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
   outline: none !important;
 }
 .nav-btn span { font-size: clamp(10px,.85vw,13px); letter-spacing: .3px; text-transform:uppercase; font-weight:600; transition:color .2s; }
@@ -1173,9 +1169,7 @@ body.fullscreen-active #playerContainerInline {
   padding: 10px 8px;
   border-right: none;
   height: 100%;
-  background: rgba(15, 19, 25, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(15, 19, 25, 0.85);
   gap: 5px;
   align-items: stretch;
   scrollbar-width: none;
@@ -1197,7 +1191,7 @@ body.fullscreen-active #playerContainerInline {
   border: none;
   color: var(--text-sub);
   outline: none;
-  transition: all .2s ease;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
 }
 
 .category-btn:focus-visible,
@@ -1432,7 +1426,7 @@ body.fullscreen-active #playerContainerInline {
   font-weight: 500;
   cursor: pointer;
   outline: none;
-  transition: all .2s ease;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
   gap: 12px;
   text-align: left;
   flex-shrink: 0;
@@ -1632,9 +1626,7 @@ body.fullscreen-active #ssToastBox {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: rgba(14, 24, 34, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(14, 24, 34, 0.92);
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 12px;
   padding: clamp(6px, 1.3vh, 12px) clamp(8px, 1.6vh, 14px);
@@ -1682,7 +1674,7 @@ body.fullscreen-active #ssToastBox {
   letter-spacing: 1px;
   text-transform: uppercase;
   outline: none;
-  transition: all .2s ease;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
 }
 #section-usuario .tv-logout-btn:focus,
 #section-usuario .tv-logout-btn:focus-visible,
@@ -1832,9 +1824,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   padding: 8px 12px;
   overflow-x: auto;
   overflow-y: hidden;
-  background: rgba(15,19,25,.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(15,19,25,.85);
   border-bottom: 1px solid rgba(255,255,255,.05);
   scrollbar-width: none;
   min-height: 52px;
@@ -1855,7 +1845,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   text-transform: uppercase;
   letter-spacing: .6px;
   white-space: nowrap;
-  transition: all .2s ease;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
   outline: none;
 }
 .pcat-btn:focus-visible:not(.active) {
@@ -1924,6 +1914,8 @@ html.ss-boot .loader-overlay { display: none !important; }
 .vod-poster-grid::-webkit-scrollbar { display: none; }
 
 .vod-poster-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
   cursor: pointer;
   outline: none;
   transition: transform .18s ease;
@@ -1945,7 +1937,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   overflow: hidden;
   background: #111;
   border: 2px solid transparent;
-  transition: border-color .2s, box-shadow .2s;
+  transition: border-color .2s;
   display: flex; align-items: center; justify-content: center;
 }
 .vod-poster-img-wrap img {
@@ -1963,7 +1955,6 @@ html.ss-boot .loader-overlay { display: none !important; }
 .vod-poster-card:focus .vod-poster-img-wrap,
 .vod-poster-card:focus-visible .vod-poster-img-wrap {
   border-color: var(--accent2);
-  box-shadow: 0 0 14px rgba(0,176,255,.55);
 }
 .vod-poster-card.now-playing .vod-poster-img-wrap {
   border-color: var(--accent);
@@ -2062,7 +2053,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: all .2s ease;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
   outline: none;
   box-shadow: 0 4px 15px rgba(0,204,68,.4);
 }
@@ -2080,7 +2071,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   color: #fff;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: all .2s ease;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
   outline: none;
   padding: 0;
 }
@@ -2117,7 +2108,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   font-size: clamp(0.85rem, 1.2vw, 1rem);
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
   outline: none;
   white-space: nowrap;
 }
@@ -2170,7 +2161,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   overflow: hidden;
   cursor: pointer;
   outline: none;
-  transition: all 0.2s ease;
+  transition: transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
   flex-shrink: 0;
 }
 .vod-episode-card.focused,
@@ -2244,6 +2235,7 @@ html.ss-boot .loader-overlay { display: none !important; }
    MODAL DE SERVIDORES (embeds de películas)
 ═══════════════════════════════════════════════════════════════ */
 .sources-modal {
+  will-change: opacity;
   position: fixed;
   top: var(--tv-topbar-h);
   left: 0; right: var(--tv-player-w); bottom: 0;
@@ -2252,8 +2244,6 @@ html.ss-boot .loader-overlay { display: none !important; }
   display: none;
   align-items: flex-start; justify-content: center;
   padding: clamp(16px, 3vh, 40px) 20px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 .sources-modal.open { display: flex; animation: slideUp .22s ease; }
 
@@ -2315,7 +2305,7 @@ html.ss-boot .loader-overlay { display: none !important; }
   font-size: .95rem;
   font-weight: 600;
   text-align: left;
-  transition: all .2s ease;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
   flex-shrink: 0;
 }
 .src-item:focus-visible,
@@ -3308,7 +3298,8 @@ function _restoreFocusAfterFullscreen() {
 
   const wantEvent = (currentMode === 'event');
   const wantMovie = (currentMode === 'movie');
-  showSection(wantEvent ? 'eventos' : (wantMovie ? 'peliculas' : 'canales'));
+  const _secWanted = wantEvent ? 'eventos' : (wantMovie ? 'peliculas' : 'canales');
+  if (activeSection !== _secWanted) showSection(_secWanted);
 
   const apply = () => {
     let target = null;
@@ -5882,7 +5873,6 @@ function handleLogout() {
 
 /* ── Constantes ── */
 const VOD_CATALOG_ADDON = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22%2C%22region%22%3A%22CO%22%7D';
-const VOD_PROXY         = 'https://api.allorigins.win/raw?url=';
 
 const VOD_MANIFEST_URL = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/manifest.json';
 const VOD_REPO_BASE    = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/';
@@ -6070,12 +6060,13 @@ const VOD_MAX_ITEMS     = 60;
 const VOD_CACHE_PREFIX  = 'ss_vod_cat_v1_';
 const VOD_CACHE_MANIFEST = 'ss_vod_manifest_v1';
 const VOD_CACHE_TTL_MS  = 12 * 60 * 60 * 1000;
-function _vodCacheRead(key) {
+function _vodCacheRead(key, allowStale) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const o = JSON.parse(raw);
-    if (!o || !o.t || Date.now() - o.t > VOD_CACHE_TTL_MS) return null;
+    if (!o || !o.t) return null;
+    if (Date.now() - o.t > VOD_CACHE_TTL_MS) { if (!allowStale) return null; o.stale = true; }
     return o;
   } catch (_) { return null; }
 }
@@ -6097,11 +6088,8 @@ function vodEscapeHtml(s) {
 }
 
 async function vodFetchJSON(url) {
-  try {
-    const r = await fetch(url, { mode: 'cors', cache: 'no-store' });
-    if (r.ok) return await r.json();
-  } catch (_) {}
-  const r = await fetch(VOD_PROXY + encodeURIComponent(url));
+  // Petición nativa (sin CORS ni proxy). Fuera de Capacitor cae a fetch normal.
+  const r = await vodNativeFetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return await r.json();
 }
@@ -6116,9 +6104,15 @@ async function vodLoadCatalog() {
 
   try {
     let cats = null;
-    const cachedManifest = _vodCacheRead(VOD_CACHE_MANIFEST);
+    const cachedManifest = _vodCacheRead(VOD_CACHE_MANIFEST, true);
     if (cachedManifest && Array.isArray(cachedManifest.cats) && cachedManifest.cats.length) {
       cats = cachedManifest.cats;
+      if (cachedManifest.stale) {
+        vodFetchJSON(VOD_CATALOG_ADDON + '/manifest.json').then(m => {
+          const c = (m.catalogs || []).filter(x => x && (x.type === 'movie' || x.type === 'series'));
+          if (c.length) _vodCacheWrite(VOD_CACHE_MANIFEST, { cats: c });
+        }).catch(() => {});
+      }
     } else {
       const manifest = await vodFetchJSON(VOD_CATALOG_ADDON + '/manifest.json');
       cats = (manifest.catalogs || [])
@@ -6185,8 +6179,14 @@ async function vodLoadCategory(cat) {
     vodCheckFill();
     return;
   }
-  const cached = _vodCacheRead(VOD_CACHE_PREFIX + cat.id);
+  const cached = _vodCacheRead(VOD_CACHE_PREFIX + cat.id, true);
   if (cached && Array.isArray(cached.metas) && cached.metas.length) {
+    if (cached.stale) {
+      vodFetchJSON(`${VOD_CATALOG_ADDON}/catalog/${cat.type}/${cat.id}.json`).then(d => {
+        const raw = Array.isArray(d.metas) ? d.metas : [];
+        if (raw.length) _vodCacheWrite(VOD_CACHE_PREFIX + cat.id, { metas: raw.slice(0, VOD_MAX_ITEMS), skip: raw.length, done: raw.length >= VOD_MAX_ITEMS });
+      }).catch(() => {});
+    }
     const cm = cached.metas.slice(0, VOD_MAX_ITEMS);
     vodMoviesByCat[cat.id] = cm;
     vodCatState[cat.id] = { skip: cached.skip || cm.length, done: !!cached.done || cm.length >= VOD_MAX_ITEMS, loading: false, wait: 0 };
@@ -6420,7 +6420,7 @@ function vodCloseSearch() {
     clearTimeout(vodSearchTimer);
     const q = input.value.trim();
     if (!q) { vodSearchSeq++; vodSearchHint(); return; }
-    vodSearchTimer = setTimeout(() => vodRunSearch(q), 350);
+    vodSearchTimer = setTimeout(() => vodRunSearch(q), 550);
   });
   input.addEventListener('keydown', (e) => {
     e.stopPropagation();
@@ -6673,7 +6673,17 @@ async function vodNativeFetch(url, opts) {
   return new Response(noBody ? null : text, { status: r.status, headers: r.headers || {} });
 }
 
-function vodEjecutarPlugin(plugin, meta, season, episode) {
+const VOD_PLUGIN_TIMEOUT_MS = 15000;
+const VOD_PLUGIN_PARALLEL   = 2;
+const VOD_MAX_EMBEDS        = 8;
+const VOD_EMBED_TTL_MS      = 5 * 60 * 1000;
+const VOD_SPEED_LS_KEY      = 'ss_vod_prov_speed_v1';
+const _vodPluginCode        = new Map(); // código de cada plugin en memoria (por sesión)
+
+function vodSpeedMap() { const m = _lsGet(VOD_SPEED_LS_KEY); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; }
+function vodSpeedSave(key, ms) { try { const m = vodSpeedMap(); m[key] = Math.round(ms); _lsSet(VOD_SPEED_LS_KEY, m); } catch (_) {} }
+
+function vodEjecutarPlugin(plugin, meta, season, episode, ctl) {
   return new Promise(async (resolve) => {
     let iframe = null;
     let listener = null;
@@ -6688,14 +6698,21 @@ function vodEjecutarPlugin(plugin, meta, season, episode) {
       if (listener) window.removeEventListener('message', listener);
       if (timeoutId) clearTimeout(timeoutId);
       if (iframe && document.body.contains(iframe)) iframe.remove();
+      if (ctl && ctl.hooks) ctl.hooks.delete(terminar);
       resolve({ links: Array.isArray(links) ? links : [], error: error || '', log });
     };
+    if (ctl) { if (ctl.aborted) { terminar([], 'cancelado'); return; } ctl.hooks.add(terminar); }
 
     try {
       if (!window.CryptoJS) throw new Error('Falta crypto-js.min.js');
-      const r = await fetch(plugin.url, { cache: 'no-store' });
-      if (!r.ok) throw new Error('Plugin HTTP ' + r.status);
-      const codigoJS = await r.text();
+      let codigoJS = _vodPluginCode.get(plugin.url);
+      if (!codigoJS) {
+        const r = await fetch(plugin.url, { cache: 'no-store' });
+        if (!r.ok) throw new Error('Plugin HTTP ' + r.status);
+        codigoJS = await r.text();
+        _vodPluginCode.set(plugin.url, codigoJS);
+      }
+      if (terminado) return;
 
       iframe = document.createElement('iframe');
       iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
@@ -6747,7 +6764,7 @@ function vodEjecutarPlugin(plugin, meta, season, episode) {
       `;
 
       iframe.contentWindow.eval(script);
-      timeoutId = setTimeout(() => terminar([], 'Tiempo de espera agotado'), 55000);
+      timeoutId = setTimeout(() => terminar([], 'Tiempo de espera agotado'), VOD_PLUGIN_TIMEOUT_MS);
     } catch (e) {
       console.warn('[VOD Embeds ' + plugin.nombre + ']', e);
       terminar([], (e && e.message) || String(e));
@@ -6755,11 +6772,14 @@ function vodEjecutarPlugin(plugin, meta, season, episode) {
   });
 }
 
-async function vodBuscarEmbedsReales(meta, season, episode, alActualizar) {
+async function vodBuscarEmbedsReales(meta, season, episode, alActualizar, ctl) {
+  ctl = ctl || { aborted: false, hooks: new Set() };
   await vodLoadPluginsFromManifest();
 
-  // Filtro 1: solo proveedores encendidos en Ajustes
-  const plugins = vodActivePlugins();
+  // Filtro 1: solo proveedores encendidos en Ajustes, los más rápidos primero
+  const speed = vodSpeedMap();
+  const plugins = vodActivePlugins().slice()
+    .sort((a, b) => (speed[a.key] == null ? 8000 : speed[a.key]) - (speed[b.key] == null ? 8000 : speed[b.key]));
   VOD_PLUGINS = plugins;
 
   if (!plugins.length) {
@@ -6770,16 +6790,16 @@ async function vodBuscarEmbedsReales(meta, season, episode, alActualizar) {
   const vistos = new Set();
   const todos = [];
   let pendientes = plugins.length;
-
-  const limit = 3;
   let index = 0;
 
   const runNext = async () => {
-    if (index >= plugins.length) return;
+    if (ctl.aborted || todos.length >= VOD_MAX_EMBEDS || index >= plugins.length) return;
     const plugin = plugins[index++];
 
-    const res = await vodEjecutarPlugin(plugin, meta, season, episode);
+    const t0 = Date.now();
+    const res = await vodEjecutarPlugin(plugin, meta, season, episode, ctl);
     pendientes--;
+    if (!ctl.aborted) vodSpeedSave(plugin.key, res.error ? VOD_PLUGIN_TIMEOUT_MS : Date.now() - t0);
 
     for (const l of res.links) {
       if (!l || !l.url || vistos.has(l.url)) continue;
@@ -6788,13 +6808,16 @@ async function vodBuscarEmbedsReales(meta, season, episode, alActualizar) {
       vistos.add(l.url);
       try { if (!l.__prov) l.__prov = plugin.nombre; } catch (_) {}
       todos.push(l);
+      if (todos.length >= VOD_MAX_EMBEDS) break;
     }
     if (alActualizar) alActualizar(todos.slice(), pendientes);
 
+    // Tope de 8: se cancelan los proveedores que aún estén corriendo
+    if (todos.length >= VOD_MAX_EMBEDS && !ctl.aborted) { ctl.aborted = true; ctl.hooks.forEach(h => h()); return; }
     await runNext();
   };
 
-  await Promise.all(Array.from({ length: limit }).map(() => runNext()));
+  await Promise.all(Array.from({ length: VOD_PLUGIN_PARALLEL }).map(() => runNext()));
   return todos;
 }
 
@@ -6893,7 +6916,7 @@ async function vodOpenSourcesWithEpisode(season, episode) {
   document.getElementById('sourcesModal').classList.add('open');
 
   const prev = _vodEmbedState;
-  if (prev && prev.key === key && (!prev.done || prev.links.length)) {
+  if (prev && prev.key === key && (Date.now() - (prev.t || 0) < VOD_EMBED_TTL_MS) && (!prev.done || prev.links.length)) {
     list.innerHTML = '';
     prev.paint = () => vodSrcPaint(prev);
     if (prev.links.length) vodSrcPaint(prev);
@@ -6901,17 +6924,20 @@ async function vodOpenSourcesWithEpisode(season, episode) {
     return;
   }
 
-  const st = { key, links: [], pendientes: 0, done: false, paint: null };
+  if (prev && prev.ctl && !prev.done) { prev.ctl.aborted = true; prev.ctl.hooks.forEach(h => h()); }
+  const ctl = { aborted: false, hooks: new Set() };
+  const st = { key, links: [], pendientes: 0, done: false, paint: null, t: Date.now(), ctl };
   _vodEmbedState = st;
   _vodSelectedEmbedUrl = null;
   st.paint = () => vodSrcPaint(st);
   list.innerHTML = loadingHtml;
   document.getElementById('srcCount').textContent = '0';
 
-  vodBuscarEmbedsReales(currentMovie, season, episode, (links, pendientes) => {
+  // Pequeña espera para no competir con el cierre de pantalla completa / otros modales
+  new Promise(r => setTimeout(r, 250)).then(() => vodBuscarEmbedsReales(currentMovie, season, episode, (links, pendientes) => {
     st.links = links; st.pendientes = pendientes;
     if (st.paint) st.paint();
-  }).then(links => {
+  }, ctl)).then(links => {
     if (Array.isArray(links) && links.length >= st.links.length) st.links = links;
     st.pendientes = 0; st.done = true;
     if (st.paint) st.paint();
@@ -6923,6 +6949,11 @@ async function vodOpenSourcesWithEpisode(season, episode) {
 
 function vodCloseSources(restoreFocus = true) {
   document.getElementById('sourcesModal').classList.remove('open');
+  const _st = _vodEmbedState;
+  if (_st && _st.ctl && !_st.done) {
+    _st.ctl.aborted = true; _st.ctl.hooks.forEach(h => h());
+    _st.done = true; // lo encontrado hasta ahora se conserva 5 min
+  }
   if (!restoreFocus) return;
   setTimeout(() => {
     let t = null;
