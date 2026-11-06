@@ -3477,7 +3477,9 @@ async function _peekBody(url) {
       if (value) head = Array.from(value.slice(0, 16)).map(b => (b >= 32 && b < 127) ? String.fromCharCode(b) : '.').join('') + ' (' + value.length + ' B en ' + (Date.now() - t0) + ' ms)';
     } catch (_) {}
     clearTimeout(to); try { ctrl.abort(); } catch (_) {}
-    dbg('pm', 'peek Range 0- → ' + r.status + ' · ' + ct + ' · cr=' + cr + ' · cl=' + cl + ' · inicio="' + head + '"', 'warn');
+    dbg('pm', 'peek 1/2 · estado ' + r.status + ' · ' + ct.split(',')[0], 'warn');
+    dbg('pm', 'peek 2/2 · range=' + cr + ' · len=' + cl, 'warn');
+    dbg('pm', 'peek bytes · ' + head, 'warn');
   } catch (e) {
     clearTimeout(to);
     dbg('pm', 'peek → error ' + ((e && e.name) || e), 'warn');
