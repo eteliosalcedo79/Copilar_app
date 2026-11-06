@@ -6075,7 +6075,16 @@ function _vodCacheWrite(key, obj) {
 }
 
 /* ── Estado de servidores / embeds ── */
-let _vodEmbedState  = null;
+let _vodEmbedState  = null;   // estado del episodio que se está mostrando ahora
+const _vodEmbedCache = new Map(); // clave movieId|temporada|episodio -> estado (TTL 5 min)
+const VOD_EMBED_CACHE_MAX = 40;
+function _vodEmbedCachePut(key, st) {
+  const now = Date.now();
+  for (const [k, v] of _vodEmbedCache) { if (now - (v.t || 0) >= VOD_EMBED_TTL_MS) _vodEmbedCache.delete(k); }
+  _vodEmbedCache.delete(key);
+  _vodEmbedCache.set(key, st);
+  while (_vodEmbedCache.size > VOD_EMBED_CACHE_MAX) _vodEmbedCache.delete(_vodEmbedCache.keys().next().value);
+}
 let _vodSrcRendered = 0;
 let _vodSrcFocused  = false;
 let _vodSelectedEmbedUrl = null;
@@ -6689,10 +6698,12 @@ function vodEjecutarPlugin(plugin, meta, season, episode, ctl) {
     let listener = null;
     let timeoutId = null;
     let terminado = false;
+    let fetchCtl = null;
 
     const terminar = (links, error) => {
       if (terminado) return;
       terminado = true;
+      if (fetchCtl) { try { fetchCtl.abort(); } catch (_) {} }
       let log = [];
       try { log = (iframe && iframe.contentWindow.__log || []).slice(0, 6); } catch (_) {}
       if (listener) window.removeEventListener('message', listener);
@@ -6703,11 +6714,15 @@ function vodEjecutarPlugin(plugin, meta, season, episode, ctl) {
     };
     if (ctl) { if (ctl.aborted) { terminar([], 'cancelado'); return; } ctl.hooks.add(terminar); }
 
+    // Los 15 s cuentan desde aquí: incluyen la descarga del código del plugin
+    timeoutId = setTimeout(() => terminar([], 'Tiempo de espera agotado'), VOD_PLUGIN_TIMEOUT_MS);
+
     try {
       if (!window.CryptoJS) throw new Error('Falta crypto-js.min.js');
       let codigoJS = _vodPluginCode.get(plugin.url);
       if (!codigoJS) {
-        const r = await fetch(plugin.url, { cache: 'no-store' });
+        fetchCtl = new AbortController();
+        const r = await fetch(plugin.url, { cache: 'no-store', signal: fetchCtl.signal });
         if (!r.ok) throw new Error('Plugin HTTP ' + r.status);
         codigoJS = await r.text();
         _vodPluginCode.set(plugin.url, codigoJS);
@@ -6764,9 +6779,8 @@ function vodEjecutarPlugin(plugin, meta, season, episode, ctl) {
       `;
 
       iframe.contentWindow.eval(script);
-      timeoutId = setTimeout(() => terminar([], 'Tiempo de espera agotado'), VOD_PLUGIN_TIMEOUT_MS);
     } catch (e) {
-      console.warn('[VOD Embeds ' + plugin.nombre + ']', e);
+      if (!terminado) console.warn('[VOD Embeds ' + plugin.nombre + ']', e);
       terminar([], (e && e.message) || String(e));
     }
   });
@@ -6915,8 +6929,15 @@ async function vodOpenSourcesWithEpisode(season, episode) {
   _vodSrcRendered = 0; _vodSrcFocused = false;
   document.getElementById('sourcesModal').classList.add('open');
 
-  const prev = _vodEmbedState;
-  if (prev && prev.key === key && (Date.now() - (prev.t || 0) < VOD_EMBED_TTL_MS) && (!prev.done || prev.links.length)) {
+  const cur  = _vodEmbedState;
+  const prev = _vodEmbedCache.get(key);
+  if (prev && (Date.now() - (prev.t || 0) < VOD_EMBED_TTL_MS) && (!prev.done || prev.links.length)) {
+    if (cur && cur !== prev) {
+      // venimos de otro episodio: si aún buscaba, se corta (lo encontrado se conserva en su entrada)
+      if (cur.ctl && !cur.done) { cur.ctl.aborted = true; cur.ctl.hooks.forEach(h => h()); cur.done = true; cur.pendientes = 0; }
+      _vodSelectedEmbedUrl = null;
+    }
+    _vodEmbedState = prev;
     list.innerHTML = '';
     prev.paint = () => vodSrcPaint(prev);
     if (prev.links.length) vodSrcPaint(prev);
@@ -6924,10 +6945,11 @@ async function vodOpenSourcesWithEpisode(season, episode) {
     return;
   }
 
-  if (prev && prev.ctl && !prev.done) { prev.ctl.aborted = true; prev.ctl.hooks.forEach(h => h()); }
+  if (cur && cur.ctl && !cur.done) { cur.ctl.aborted = true; cur.ctl.hooks.forEach(h => h()); cur.done = true; cur.pendientes = 0; }
   const ctl = { aborted: false, hooks: new Set() };
   const st = { key, links: [], pendientes: 0, done: false, paint: null, t: Date.now(), ctl };
   _vodEmbedState = st;
+  _vodEmbedCachePut(key, st);
   _vodSelectedEmbedUrl = null;
   st.paint = () => vodSrcPaint(st);
   list.innerHTML = loadingHtml;
@@ -7026,7 +7048,7 @@ function vodRenderSettings() {
       const m = vodProvMap(); m[p.key] = now; _lsSet(VOD_PROV_LS_KEY, m);
       btn.classList.toggle('on', now);
       btn.setAttribute('aria-checked', now ? 'true' : 'false');
-      _vodEmbedState = null; // los resultados guardados ya no aplican
+      _vodEmbedState = null; _vodEmbedCache.clear(); // los resultados guardados ya no aplican
       vodSettingsCount();
     });
     list.appendChild(btn);
@@ -8398,5 +8420,86 @@ function fsHookHls(reused) {
 }
 
 </script>
+<script>
+(function(){
+  // Esperar a que la app cargue el reproductor
+  setTimeout(() => {
+    const player = document.getElementById('playerContainerInline');
+    if (!player) return;
+
+    // Crear la ventana flotante DENTRO del reproductor
+    const hud = document.createElement('div');
+    hud.id = 'test-hud';
+    
+    // Estilos ajustados para que quepa en el reproductor y tape el video
+    hud.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); color:#00ff00; font-family:monospace; z-index:9999; overflow-y:auto; padding:20px; box-sizing:border-box; pointer-events:none; line-height:1.3;';
+    
+    hud.innerHTML = `
+      <div style="font-size: clamp(16px, 3vw, 28px); color:white; font-weight:bold; margin-bottom:10px; text-align:center;">🛠️ PRUEBAS</div>
+      <div id="hud-log" style="font-size: clamp(14px, 2.5vw, 22px); text-align:left;"></div>
+    `;
+    
+    // Lo metemos dentro del reproductor
+    player.appendChild(hud);
+
+    function log(msg, color = '#00ff00') {
+      const p = document.createElement('div');
+      p.style.color = color;
+      p.style.marginBottom = '15px';
+      p.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+      p.style.paddingBottom = '5px';
+      p.innerHTML = msg;
+      document.getElementById('hud-log').appendChild(p);
+    }
+
+    log('Esperando acciones...', '#aaaaaa');
+
+    // PRUEBA 1: Medir tiempo al salir de pantalla completa
+    let origExit = window._handleExitFullscreen;
+    if (origExit) {
+      window._handleExitFullscreen = function() {
+        const t0 = performance.now();
+        const r = origExit.apply(this, arguments);
+        const tiempo = performance.now() - t0;
+        
+        let color = '#00ff00'; // verde
+        if (tiempo > 500) color = '#ffaa00'; // naranja
+        if (tiempo > 2000) color = '#ff0000'; // rojo
+        
+        log(`⏱️ <b>Salida de Fullscreen:</b><br>${tiempo.toFixed(0)} ms`, color);
+        return r;
+      };
+    }
+
+    // PRUEBA 2: Probar el Proxy automáticamente al capturar un video
+    let origCapture = window._processInterceptedM3u8;
+    if (origCapture) {
+      window._processInterceptedM3u8 = async function(url, refer) {
+        const resultado = origCapture.apply(this, arguments);
+        
+        log(`🔗 <b>Video detectado. Probando...</b>`, '#ffffff');
+        
+        const t0 = performance.now();
+        try {
+          const res = await vodNativeFetch(url, { cache: 'no-store' });
+          const txt = await res.text();
+          const tiempo = (performance.now() - t0).toFixed(0);
+          
+          log(`Status: ${res.status} | Tiempo: ${tiempo} ms`);
+          
+          if (txt.trim().startsWith('#EXTM3U')) {
+            log(`✅ <b>El link SÍ es válido</b>`, '#00ff00');
+          } else {
+            log(`❌ <b>El link NO es válido</b>`, '#ff0000');
+          }
+        } catch(e) {
+          log(`❌ <b>Error:</b> ${e.message}`, '#ff0000');
+        }
+        return resultado;
+      };
+    }
+  }, 2000); // Espera 2 segundos a que la app cargue
+})();
+</script> 
 </body>
-</html>
+</html>
