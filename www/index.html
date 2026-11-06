@@ -1957,6 +1957,7 @@ const STALE_ORIGIN_MS        = 8000;
 const M3U8_INTERCEPT_DEBOUNCE_MS = 250;
 const BUF_SHOW_DELAY_MS      = 800;
 const HLS_VERIFY_MS          = 12000;
+const NATIVE_VERIFY_MS       = 30000;   // mp4 grandes (Workers tardó ~10 s en dar metadata)
 const FLV_VERIFY_MS          = 7000;
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS     = 4000;
@@ -3433,7 +3434,8 @@ async function _probeDirectHeaders(url, tok) {
   const mapped = _directReferer(url);
   let base = ''; try { base = new URL(url).origin + '/'; } catch (_) {}
   const sets = [];
-  [mapped, '', base].forEach(r => { if (!sets.includes(r)) sets.push(r); });
+  const extra = /(^|\.)tnmr\.org$/i.test(new URL(url).hostname) ? ['https://vidhidefast.com/'] : [];   // suposición: familia VidHide
+  [mapped, '', base, ...extra].forEach(r => { if (!sets.includes(r)) sets.push(r); });
   for (const ref of sets) {
     if (tok.cancelled) return null;
     const hd = {};
@@ -3459,10 +3461,34 @@ async function _probeDirectHeaders(url, tok) {
   return null;
 }
 
+/* Pide el enlace como lo hace el <video> (Range: bytes=0-) y muestra estado, cabeceras y los primeros bytes */
+async function _peekBody(url) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const r = await fetch(url, { headers: { Range: 'bytes=0-' }, signal: ctrl.signal });
+    const ct = r.headers.get('content-type') || '-';
+    const cr = r.headers.get('content-range') || '-';
+    const cl = r.headers.get('content-length') || '-';
+    let head = '-';
+    try {
+      const t0 = Date.now();
+      const { value } = await r.body.getReader().read();
+      if (value) head = Array.from(value.slice(0, 16)).map(b => (b >= 32 && b < 127) ? String.fromCharCode(b) : '.').join('') + ' (' + value.length + ' B en ' + (Date.now() - t0) + ' ms)';
+    } catch (_) {}
+    clearTimeout(to); try { ctrl.abort(); } catch (_) {}
+    dbg('pm', 'peek Range 0- → ' + r.status + ' · ' + ct + ' · cr=' + cr + ' · cl=' + cl + ' · inicio="' + head + '"', 'warn');
+  } catch (e) {
+    clearTimeout(to);
+    dbg('pm', 'peek → error ' + ((e && e.name) || e), 'warn');
+  }
+}
+
 /* Verifica un video directo de verdad (metadata) y descarta los muy cortos (avisos/anuncios) */
 function _verifyNative(url, seq, finish) {
   const minDur = (pm && pm.src && pm.src.kind === 'movie') ? 900 : 240;
   pm.cancel = probeNative(url, (ok, dur) => {
+    if (!ok) _peekBody(url);
     if (!pm || pm.seq !== seq) return;
     const known = isFinite(dur) && dur > 0;
     if (ok && known && dur < minDur) {
@@ -3471,7 +3497,7 @@ function _verifyNative(url, seq, finish) {
     }
     dbg('pm', 'probe native ' + (ok ? 'OK' : 'falló') + ' · duración=' + (known ? Math.round(dur) + ' s' : '?'), ok ? 'ok' : 'err');
     finish(ok);
-  });
+  }, NATIVE_VERIFY_MS, true);
 }
 
 function _isAdMp4(url) {
@@ -3556,19 +3582,31 @@ function probeFlv(url, cb) {
   return () => done(false, true);
 }
 
-function probeNative(url, cb) {
+function probeNative(url, cb, timeoutMs, dbgEv) {
   const v = document.createElement('video'); v.muted = true; v.preload = 'metadata'; v.setAttribute('playsinline','');
   v.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none;opacity:0;';
   document.body.appendChild(v);
   let finished = false, timer = null, dur = NaN;
+  const t0 = Date.now();
   const done = (ok, silent) => {
     if (finished) return; finished = true; clearTimeout(timer);
     try { v.removeAttribute('src'); v.load(); } catch (_) {}
     try { v.remove(); } catch (_) {} if (!silent) cb(ok, dur);
   };
   v.addEventListener('loadedmetadata', () => { dur = v.duration; done(true); });
-  v.addEventListener('error', () => { dbg('pm', 'video error · código=' + (v.error ? v.error.code : '?') + (v.error && v.error.message ? ' · ' + v.error.message : ''), 'err'); done(false); });
-  v.src = url; timer = setTimeout(() => done(false), HLS_VERIFY_MS);
+  v.addEventListener('error', () => { dbg('pm', 'video error · código=' + (v.error ? v.error.code : '?') + (v.error && v.error.message ? ' · ' + v.error.message : '') + ' · +' + (Date.now() - t0) + ' ms', 'err'); done(false); });
+  if (dbgEv) {
+    const cnt = {};
+    ['loadstart', 'durationchange', 'progress', 'stalled', 'suspend', 'abort', 'emptied'].forEach(n => v.addEventListener(n, () => {
+      cnt[n] = (cnt[n] || 0) + 1; if (cnt[n] > 2) return;
+      dbg('pm', 'video evento ' + n + ' · +' + (Date.now() - t0) + ' ms · net=' + v.networkState + ' rs=' + v.readyState);
+    }));
+  }
+  v.src = url;
+  timer = setTimeout(() => {
+    if (dbgEv && !finished) dbg('pm', 'probe native: tiempo agotado · net=' + v.networkState + ' rs=' + v.readyState, 'err');
+    done(false);
+  }, timeoutMs || HLS_VERIFY_MS);
   return () => done(false, true);
 }
 
