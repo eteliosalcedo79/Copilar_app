@@ -3367,6 +3367,7 @@ window.onM3u8Intercepted = function (m3u8Url, referer) {
   if (!m3u8Url || !m3u8Url.includes('.m3u8')) return;
   if (window._ignoreM3u8Intercept) return;
   const waiting = window._embedWaiting;
+  if (!waiting) return;
   dbg('m3u8', 'llegó · ' + dbgShort(m3u8Url) + ' · referer=' + dbgShort(referer || '-', 80) + ' · esperando=' + !!waiting);
   if (!waiting || !pm || waiting.sid !== pm.seq) { dbg('m3u8', 'rechazado · sin captura activa', 'warn'); return; }
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) { dbg('m3u8', 'rechazado · referer localhost', 'warn'); return; }
@@ -3426,6 +3427,38 @@ function _directReferer(u) {
   if (/(streamtape\.\w+|tapecontent\.net)$/i.test(h)) return 'https://streamtape.to/';
   return '';
 }
+/* Sondeo: prueba varios juegos de cabeceras contra el enlace directo (a través del proxy nativo)
+   y registra el estado HTTP real. Devuelve el primero que responde 2xx con un tipo que no sea HTML. */
+async function _probeDirectHeaders(url, tok) {
+  const mapped = _directReferer(url);
+  let base = ''; try { base = new URL(url).origin + '/'; } catch (_) {}
+  const sets = [];
+  [mapped, '', base].forEach(r => { if (!sets.includes(r)) sets.push(r); });
+  for (const ref of sets) {
+    if (tok.cancelled) return null;
+    const hd = {};
+    if (ref) { hd['Referer'] = ref; hd['Origin'] = ref.replace(/\/$/, ''); }
+    try { window.SSNative.setHeaders(url, JSON.stringify(hd)); } catch (_) {}
+    const ctrl = new AbortController(); tok.ctrl = ctrl;
+    const to = setTimeout(() => ctrl.abort(), 6000);
+    try {
+      const r = await fetch(url, { headers: { Range: 'bytes=0-1' }, signal: ctrl.signal });
+      clearTimeout(to);
+      const ct = r.headers.get('content-type') || '-';
+      const cr = r.headers.get('content-range') || r.headers.get('content-length') || '-';
+      try { ctrl.abort(); } catch (_) {}
+      const good = r.status >= 200 && r.status < 300 && !/text\/html/i.test(ct);
+      dbg('pm', 'sondeo ref=' + (ref || 'ninguno') + ' → ' + r.status + ' · ' + ct + ' · ' + cr, good ? 'ok' : 'warn');
+      if (good) return { hd, ref };
+    } catch (e) {
+      clearTimeout(to);
+      if (tok.cancelled) return null;
+      dbg('pm', 'sondeo ref=' + (ref || 'ninguno') + ' → error ' + ((e && e.name) || e), 'warn');
+    }
+  }
+  return null;
+}
+
 /* Verifica un video directo de verdad (metadata) y descarta los muy cortos (avisos/anuncios) */
 function _verifyNative(url, seq, finish) {
   const minDur = (pm && pm.src && pm.src.kind === 'movie') ? 900 : 240;
@@ -3453,6 +3486,7 @@ function _isAdMp4(url) {
 window.onMp4Intercepted = function (mp4Url, referer) {
   if (!mp4Url) return;
   const waiting = window._embedWaiting;
+  if (!waiting) return;
   dbg('mp4', 'llegó · ' + dbgShort(mp4Url) + ' · referer=' + dbgShort(referer || '-', 80) + ' · esperando=' + !!waiting);
   if (!waiting || !pm || waiting.sid !== pm.seq) return;
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) { dbg('mp4', 'rechazado · referer localhost', 'warn'); return; }
@@ -3533,7 +3567,7 @@ function probeNative(url, cb) {
     try { v.remove(); } catch (_) {} if (!silent) cb(ok, dur);
   };
   v.addEventListener('loadedmetadata', () => { dur = v.duration; done(true); });
-  v.addEventListener('error', () => done(false));
+  v.addEventListener('error', () => { dbg('pm', 'video error · código=' + (v.error ? v.error.code : '?') + (v.error && v.error.message ? ' · ' + v.error.message : ''), 'err'); done(false); });
   v.src = url; timer = setTimeout(() => done(false), HLS_VERIFY_MS);
   return () => done(false, true);
 }
@@ -3581,21 +3615,23 @@ function openPlayModal(src) {
   } else if (_dk === 'hls' || _dk === 'native') {
     dbg('pm', 'enlace directo (' + _dk + ') · sin iframe · ' + dbgShort(src.url));
     pm.playUrl = src.url; pm.referer = null; pm.playType = _dk;
-    if (window.SSNative && window.SSNative.setHeaders) {
-      try {
-        const ref = _directReferer(src.url), hd = {};
-        if (ref) { hd['Referer'] = ref; hd['Origin'] = ref.replace(/\/$/, ''); pm.referer = ref; }
-        window.SSNative.setHeaders(src.url, JSON.stringify(hd));
-      } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
-    }
-    if (_dk === 'native') {
-      _verifyNative(src.url, seq, finish);
-    } else {
-      pm.cancel = prepareHls(src.url, pm.referer, (levels, take) => {
-        if (pm && pm.seq === seq) pm.takeHls = take || null;
-        finish(levels !== null, levels);
-      });
-    }
+    const tok = { cancelled: false, ctrl: null };
+    pm.cancel = () => { tok.cancelled = true; try { tok.ctrl && tok.ctrl.abort(); } catch (_) {} };
+    const canProbe = !!(window.SSNative && window.SSNative.setHeaders);
+    (canProbe ? _probeDirectHeaders(src.url, tok) : Promise.resolve({ hd: {}, ref: '' })).then(found => {
+      if (tok.cancelled || !pm || pm.seq !== seq) return;
+      if (!found) { dbg('pm', 'ninguna combinación de cabeceras dio 2xx · enlace inaccesible desde la app', 'err'); finish(false); return; }
+      pm.referer = found.ref || null;
+      if (canProbe) { try { window.SSNative.setHeaders(src.url, JSON.stringify(found.hd)); } catch (e) { console.warn('[Proxy] setHeaders falló:', e); } }
+      if (_dk === 'native') {
+        _verifyNative(src.url, seq, finish);
+      } else {
+        pm.cancel = prepareHls(src.url, pm.referer, (levels, take) => {
+          if (pm && pm.seq === seq) pm.takeHls = take || null;
+          finish(levels !== null, levels);
+        });
+      }
+    });
   } else if (type === 'embed') {
     pm.cancel = _cancelCapture;
     _captureEmbed(src.url, seq, (capturedUrl, referer) => {
