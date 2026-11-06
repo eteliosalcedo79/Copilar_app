@@ -3368,10 +3368,10 @@ window.onM3u8Intercepted = function (m3u8Url, referer) {
   if (window._ignoreM3u8Intercept) return;
   const waiting = window._embedWaiting;
   dbg('m3u8', 'llegó · ' + dbgShort(m3u8Url) + ' · referer=' + dbgShort(referer || '-', 80) + ' · esperando=' + !!waiting);
-  if (!waiting || !pm || waiting.sid !== pm.seq) return;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
-  if (window._lastInterceptedM3u8 === m3u8Url) return;
-  if (_isFromPrevEmbed(referer, waiting.url)) return;
+  if (!waiting || !pm || waiting.sid !== pm.seq) { dbg('m3u8', 'rechazado · sin captura activa', 'warn'); return; }
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) { dbg('m3u8', 'rechazado · referer localhost', 'warn'); return; }
+  if (window._lastInterceptedM3u8 === m3u8Url) { dbg('m3u8', 'rechazado · repetido', 'warn'); return; }
+  if (_isFromPrevEmbed(referer, waiting.url)) { dbg('m3u8', 'rechazado · viene de un embed anterior', 'warn'); return; }
   /* Un .m3u8 puede reemplazar a un .mp4 que aún esté pendiente; entre dos .m3u8 gana el primero */
   if (waiting.candidate && !waiting.candidateIsMp4) return;
 
@@ -3400,12 +3400,45 @@ function _processInterceptedM3u8(m3u8Url, referer) {
 const MP4_SETTLE_MS = 1500;   // espera extra: si en ese lapso llega un .m3u8, el .m3u8 gana
 
 /* Filtro de anuncios: dominios de ads/trackers y rutas típicas de publicidad o previews */
-const _AD_HOST_RE = /(doubleclick|googlesyndication|googleadservices|adservice|adsystem|adnxs|adsterra|adskeeper|exoclick|exosrv|juicyads|trafficjunky|trafficstars|popads|popcash|propeller|onclickads|clickadu|hilltopads|tsyndicate|mgid|taboola|outbrain|revcontent|yllix|a-ads|bidvertiser|adcash|adform|criteo|pubmatic|rubiconproject|openx|smartadserver|teads|vidazoo|adtng|admaven|richads|monetag|realsrv|plugrush|adspyglass)/i;
+const _AD_HOST_RE = /(doubleclick|googlesyndication|googleadservices|adservice|adsystem|adnxs|adsterra|adskeeper|exoclick|exosrv|juicyads|trafficjunky|trafficstars|popads|popcash|propeller|onclickads|clickadu|hilltopads|tsyndicate|mgid|taboola|outbrain|revcontent|yllix|a-ads|bidvertiser|adcash|adform|criteo|pubmatic|rubiconproject|openx|smartadserver|teads|vidazoo|adtng|admaven|richads|monetag|realsrv|plugrush|adspyglass|aoneroom|moviebox)/i;
 const _AD_PATH_RE = /(^|[\/_\-.])(ads?|adv|advert\w*|banner|preroll|pre-roll|midroll|postroll|promo|sponsor\w*|teaser|trailer|preview|vast|vpaid|popunder|thumb\w*|sprite|poster)([\/_\-.]|$)/i;
 
 /* Video directo (no HLS): por extensión, o el /get_video de StreamTape (sin extensión) */
 function _isDirectVideoUrl(u) {
   return /\.(mp4|mkv|webm)([?#]|$)/i.test(u) || /\/get_video([?#]|$)/i.test(u);
+}
+
+/* Clasifica la URL del "embed": si ya es el video final, no hace falta abrir iframe */
+function _directKind(u) {
+  let x; try { x = new URL(u); } catch (_) { return null; }
+  const h = x.hostname, p = x.pathname;
+  if (/\/novideo\.[a-z0-9]+$/i.test(p)) return 'dead';       // YourUpload: marcador de "sin video"
+  if (_AD_HOST_RE.test(h)) return 'ad';                      // aviso/anuncio (p.ej. aoneroom = MovieBox)
+  if (/\.m3u8([?#]|$)/i.test(u)) return 'hls';
+  if (/\.(mp4|mkv|webm)$/i.test(p) || /\/get_video$/i.test(p)) return 'native';
+  if (/(^|\.)(okcdn\.ru|mycdn\.me|mxcontent\.net|tapecontent\.net)$/i.test(h)) return 'native';
+  return null;
+}
+function _directReferer(u) {
+  let h = ''; try { h = new URL(u).hostname; } catch (_) {}
+  if (/(okcdn\.ru|mycdn\.me)$/i.test(h)) return 'https://ok.ru/';
+  if (/mxcontent\.net$/i.test(h)) return 'https://mixdrop.ag/';
+  if (/(streamtape\.\w+|tapecontent\.net)$/i.test(h)) return 'https://streamtape.to/';
+  return '';
+}
+/* Verifica un video directo de verdad (metadata) y descarta los muy cortos (avisos/anuncios) */
+function _verifyNative(url, seq, finish) {
+  const minDur = (pm && pm.src && pm.src.kind === 'movie') ? 900 : 240;
+  pm.cancel = probeNative(url, (ok, dur) => {
+    if (!pm || pm.seq !== seq) return;
+    const known = isFinite(dur) && dur > 0;
+    if (ok && known && dur < minDur) {
+      dbg('pm', 'descartado · dura ' + Math.round(dur) + ' s (< ' + minDur + ' s) · parece aviso/anuncio', 'err');
+      finish(false); return;
+    }
+    dbg('pm', 'probe native ' + (ok ? 'OK' : 'falló') + ' · duración=' + (known ? Math.round(dur) + ' s' : '?'), ok ? 'ok' : 'err');
+    finish(ok);
+  });
 }
 
 function _isAdMp4(url) {
@@ -3422,8 +3455,8 @@ window.onMp4Intercepted = function (mp4Url, referer) {
   const waiting = window._embedWaiting;
   dbg('mp4', 'llegó · ' + dbgShort(mp4Url) + ' · referer=' + dbgShort(referer || '-', 80) + ' · esperando=' + !!waiting);
   if (!waiting || !pm || waiting.sid !== pm.seq) return;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
-  if (_isFromPrevEmbed(referer, waiting.url)) return;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) { dbg('mp4', 'rechazado · referer localhost', 'warn'); return; }
+  if (_isFromPrevEmbed(referer, waiting.url)) { dbg('mp4', 'rechazado · viene de un embed anterior', 'warn'); return; }
   if (waiting.candidate) return;
   if (_isAdMp4(mp4Url)) { dbg('mp4', 'ignorado (anuncio)', 'warn'); return; }
 
@@ -3493,13 +3526,13 @@ function probeNative(url, cb) {
   const v = document.createElement('video'); v.muted = true; v.preload = 'metadata'; v.setAttribute('playsinline','');
   v.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none;opacity:0;';
   document.body.appendChild(v);
-  let finished = false, timer = null;
+  let finished = false, timer = null, dur = NaN;
   const done = (ok, silent) => {
     if (finished) return; finished = true; clearTimeout(timer);
     try { v.removeAttribute('src'); v.load(); } catch (_) {}
-    try { v.remove(); } catch (_) {} if (!silent) cb(ok);
+    try { v.remove(); } catch (_) {} if (!silent) cb(ok, dur);
   };
-  v.addEventListener('loadedmetadata', () => done(true));
+  v.addEventListener('loadedmetadata', () => { dur = v.duration; done(true); });
   v.addEventListener('error', () => done(false));
   v.src = url; timer = setTimeout(() => done(false), HLS_VERIFY_MS);
   return () => done(false, true);
@@ -3541,7 +3574,29 @@ function openPlayModal(src) {
 
   const finish = (online, levels) => { if (!pm || pm.seq !== seq) return; _pmRender(online, levels); };
 
-  if (type === 'embed') {
+  const _dk = (type === 'embed') ? _directKind(src.url) : null;
+  if (_dk === 'dead' || _dk === 'ad') {
+    dbg('pm', 'enlace descartado (' + (_dk === 'dead' ? 'sin video' : 'aviso/anuncio') + ') · ' + dbgShort(src.url), 'err');
+    setTimeout(() => finish(false), 0);
+  } else if (_dk === 'hls' || _dk === 'native') {
+    dbg('pm', 'enlace directo (' + _dk + ') · sin iframe · ' + dbgShort(src.url));
+    pm.playUrl = src.url; pm.referer = null; pm.playType = _dk;
+    if (window.SSNative && window.SSNative.setHeaders) {
+      try {
+        const ref = _directReferer(src.url), hd = {};
+        if (ref) { hd['Referer'] = ref; hd['Origin'] = ref.replace(/\/$/, ''); pm.referer = ref; }
+        window.SSNative.setHeaders(src.url, JSON.stringify(hd));
+      } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
+    }
+    if (_dk === 'native') {
+      _verifyNative(src.url, seq, finish);
+    } else {
+      pm.cancel = prepareHls(src.url, pm.referer, (levels, take) => {
+        if (pm && pm.seq === seq) pm.takeHls = take || null;
+        finish(levels !== null, levels);
+      });
+    }
+  } else if (type === 'embed') {
     pm.cancel = _cancelCapture;
     _captureEmbed(src.url, seq, (capturedUrl, referer) => {
       if (!pm || pm.seq !== seq) return;
@@ -3560,7 +3615,7 @@ function openPlayModal(src) {
       if (_isDirectVideoUrl(capturedUrl)) {
         dbg('pm', 'video directo → reproducción native');
         pm.playType = 'native';
-        finish(true, null);
+        _verifyNative(capturedUrl, seq, finish);
         return;
       }
 
