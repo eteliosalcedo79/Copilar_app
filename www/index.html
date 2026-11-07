@@ -495,13 +495,19 @@ html, body {
   padding: 2px 8px; border-radius: 6px;
   background: rgba(255,255,255,.1); color: #dbe7f3;
 }
-.src-tag.lang { background: rgba(0,176,255,.2); color: var(--accent2); }
-.src-tag.prov { background: rgba(245,197,24,.18); color: #f5c518; }
+.src-tag.lang { background: #0a7fc2; color: #fff; }
+.src-tag.prov { background: #c98f00; color: #fff; }
 /* NUEVO: Estilo para la etiqueta del servidor de alojamiento (Host) */
 .src-tag.domain { background: rgba(255, 255, 255, 0.12); color: #a0aec0; text-transform: capitalize; }
 
 .src-item:focus-visible .src-tag,
 .src-item.focused .src-tag { background: rgba(0,0,0,.35); color: #fff; }
+.src-item:focus-visible .src-tag.lang,
+.src-item.focused .src-tag.lang { background: #0a7fc2; color: #fff; }
+.src-item:focus-visible .src-tag.prov,
+.src-item.focused .src-tag.prov { background: #c98f00; color: #fff; }
+.src-item:focus-visible .src-quality,
+.src-item.focused .src-quality { color: rgba(255,255,255,.85); }
 
 /* ══════════════════ PLAYER ══════════════════ */
 /* Reproductor OCULTO: no ocupa lugar en pantalla ni recibe foco/toques. Solo se ve en pantalla completa.
@@ -2565,23 +2571,20 @@ function _srcAddItem(list, link, before) {
   if (_selectedEmbedUrl && link.url === _selectedEmbedUrl) btn.classList.add('is-selected');
 
   const lang = _srcLang(link);
-  const prov = _srcProv(link);
   const host = _srcHost(link);
-  // Línea 1: nombre del proveedor sin el "(Host)"; si no hay name, cae al título
+  // Proveedor: nombre sin el "(Host)"; si no hay name, cae al título
   const base = _splitName(link.name).base || _splitName(link.title).base || 'Servidor';
-  const showProv = prov && prov.toLowerCase().replace(/[^a-z0-9]/g, '') !== base.toLowerCase().replace(/[^a-z0-9]/g, '');
 
+  // Orden del original:  [Proveedor] - host   /   [Idioma] - Calidad: X
   btn.innerHTML = `
     <span class="src-ic">${PM_VIDEO_SVG}</span>
     <div class="src-info">
-      <div class="src-name">${escapeHtml(base)}</div>
-      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
-        ${lang ? `<span class="src-tag lang">${escapeHtml(lang)}</span>` : ''}
-        <span class="src-quality" style="margin-top: 0;">Calidad: ${escapeHtml(_srcQuality(link))}</span>
+      <div class="src-tags" style="margin-top:0;">
+        <span class="src-tag prov">${escapeHtml(base)}</span>${host ? `<span class="src-name">- ${escapeHtml(host)}</span>` : ''}
       </div>
-      <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px;">
-        ${host ? `<span class="src-tag domain">${escapeHtml(host)}</span>` : ''}
-        ${showProv ? `<span class="src-tag prov">${escapeHtml(prov)}</span>` : ''}
+      <div class="src-tags">
+        ${lang ? `<span class="src-tag lang">${escapeHtml(lang)}</span><span class="src-quality">-</span>` : ''}
+        <span class="src-quality">Calidad: ${escapeHtml(_srcQuality(link))}</span>
       </div>
     </div>
   `;
