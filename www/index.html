@@ -1203,6 +1203,86 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   .ep-title { font-size: 1rem; }
   .ep-desc { -webkit-line-clamp: 2; }
 }
+/* ── ⚙️ Ajustes: se oculta en modo búsqueda ── */
+.categories-bar.searching #btnSettings { display: none; }
+#btnSettings { white-space: nowrap; }
+
+/* ── Botón ♡ Favoritos (detalle) ── */
+.btn-fav {
+  display: flex; align-items: center; justify-content: center;
+  width: clamp(42px, 5.2vh, 52px); height: clamp(42px, 5.2vh, 52px);
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s;
+  outline: none;
+  padding: 0;
+}
+.btn-fav svg { width: 55%; height: 55%; display: block; }
+.btn-fav.fav-on { color: #ff3d6e; background: rgba(255,61,110,0.16); box-shadow: 0 0 14px rgba(255,61,110,.45); }
+.btn-fav:focus-visible {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(0,176,255,.35), 0 0 18px rgba(0,176,255,.5);
+  transform: scale(1.08);
+}
+.btn-fav.fav-on:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0,176,255,.35), 0 0 18px rgba(255,61,110,.6);
+}
+
+/* ── Menú de calidad del reproductor (popup) ── */
+#tvFsQualityMenu {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 10px;
+  background: rgba(15, 19, 25, .97);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 150px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 100;
+  box-shadow: 0 6px 32px rgba(0, 0, 0, .8), 0 0 20px var(--accent-glow);
+}
+#tvFsQualityMenu.open { display: flex; }
+
+.tv-fs-q-item {
+  padding: clamp(8px, 1.2vmin, 11px) clamp(14px, 2vmin, 18px);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(.78rem, 1.2vmin, .95rem);
+  font-weight: 700;
+  color: #fff;
+  border-radius: 7px;
+  cursor: pointer;
+  letter-spacing: .5px;
+  transition: transform .12s, opacity .12s, background-color .12s, border-color .12s, color .12s, box-shadow .12s;
+  text-align: center;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.tv-fs-q-item.q-active { color: var(--accent); font-weight: 900; }
+.tv-fs-q-item.q-active::before { content: '✓  '; font-weight: 900; }
+.tv-fs-q-item.q-only::before { content: none; }
+.tv-fs-q-item.focused {
+  background: rgba(0, 204, 68, .22);
+  border: 1px solid var(--accent);
+  transform: scale(1.05);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.tv-fs-q-item.q-empty {
+  color: var(--text-sub);
+  font-style: italic;
+  cursor: default;
+  pointer-events: none;
+  font-size: .7rem;
+  padding: 6px 12px;
+}
 </style>
 </head>
 <body>
@@ -1214,9 +1294,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     <button class="category-btn search-btn" id="searchBtn" aria-label="Buscar" tabindex="0">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/></svg>
     </button>
-    <button class="category-btn" id="btnSettings" aria-label="Ajustes" tabindex="0" style="padding: 8px; font-size: 1.2rem;">
-      ⚙️
-    </button>
+    <button class="category-btn" id="btnSettings" aria-label="Ajustes" tabindex="0">⚙️ Ajustes</button>
     <div class="search-box" id="searchBox">
       <input id="searchInput" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar película, serie, novela o anime…">
       <button class="search-clear" id="searchClose" aria-label="Cerrar búsqueda" tabindex="0">✕</button>
@@ -1241,6 +1319,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
           <button class="btn-play-large" id="btnPlayMain" onclick="openSources()">
             ▶ Reproducir
           </button>
+          <button class="btn-fav" id="btnFav" tabindex="0" aria-label="Agregar a favoritos" onclick="toggleFav()"></button>
           <!-- Temporadas (series): a la misma altura que "Reproducir" -->
           <div class="seasons-bar" id="detSeasonsBar"></div>
         </div>
@@ -1375,14 +1454,16 @@ const CATALOG_ADDON  = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/manifest.json';
 const REPO_BASE    = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/';
 
-// Los 23 que dejamos por defecto la primera vez que abren la app
-const DEFAULT_ENABLED = [
-  'embed69', 'sololatino', 'peliculasflix', 'cinecalidad', 'lamovie',
-  'allcalidad', 'areadocumental', 'cinehdplus', 'cuevana_unbuendato', 'documaniatv',
-  'doramasflix', 'doramasyt', 'gnula', 'henaojara', 'moviebox',
-  'pelisgo', 'pelisplus', 'plutotv', 'rcn', 'seriesflix',
-  'tioanime', 'vimeus', 'vitaminagg'
-];
+// Proveedores encendidos por defecto la primera vez (los 17 del original) + cualquier "cuevana*"
+const PROV_DEFAULTS = new Set([
+  'embed69', 'cuevana', 'sololatino', 'vimeus', 'pelishax', 'pelispanda',
+  'pelisplus', 'lamovie', 'allcalidad', 'gnula', 'entrepeliculasyseries',
+  'allpeliculasse', 'hackstore', 'cinecalidad', 'animeav1', 'animejl', 'areshd'
+]);
+function provDefault(key) { return PROV_DEFAULTS.has(key) || String(key).indexOf('cuevana') === 0; }
+
+/* Filtro fijo de hosts: solo pasan embeds de estos 6 (el resto se descarta en silencio) */
+const ALLOWED_HOSTS = ['vidhide', 'streamwish', 'filemoon', 'vimeus', 'voe', 'morencius'];
 
 let allPlugins = []; // Todos los 53 plugins
 let activePlugins = new Set(); // Los que el usuario eligió
@@ -1426,12 +1507,13 @@ function loadPluginsFromManifest() {
       }
 
       // 2. Recuperar selección del usuario (localStorage)
-      const saved = localStorage.getItem('user_plugins');
-      if (saved) {
-        activePlugins = new Set(JSON.parse(saved));
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem('user_plugins') || 'null'); } catch (_) {}
+      if (Array.isArray(saved)) {
+        activePlugins = new Set(saved);   // selección del usuario: se conserva intacta
       } else {
-        // Si es la primera vez, activamos los 23 por defecto
-        activePlugins = new Set(DEFAULT_ENABLED);
+        // Primera instalación: se filtra el manifest con los 17 por defecto + cuevana*
+        activePlugins = new Set(allPlugins.filter(p => provDefault(p.id)).map(p => p.id));
       }
 
       console.log('[Plugins] Total:', allPlugins.length, '| Activos:', activePlugins.size);
@@ -1672,16 +1754,69 @@ async function loadCatalog() {
   }
 }
 
+/* ══════════ FAVORITOS (películas/series) ══════════ */
+const FAV_KEY = 'ss_vod_favs_v1';
+const FAV_CAT = { id: '__fav__', name: 'Favoritos', type: 'fav' };
+const SVG_HEART_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+const SVG_HEART_ON  = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+
+function favList() {
+  try { const a = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); return Array.isArray(a) ? a.filter(m => m && m.id) : []; }
+  catch (_) { return []; }
+}
+function favSave(list) { try { localStorage.setItem(FAV_KEY, JSON.stringify(list)); } catch (_) {} }
+function isFav(id) { return !!id && favList().some(m => m.id === id); }
+function hasFavs() { return favList().length > 0; }
+function favSlimMeta(m) {
+  const o = {};
+  ['id','type','name','poster','background','logo','description','genres','releaseInfo','year','runtime','imdbRating']
+    .forEach(k => { if (m[k] !== undefined && m[k] !== null) o[k] = m[k]; });
+  return o;
+}
+function updateFavBtn() {
+  const b = document.getElementById('btnFav');
+  if (!b || !currentMovie) return;
+  const on = isFav(currentMovie.id);
+  b.classList.toggle('fav-on', on);
+  b.innerHTML = on ? SVG_HEART_ON : SVG_HEART_OFF;
+  b.setAttribute('aria-label', on ? 'Quitar de favoritos' : 'Agregar a favoritos');
+}
+function toggleFav() {
+  const meta = currentMovie;
+  if (!meta || !meta.id) return;
+  let list = favList();
+  const was = list.some(m => m.id === meta.id);
+  list = was ? list.filter(m => m.id !== meta.id) : list.concat([favSlimMeta(meta)]);
+  favSave(list);
+  updateFavBtn();
+  refreshFavUi();
+  showToast(was ? 'Quitado de favoritos' : 'Agregado a favoritos', 'info', 1800);
+}
+function refreshFavUi() {
+  const viewingFav = currentCatObj && currentCatObj.id === FAV_CAT.id;
+  if (viewingFav && !hasFavs()) {
+    // se quitó el último favorito: la sección desaparece y se vuelve a la primera categoría real
+    currentCatObj = categories[0] || null;
+    currentCategory = currentCatObj ? (currentCatObj.name || '') : '';
+    renderCategories();
+    if (currentCatObj && !searchMode) loadCategory(currentCatObj);
+    return;
+  }
+  renderCategories();
+  if (viewingFav && !searchMode) renderPosters(favList(), 'Aún no tienes favoritos.');
+}
+
 function renderCategories() {
   const bar = document.getElementById('categoriesBar');
   bar.querySelectorAll('.category-btn[data-cat]').forEach(b => b.remove());
-  categories.forEach(cat => {
+  const list = hasFavs() ? [FAV_CAT].concat(categories) : categories;
+  list.forEach(cat => {
     const btn = document.createElement('button');
     btn.className = 'category-btn';
     btn.dataset.cat = cat.id;
     btn.textContent = cat.name || (cat.type === 'series' ? 'Series' : 'Películas');
     btn.tabIndex = 0;
-    if (currentCategory === cat.name) btn.classList.add('active');
+    if (currentCatObj ? currentCatObj.id === cat.id : currentCategory === cat.name) btn.classList.add('active');
     btn.addEventListener('click', () => {
       bar.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -1690,8 +1825,12 @@ function renderCategories() {
     bar.appendChild(btn);
   });
   if (!currentCategory && categories.length) {
-    bar.querySelector('.category-btn[data-cat]')?.classList.add('active');
+    const firstReal = bar.querySelector('.category-btn[data-cat="' + CSS.escape(categories[0].id) + '"]');
+    (firstReal || bar.querySelector('.category-btn[data-cat]'))?.classList.add('active');
   }
+  // ⚙️ Ajustes siempre al final de la barra (después de todas las categorías)
+  const sb = document.getElementById('btnSettings');
+  if (sb) bar.appendChild(sb);
 }
 
 
@@ -1709,6 +1848,13 @@ async function loadCategory(cat) {
   currentCatObj = cat;
   currentCategory = cat.name;
   const grid = document.getElementById('posterGrid');
+
+  if (cat.id === FAV_CAT.id) {
+    const favs = favList();
+    favs.forEach(m => { moviesById[m.id] = m; });
+    if (!searchMode) renderPosters(favs, 'Aún no tienes favoritos.');
+    return;
+  }
 
   if (moviesByCategory[cat.id]) {
     renderPosters(moviesByCategory[cat.id]);
@@ -2028,6 +2174,16 @@ function showDetails(meta, cardEl) {
   document.getElementById('detSeasonsBar').innerHTML = '';
   document.getElementById('detEpisodesList').innerHTML = '';
 
+  // Orden de acciones: Película [▶ Reproducir][♡] · Serie [♡][Temporadas…]
+  {
+    const actions = document.getElementById('detailActions');
+    const play = document.getElementById('btnPlayMain');
+    const fav = document.getElementById('btnFav');
+    if (meta.type === 'series') actions.insertBefore(fav, actions.firstChild);
+    else { actions.insertBefore(play, actions.firstChild); play.after(fav); }
+    updateFavBtn();
+  }
+
   if (meta.type === 'series') {
     document.getElementById('btnPlayMain').style.display = 'none';
     document.getElementById('inlineEpisodesContainer').style.display = 'block';
@@ -2269,6 +2425,17 @@ function ejecutarPlugin(plugin, meta, season, episode) {
 }
 
 /* ⬇️ CARGA EN LOTES DE 3 EN 3 PARA NO SATURAR EL WEBVIEW DE ANDROID ⬇️ */
+/* Pasa solo si el host detectado (o el dominio real de la URL) es uno de los permitidos */
+function _hostAllowed(link) {
+  const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const label = norm(_srcHost(link));
+  if (label && ALLOWED_HOSTS.some(h => label.indexOf(h) !== -1)) return true;
+  try {
+    const hn = new URL(link.url).hostname.toLowerCase();
+    return ALLOWED_HOSTS.some(h => hn.indexOf(h) !== -1);
+  } catch (_) { return false; }
+}
+
 async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   await loadPluginsFromManifest();
 
@@ -2296,6 +2463,7 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar) {
     
     for (const l of res.links) {
       if (!l || !l.url || vistos.has(l.url)) continue;
+      if (!_hostAllowed(l)) continue;   // host fuera de la whitelist: se ignora
       vistos.add(l.url);
       try { if (!l.__prov) l.__prov = plugin.nombre; } catch (_) {}
       todos.push(l);
@@ -3534,26 +3702,37 @@ document.addEventListener('keydown', (e) => {
         const idx = eps.indexOf(focused);
         if (e.key === 'ArrowRight') { e.preventDefault(); if (eps[idx + 1]) _focusH(eps[idx + 1], epList); }
         else if (e.key === 'ArrowLeft') { e.preventDefault(); if (eps[idx - 1]) _focusH(eps[idx - 1], epList); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); activeSeasonBtn?.focus({ preventScroll: true }); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); (activeSeasonBtn || document.getElementById('btnFav'))?.focus({ preventScroll: true }); }
         else if (e.key === 'ArrowDown') { e.preventDefault(); }
         else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); }
       } else if (focused?.classList.contains('season-btn')) {
         const idx = seasonBtns.indexOf(focused);
         /* ↔ solo mueve el foco; los capítulos cambian con OK */
         if (e.key === 'ArrowRight') { e.preventDefault(); if (seasonBtns[idx + 1]) _focusH(seasonBtns[idx + 1], sBar); }
-        else if (e.key === 'ArrowLeft') { e.preventDefault(); if (seasonBtns[idx - 1]) _focusH(seasonBtns[idx - 1], sBar); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); if (seasonBtns[idx - 1]) _focusH(seasonBtns[idx - 1], sBar); else document.getElementById('btnFav')?.focus({ preventScroll: true }); }
         else if (e.key === 'ArrowDown') { e.preventDefault(); _focusH(eps[0], epList); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); }
         else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); }
+      } else if (focused?.id === 'btnFav') {
+        if (e.key === 'ArrowRight') { e.preventDefault(); activeSeasonBtn?.focus({ preventScroll: true }); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); (eps[0] || activeSeasonBtn)?.focus({ preventScroll: true }); }
+        else if (isArrow) e.preventDefault();
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); }
       } else if (isArrow) {
-        e.preventDefault(); (eps[0] || activeSeasonBtn)?.focus({ preventScroll: true });
+        e.preventDefault(); (eps[0] || activeSeasonBtn || document.getElementById('btnFav'))?.focus({ preventScroll: true });
       }
       return;
     } else {
       const playBtn = document.getElementById('btnPlayMain');
+      const favBtn = document.getElementById('btnFav');
       if (focused === playBtn) {
-        if (isArrow) e.preventDefault();
+        if (e.key === 'ArrowRight') { e.preventDefault(); favBtn?.focus({ preventScroll: true }); }
+        else if (isArrow) e.preventDefault();
         else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playBtn.click(); }
+      } else if (focused === favBtn) {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); playBtn?.focus({ preventScroll: true }); }
+        else if (isArrow) e.preventDefault();
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); favBtn.click(); }
       } else if (isArrow) { e.preventDefault(); playBtn?.focus({ preventScroll: true }); }
       return;
     }
@@ -3564,7 +3743,7 @@ document.addEventListener('keydown', (e) => {
 let _lastBrowseFocus = null;
 document.addEventListener('focusin', (e) => {
   const t = e.target;
-  if (t && t.matches && t.matches('.poster-card, .category-btn, .season-btn, .episode-card, #btnPlayMain')) _lastBrowseFocus = t;
+  if (t && t.matches && t.matches('.poster-card, .category-btn, .season-btn, .episode-card, #btnPlayMain, #btnFav')) _lastBrowseFocus = t;
 });
 
 /* Enfoca un elemento y lo centra con scroll horizontal dentro de su contenedor */
