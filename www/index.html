@@ -2755,23 +2755,122 @@ function playMovieSource(link, btn) {
   const seq = _capSeq;
   if (btn) { btn.classList.add('loading'); _capBtn = btn; }
 
-  _captureEmbed(link.url, seq, (m3u8, referer) => {
+  /* PRUEBA: extractor directo, SIN iframe. Si falla, se muestra un panel con lo que respondió el servidor */
+  const _log = [];
+  const log = m => { _log.push(m); console.log('[Extractor]', m); };
+  extractM3u8(link.url, log).then(res => {
     if (seq !== _capSeq) return;
     _capClear();
-    if (!m3u8) { showToast('No se pudo obtener el video. Probá con otro servidor.', 'error', 4000); return; }
+    if (!res.m3u8) { showExtractDebug(link.url, res, _log); return; }
     if (window.SSNative && window.SSNative.setHeaders) {
       try {
-        const hd = {};
-        if (referer) { hd['Referer'] = referer; try { hd['Origin'] = new URL(referer).origin; } catch (_) {} }
-        window.SSNative.setHeaders(m3u8, JSON.stringify(hd));
+        const hd = { 'Referer': res.referer };
+        try { hd['Origin'] = new URL(res.referer).origin; } catch (_) {}
+        window.SSNative.setHeaders(res.m3u8, JSON.stringify(hd));
       } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
     }
-    const ctx = { kind: 'movie', movie, url: m3u8, type: 'hls' };
+    showToast('Extraído en ' + res.ms + ' ms', 'info', 2500);
+    const ctx = { kind: 'movie', movie, url: res.m3u8, type: 'hls' };
     startPlayback(ctx, false);
     if (_ctx !== ctx || !navigator.onLine) return;
-    _enterFullscreen();   // URL capturada: recién ahora se abre el reproductor en pantalla completa
+    _enterFullscreen();
+  }).catch(e => {
+    if (seq !== _capSeq) return;
+    _capClear();
+    log('ERROR: ' + ((e && e.message) || e));
+    showExtractDebug(link.url, { m3u8: null, html: '' }, _log);
   });
 }
+
+/* ══════════════ EXTRACTOR DIRECTO (PRUEBA) ══════════════ */
+function _unpackAll(html) {
+  const out = [];
+  const re = /eval\(function\(p,a,c,k,e,[dr]\)\{.*?\}\('((?:[^'\\]|\\.)*)',\s*(\d+),\s*(\d+),\s*'((?:[^'\\]|\\.)*)'\.split\('\|'\)/gs;
+  let m;
+  while ((m = re.exec(html))) {
+    try {
+      let pl = m[1].replace(/\\'/g, "'").replace(/\\\\/g, '\\');
+      const a = +m[2]; let c = +m[3]; const k = m[4].split('|');
+      const enc = n => (n < a ? '' : enc(Math.floor(n / a))) + ((n = n % a) > 35 ? String.fromCharCode(n + 29) : n.toString(36));
+      const d = {};
+      while (c--) d[enc(c)] = k[c] || enc(c);
+      out.push(pl.replace(/\b\w+\b/g, w => (d[w] !== undefined ? d[w] : w)));
+    } catch (_) {}
+  }
+  return out;
+}
+
+function _voeDecode(html) {
+  const m = html.match(/<script[^>]*type=["']application\/json["'][^>]*>\s*\[?\s*"([^"]+)"\s*\]?\s*<\/script>/i);
+  if (!m) return null;
+  try {
+    let v = m[1].replace(/[a-zA-Z]/g, ch => { const c = ch.charCodeAt(0) + 13; return String.fromCharCode((ch <= 'Z' ? 90 : 122) >= c ? c : c - 26); });
+    ['@$', '^^', '~@', '%?', '*~', '!!', '#&'].forEach(p => { v = v.split(p).join(''); });
+    v = atob(v);
+    v = Array.from(v, ch => String.fromCharCode(ch.charCodeAt(0) - 3)).join('');
+    v = atob(v.split('').reverse().join(''));
+    return v;
+  } catch (e) { return null; }
+}
+
+function _findM3u8(html, pageUrl, log) {
+  const texts = [html.replace(/\\\//g, '/')];
+  const unp = _unpackAll(html);
+  if (unp.length) log('Script empaquetado: ' + unp.length);
+  unp.forEach(u => texts.push(u.replace(/\\\//g, '/')));
+  const voe = _voeDecode(html);
+  if (voe) { log('Bloque JSON de Voe decodificado'); texts.push(voe.replace(/\\\//g, '/')); }
+  const abs = u => { try { return new URL(u, pageUrl).href; } catch (_) { return null; } };
+  for (const t of texts) {
+    let m = t.match(/["']hls[234]?["']\s*:\s*["']([^"']+)["']/);
+    if (m) { const u = abs(m[1]); if (u) return u; }
+    m = t.match(/["'](?:source|file|src|direct_access_url)["']?\s*[:=]\s*["']([^"']+\.m3u8[^"']*)["']/);
+    if (m) { const u = abs(m[1]); if (u) return u; }
+    m = t.match(/https?:\/\/[^\s"'\\<>]+?\.m3u8[^\s"'\\<>]*/);
+    if (m) return m[0];
+  }
+  return null;
+}
+
+async function extractM3u8(embedUrl, log) {
+  const t0 = Date.now();
+  let url = embedUrl, referer = null, html = '', status = 0;
+  for (let hop = 0; hop < 3; hop++) {
+    const r = await nativeFetch(url, { headers: { 'Accept': 'text/html,application/xhtml+xml,*/*', 'Referer': referer || (new URL(url).origin + '/') } });
+    status = r.status;
+    html = await r.text();
+    log('GET ' + url + ' → ' + status + ' · ' + html.length + ' bytes · ' + (Date.now() - t0) + ' ms');
+    const found = _findM3u8(html, url, log);
+    if (found) { log('m3u8: ' + found); return { m3u8: found, referer: url, ms: Date.now() - t0, html, status }; }
+    const m = html.match(/(?:window\.)?location(?:\.href)?\s*=\s*['"](https?:\/\/[^'"]+)['"]/);
+    if (m) { referer = url; url = m[1]; log('Redirige a ' + url); continue; }
+    break;
+  }
+  log('No se encontró ningún m3u8');
+  return { m3u8: null, html, status, ms: Date.now() - t0 };
+}
+
+function showExtractDebug(embedUrl, res, lines) {
+  let el = document.getElementById('extDbg');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'extDbg'; el.tabIndex = -1;
+    el.style.cssText = 'position:fixed;inset:5% 8%;z-index:99999;background:#0b1220;color:#e6edf7;border:2px solid #ff5d5d;border-radius:14px;padding:22px 26px;font:20px/1.35 monospace;overflow:auto;white-space:pre-wrap;word-break:break-all;';
+    document.body.appendChild(el);
+  }
+  const h = String(res.html || '');
+  el.textContent = 'EXTRACTOR: FALLÓ  (Atrás / OK para cerrar)\n\nEmbed: ' + embedUrl + '\nHTTP: ' + (res.status || '?') + ' · ' + (res.ms || 0) + ' ms\n\n' +
+    lines.join('\n') + '\n\n--- Inicio del HTML (900 car.) ---\n' + h.slice(0, 900) +
+    '\n\n--- Pistas ---\npacked: ' + /eval\(function\(p,a,c,k/.test(h) + ' · json-script: ' + /type=["']application\/json["']/.test(h) + ' · "m3u8" en texto: ' + /m3u8/.test(h);
+  el.style.display = 'block';
+  try { el.focus(); } catch (_) {}
+}
+document.addEventListener('keydown', e => {
+  const el = document.getElementById('extDbg');
+  if (!el || el.style.display === 'none') return;
+  if (['Escape', 'Backspace', 'Enter'].includes(e.key) || e.keyCode === 4) { e.preventDefault(); e.stopPropagation(); el.style.display = 'none'; }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); el.scrollTop += 120; }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); el.scrollTop -= 120; }
+}, true);
 
 /* ══════════════════ PLAYER · NÚCLEO ══════════════════ */
 function getActiveVideoEl()       { return document.getElementById('iptv-player'); }
