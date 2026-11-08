@@ -94,7 +94,7 @@ html, body {
 }
 .category-btn:focus-visible:not(.active) {
   color: var(--text);
-  box-shadow: inset 0 0 0 3px var(--accent2), 0 0 14px rgba(0,176,255,.55);
+  box-shadow: inset 0 0 0 3px var(--accent2);
 }
 .category-btn.active {
   background: linear-gradient(90deg, #1f2937 0%, var(--accent) 40%, var(--accent) 100%);
@@ -103,7 +103,6 @@ html, body {
 }
 .category-btn.active:focus-visible {
   box-shadow: inset 0 0 0 3px var(--accent2),
-              0 0 14px rgba(0,176,255,.55),
               0 4px 15px rgba(0,204,68,.3);
 }
 
@@ -191,7 +190,6 @@ html, body {
 .poster-card:focus .poster-img-wrap,
 .poster-card:focus-visible .poster-img-wrap {
   border-color: var(--accent2);
-  box-shadow: 0 0 14px rgba(0,176,255,.55);
 }
 .poster-card .poster-name {
   font-size: clamp(.6rem, .9vw, .72rem);
@@ -293,7 +291,7 @@ html, body {
 }
 .btn-play-large:focus-visible {
   border-color: var(--accent2);
-  box-shadow: 0 0 0 3px rgba(0,176,255,.35), 0 0 18px rgba(0,176,255,.5);
+  box-shadow: 0 0 0 3px rgba(0,176,255,.35);
 }
 .btn-back {
   display: flex; align-items: center; gap: 8px;
@@ -368,7 +366,7 @@ html, body {
 .season-btn.active.focused,
 .season-btn.active:focus-visible {
   border-color: #fff;
-  box-shadow: 0 0 20px rgba(0,176,255,0.8);
+  box-shadow: none;
 }
 
 .episodes-scroll-area {
@@ -402,7 +400,7 @@ html, body {
 .episode-card:focus-visible {
   transform: scale(1.04);
   border-color: var(--accent2);
-  box-shadow: 0 0 20px rgba(0,176,255,0.5);
+  box-shadow: none;
 }
 
 /* Imagen de fondo ocupando toda la tarjeta */
@@ -715,13 +713,11 @@ html, body {
   position: fixed;
   top: var(--tv-topbar-h);
   left: 0; right: var(--modal-right); bottom: 0;
-  background: rgba(6,9,14,.92);
+  background: transparent;          /* contenedor transparente: se ve limpio el fondo de la película */
   z-index: 700;
   display: none;
-  align-items: flex-start; justify-content: center;
+  align-items: center; justify-content: center;
   padding: clamp(16px, 3vh, 40px) 20px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 .sources-modal.open { display: flex; animation: fadeInUp .22s ease; }
 @keyframes fadeInUp {
@@ -730,8 +726,8 @@ html, body {
 }
 
 .sources-card {
-  width: 100%; max-width: 640px;
-  height: 100%;
+  width: 100%; max-width: 520px;
+  height: 82%; max-height: 640px;
   display: flex; flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -804,7 +800,7 @@ html, body {
 .src-item:focus-visible,
 .src-item.focused {
   border-color: var(--accent2);
-  box-shadow: 0 0 14px rgba(0,176,255,.55);
+  box-shadow: none;
   color: #fff;
 }
 
@@ -1026,7 +1022,7 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   padding: clamp(4px, 0.8vmin, 8px); /* Botones más pequeños */
   border-radius: 10px;
   outline: none;
-  transition: all .15s ease;
+  transition: none;                 /* respuesta instantánea al mover el foco */
   min-width: clamp(36px, 4vw, 44px);
   min-height: clamp(36px, 4vw, 44px);
   position: relative;
@@ -1046,8 +1042,7 @@ body.fullscreen-active #playerContainerInline:focus-visible { box-shadow: none !
   border-color: var(--accent);
   background: rgba(0,204,68,.18);
   color: #fff;
-  box-shadow: 0 0 0 3px rgba(0,204,68,.25), 0 0 18px rgba(0,204,68,.3);
-  transform: scale(1.06);
+  box-shadow: 0 0 0 3px rgba(0,204,68,.25);
 }
 .bar-live-indicator {
   display: flex; align-items: center;
@@ -1231,11 +1226,11 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 .btn-fav.fav-on { color: #ff3d6e; background: rgba(255,61,110,0.16); box-shadow: 0 0 14px rgba(255,61,110,.45); }
 .btn-fav:focus-visible {
   border-color: var(--accent2);
-  box-shadow: 0 0 0 3px rgba(0,176,255,.35), 0 0 18px rgba(0,176,255,.5);
+  box-shadow: 0 0 0 3px rgba(0,176,255,.35);
   transform: scale(1.08);
 }
 .btn-fav.fav-on:focus-visible {
-  box-shadow: 0 0 0 3px rgba(0,176,255,.35), 0 0 18px rgba(255,61,110,.6);
+  box-shadow: 0 0 0 3px rgba(0,176,255,.35);
 }
 
 /* ── Menú de calidad del reproductor (popup) ── */
@@ -1279,7 +1274,7 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   background: rgba(0, 204, 68, .22);
   border: 1px solid var(--accent);
   transform: scale(1.05);
-  box-shadow: 0 0 12px var(--accent-glow);
+  box-shadow: none;
 }
 .tv-fs-q-item.q-empty {
   color: var(--text-sub);
@@ -1573,6 +1568,7 @@ function togglePlugin(id, isChecked) {
 
 /* ⬇️ TIEMPOS ORIGINALES RESTAURADOS (No se tocan) ⬇️ */
 const EMBED_TIMEOUT_MS       = 7500;
+const PLUGIN_TIMEOUT_MS      = 15000;   // tiempo máximo por plugin
 const EMBED_MAX_RETRY        = 2;
 const EMBED_LOAD_GRACE_MS    = 5000;
 const EMBED_MAX_TOTAL_MS     = 15000;
@@ -2422,7 +2418,7 @@ function ejecutarPlugin(plugin, meta, season, episode) {
       `;
 
       iframe.contentWindow.eval(script);
-      timeoutId = setTimeout(() => terminar([], 'Tiempo de espera agotado'), 55000);
+      timeoutId = setTimeout(() => terminar([], 'Tiempo de espera agotado'), PLUGIN_TIMEOUT_MS);   // francotirador: si el plugin no responde, se descarta
     } catch (e) {
       console.warn('[Embeds ' + plugin.nombre + ']', e);
       terminar([], (e && e.message) || String(e));
@@ -2430,7 +2426,7 @@ function ejecutarPlugin(plugin, meta, season, episode) {
   });
 }
 
-/* ⬇️ CARGA EN LOTES DE 3 EN 3 PARA NO SATURAR EL WEBVIEW DE ANDROID ⬇️ */
+/* ⬇️ CARGA EN LOTES DE 2 EN 2 PARA NO SATURAR EL WEBVIEW DE ANDROID ⬇️ */
 /* Pasa solo si el host detectado (o el dominio real de la URL) es uno de los permitidos */
 function _hostAllowed(link) {
   const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -2457,7 +2453,7 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar) {
   const todos = [];
   let pendientes = PLUGINS_TO_USE.length;
 
-  const limit = 3; // Solo 3 peticiones a la vez
+  const limit = 2; // Solo 2 peticiones a la vez
   let index = 0;
 
   const runNext = async () => {
@@ -3236,7 +3232,6 @@ class TVPlayerBar {
   constructor() {
     this._visible = false; this._currentBtnIdx = 0; this._hideTimer = null; this._barEl = null;
     this._buttons = []; this._qualityMenuEl = null; this._qualityMenuOpen = false; this._qualityMenuIdx = 0; this._qualityItems = [];
-    this._seekFeedbackTimer = null;
     this._build();
   }
   get visible() { return this._visible; } get qualityMenuOpen() { return this._qualityMenuOpen; }
@@ -3384,43 +3379,6 @@ class TVPlayerBar {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
-  _showSeekFeedback(text) {
-    let fb = document.getElementById('seekFeedback');
-    if (!fb) {
-      fb = document.createElement('div');
-      fb.id = 'seekFeedback';
-      fb.style.cssText = `
-        position: absolute;
-        top: -30px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 176, 255, 0.9);
-        color: #fff;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-family: 'Rajdhani', sans-serif;
-        font-weight: 800;
-        font-size: 0.9rem;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.2s, transform 0.2s;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        z-index: 100;
-      `;
-      this._progressTrack.appendChild(fb);
-    }
-    
-    fb.textContent = text;
-    fb.style.opacity = '1';
-    fb.style.transform = 'translateX(-50%) translateY(-5px)';
-    
-    clearTimeout(this._seekFeedbackTimer);
-    this._seekFeedbackTimer = setTimeout(() => {
-      fb.style.opacity = '0';
-      fb.style.transform = 'translateX(-50%) translateY(0)';
-    }, 800);
-  }
-
   _resetTimer() { if (this._hideTimer) clearTimeout(this._hideTimer); this._hideTimer = setTimeout(() => { if (this._qualityMenuOpen) { this._resetTimer(); return; } this.hide(); }, TV_BAR_HIDE_MS); }
   _openQualityMenu() { if (!this._qualityMenuEl) return; this._qualityMenuOpen = true; _tvFsQualityOpen = true; this._buildQualityItems(); this._qualityMenuEl.classList.add('open'); this._focusQualityItem(0); this._resetTimer(); }
   _closeQualityMenu() { if (!this._qualityMenuEl) return; this._qualityMenuOpen = false; _tvFsQualityOpen = false; this._qualityMenuEl.classList.remove('open'); this._qualityItems = []; }
@@ -3469,14 +3427,12 @@ class TVPlayerBar {
           if (v) {
             v.currentTime = Math.max(0, v.currentTime - 10);
             this.updateProgress();
-            this._showSeekFeedback('-10s');
           }
           return true;
         case 'ArrowRight':
           if (v) {
             v.currentTime = Math.min(v.duration || 0, v.currentTime + 10);
             this.updateProgress();
-            this._showSeekFeedback('+10s');
           }
           return true;
         case 'ArrowDown':
