@@ -2755,13 +2755,10 @@ function playMovieSource(link, btn) {
   const seq = _capSeq;
   if (btn) { btn.classList.add('loading'); _capBtn = btn; }
 
-  /* Pantalla completa YA, dentro del gesto del usuario: el reproductor con el logo cubre la captura y no hay salto al final */
-  _beginFullscreenLoading();
-
   _captureEmbed(link.url, seq, (m3u8, referer) => {
     if (seq !== _capSeq) return;
     _capClear();
-    if (!m3u8) { _abortFullscreenLoading(); showToast('No se pudo obtener el video. Probá con otro servidor.', 'error', 4000); return; }
+    if (!m3u8) { showToast('No se pudo obtener el video. Probá con otro servidor.', 'error', 4000); return; }
     if (window.SSNative && window.SSNative.setHeaders) {
       try {
         const hd = {};
@@ -2770,26 +2767,10 @@ function playMovieSource(link, btn) {
       } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
     }
     const ctx = { kind: 'movie', movie, url: m3u8, type: 'hls' };
-    _fsLoading = false;
     startPlayback(ctx, false);
-    if (_ctx !== ctx) { _abortFullscreenLoading(); return; }
-    tvBar?.updateLiveLabel();
-    requestAnimationFrame(() => requestAnimationFrame(() => tvBar?.show()));
+    if (_ctx !== ctx || !navigator.onLine) return;
+    _enterFullscreen();   // URL capturada: recién ahora se abre el reproductor en pantalla completa
   });
-}
-
-function _beginFullscreenLoading() {
-  _fsLoading = true;
-  _enterFullscreen();            // nativo (con gesto del usuario)
-  _handleEnterFullscreen();      // CSS inmediato, sin esperar el evento fullscreenchange
-  setPlayerLoader('decoding');   // logo
-  tvBar?.hide();
-}
-
-function _abortFullscreenLoading() {
-  _fsLoading = false;
-  _wasFullscreen = false; if (_wasFullscreenTimer) { clearTimeout(_wasFullscreenTimer); _wasFullscreenTimer = null; }
-  _exitFullscreen(); _handleExitFullscreen();   // vuelve al modal de servidores con el foco restaurado
 }
 
 /* ══════════════════ PLAYER · NÚCLEO ══════════════════ */
