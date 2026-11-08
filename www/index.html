@@ -2835,11 +2835,19 @@ function _findM3u8(html, pageUrl, log) {
 async function extractM3u8(embedUrl, log) {
   const t0 = Date.now();
   let url = embedUrl, referer = null, html = '', status = 0;
+  /* Muchos "embeds" ya son el master.m3u8 directo: no hace falta pedir nada */
+  try {
+    if (/\.m3u8$/i.test(new URL(url).pathname)) {
+      log('El embed ya es un .m3u8: se usa directo');
+      return { m3u8: url, referer: new URL(url).origin + '/', ms: Date.now() - t0, html: '', status: 0 };
+    }
+  } catch (_) {}
   for (let hop = 0; hop < 3; hop++) {
     const r = await nativeFetch(url, { headers: { 'Accept': 'text/html,application/xhtml+xml,*/*', 'Referer': referer || (new URL(url).origin + '/') } });
     status = r.status;
     html = await r.text();
     log('GET ' + url + ' → ' + status + ' · ' + html.length + ' bytes · ' + (Date.now() - t0) + ' ms');
+    if (/^\s*#EXTM3U/.test(html)) { log('La respuesta ya es una lista m3u8'); return { m3u8: url, referer: new URL(url).origin + '/', ms: Date.now() - t0, html, status }; }
     const found = _findM3u8(html, url, log);
     if (found) { log('m3u8: ' + found); return { m3u8: found, referer: url, ms: Date.now() - t0, html, status }; }
     const m = html.match(/(?:window\.)?location(?:\.href)?\s*=\s*['"](https?:\/\/[^'"]+)['"]/);
