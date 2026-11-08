@@ -146,14 +146,12 @@ html, body {
   gap: 8px;
   align-content: start;
   scrollbar-width: none;
-  scroll-behavior: smooth;
 }
 .poster-grid::-webkit-scrollbar { display: none; }
 
 .poster-card {
   cursor: pointer;
   outline: none;
-  transition: transform .18s ease;
   padding: 2px;
   border-radius: 8px;
   display: flex; flex-direction: column;
@@ -161,7 +159,6 @@ html, body {
 }
 .poster-card:focus,
 .poster-card:focus-visible {
-  transform: scale(1.04);
   z-index: 2;
   background: rgba(0,176,255,.06);
 }
@@ -172,7 +169,6 @@ html, body {
   overflow: hidden;
   background: #111;
   border: 2px solid transparent;
-  transition: border-color .2s, box-shadow .2s;
   display: flex; align-items: center; justify-content: center;
 }
 .poster-card .poster-img-wrap img {
@@ -720,6 +716,20 @@ html, body {
   padding: clamp(16px, 3vh, 40px) 20px;
 }
 .sources-modal.open { display: flex; animation: fadeInUp .22s ease; }
+
+/* Captura de embeds: mismo recuadro que el modal, un nivel por debajo (z 699 < 700), sin recibir toques.
+   Solo existe mientras el modal está abierto; al cerrarlo desaparece. */
+#embedCaptureHost {
+  position: fixed;
+  top: var(--tv-topbar-h);
+  left: 0; right: var(--modal-right); bottom: 0;
+  padding: clamp(16px, 3vh, 40px) 20px;
+  z-index: 699;
+  display: none;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+}
+#sourcesModal.open ~ #embedCaptureHost { display: flex; }
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -1391,6 +1401,8 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     <div class="sources-list" id="sourcesList"></div>
   </div>
 </div>
+<!-- Soporte del iframe de captura de embeds: va DETRÁS de la tarjeta de servidores (la tarjeta es opaca y lo tapa) -->
+<div id="embedCaptureHost" aria-hidden="true"></div>
 
 <!-- ══════ SETTINGS MODAL (Proveedores) ══════ -->
 <div class="exit-modal-overlay" id="settingsModal">
@@ -1580,6 +1592,8 @@ const BUF_SHOW_DELAY_MS      = 800;
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS     = 4000;
 const TV_BAR_HIDE_MS         = 4000;
+const SEEK_TAP_SECONDS       = 10;      // un toque en ←/→ de la barra de progreso: ±10 s
+const SEEK_HOLD_SPEED_SPS    = 30;      // manteniendo ←/→: segundos de película que avanza/retrocede el marcador por cada segundo real
 
 const PM_VIDEO_SVG =
   '<svg viewBox="0 0 576 512" width="18" height="18" fill="currentColor" aria-hidden="true">' +
@@ -3050,7 +3064,12 @@ function _captureEmbed(url, seq, cb) {
   if (typeof window.SSNative === 'undefined' || !window.SSNative.capture) {
     setTimeout(() => cb(null), 1500); return;
   }
-  const container = getActivePlayerContainer();
+  /* Con el modal de servidores abierto el iframe va detrás de la tarjeta (520×292); si no, donde estaba antes */
+  const _pickContainer = () => {
+    const sm = document.getElementById('sourcesModal');
+    const ch = document.getElementById('embedCaptureHost');
+    return (ch && sm && sm.classList.contains('open')) ? { el: ch, inHost: true } : { el: getActivePlayerContainer(), inHost: false };
+  };
   let retry = 0;
   const host = (() => { try { return new URL(url).hostname; } catch (_) { return url; } })();
   let useSandbox = _embedSbGet(host);
@@ -3069,7 +3088,10 @@ function _captureEmbed(url, seq, cb) {
 
     const wrapper = document.createElement('div');
     wrapper.id = 'embedWrapper';
-    wrapper.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;background:transparent;z-index:10;opacity:0.01;pointer-events:none;';
+    const _cont = _pickContainer();
+    wrapper.style.cssText = _cont.inHost
+      ? 'position:relative;flex:0 0 auto;width:100%;max-width:520px;aspect-ratio:16/9;overflow:hidden;background:transparent;opacity:0.01;pointer-events:none;'
+      : 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;background:transparent;z-index:10;opacity:0.01;pointer-events:none;';
 
     const iframe = document.createElement('iframe');
     iframe.id = 'embedFrame'; iframe.src = url;
@@ -3106,7 +3128,7 @@ function _captureEmbed(url, seq, cb) {
       if (_iframeLoadMs + remaining > EMBED_TIMEOUT_MS) armTimer(remaining);
     });
 
-    wrapper.appendChild(iframe); container.appendChild(wrapper); armTimer(EMBED_TIMEOUT_MS);
+    wrapper.appendChild(iframe); _cont.el.appendChild(wrapper); armTimer(EMBED_TIMEOUT_MS);
   };
   attempt(false);
 }
@@ -3316,6 +3338,7 @@ class TVPlayerBar {
     this._focusButton(0); this._resetTimer();
   }
   hide() {
+    this._endArrow();
     this._barEl.classList.remove('visible'); this._visible = false; this._buttons.forEach(b => b.classList.remove('focused'));
     if(this._progressTrack) this._progressTrack.classList.remove('focused');
     this._closeQualityMenu(); if (this._hideTimer) { clearTimeout(this._hideTimer); this._hideTimer = null; }
@@ -3348,9 +3371,10 @@ class TVPlayerBar {
       this._progressContainer.style.display = 'flex';
     }
 
-    const cur = v.currentTime || 0;
+    /* Mientras se mantiene ←/→ el marcador muestra la posición de destino; el video sigue su curso */
+    const cur = (this._scrubPos != null) ? this._scrubPos : (v.currentTime || 0);
     const dur = v.duration || 0;
-    
+
     if (dur > 0) {
       const pct = (cur / dur) * 100;
       this._progressFill.style.width = pct + '%';
@@ -3406,7 +3430,63 @@ class TVPlayerBar {
     this._closeQualityMenu(); this.updateQualityLabel(); this._focusButton(2);
   }
   
-  handleKey(key) {
+  /* ── ←/→ en la barra de progreso ──
+     Toque corto: ±10 s al soltar la tecla.
+     Mantener: el marcador avanza/retrocede suave y el video sigue normal; al soltar se busca esa posición. */
+  _arrowDown(dir, e) {
+    const now = Date.now();
+    const a = this._arrow;
+    if (a && a.dir === dir && (now - a.last) < 700) {          // tecla ya presionada: es repetición (mantener)
+      a.last = now;
+      if (!a.scrubbing) this._beginScrub(a);
+      return;
+    }
+    if (a) this._endArrow();                                   // otra dirección o estado viejo: se cierra primero
+    if (e && e.repeat) return;                                 // repetición huérfana sin pulsación inicial
+    const na = { dir, last: now, scrubbing: false, tapTimer: null };
+    /* Respaldo: si no llega ni repetición ni keyup, el toque se aplica igual */
+    na.tapTimer = setTimeout(() => { if (this._arrow === na && !na.scrubbing) this._endArrow(); }, 900);
+    this._arrow = na;
+  }
+
+  _beginScrub(a) {
+    const v = document.getElementById('iptv-player');
+    if (!v || !(v.duration > 0)) return;
+    a.scrubbing = true;
+    clearTimeout(a.tapTimer);
+    this._scrubPos = v.currentTime || 0;
+    let lastT = performance.now(), lastReset = lastT;
+    const step = (t) => {
+      if (this._arrow !== a) return;
+      if (Date.now() - a.last > 700) { this._endArrow(); return; }   // dejaron de llegar repeticiones: se soltó
+      const vv = document.getElementById('iptv-player');
+      const dur = (vv && vv.duration) || 0;
+      const dt = (t - lastT) / 1000; lastT = t;
+      this._scrubPos = Math.max(0, Math.min(dur, this._scrubPos + a.dir * SEEK_HOLD_SPEED_SPS * dt));
+      this.updateProgress();
+      if (t - lastReset > 500) { lastReset = t; this._resetTimer(); }
+      this._scrubRaf = requestAnimationFrame(step);
+    };
+    this._scrubRaf = requestAnimationFrame(step);
+  }
+
+  _endArrow() {
+    const a = this._arrow;
+    if (!a) return;
+    this._arrow = null;
+    clearTimeout(a.tapTimer);
+    if (this._scrubRaf) { cancelAnimationFrame(this._scrubRaf); this._scrubRaf = null; }
+    const v = document.getElementById('iptv-player');
+    if (v) {
+      const dur = v.duration || 0;
+      if (a.scrubbing && this._scrubPos != null) v.currentTime = Math.max(0, Math.min(dur, this._scrubPos));
+      else if (!a.scrubbing) v.currentTime = Math.max(0, Math.min(dur, (v.currentTime || 0) + a.dir * SEEK_TAP_SECONDS));
+    }
+    this._scrubPos = null;
+    this.updateProgress();
+  }
+
+  handleKey(key, e) {
     if (!this._visible) return false; this._resetTimer();
     if (this._qualityMenuOpen) {
       switch (key) {
@@ -3422,19 +3502,10 @@ class TVPlayerBar {
     // CONTROL DE LA BARRA DE PROGRESO
     if (isProgressFocused) {
       const v = document.getElementById('iptv-player');
+      if (key !== 'ArrowLeft' && key !== 'ArrowRight' && this._arrow) this._endArrow();
       switch (key) {
-        case 'ArrowLeft':
-          if (v) {
-            v.currentTime = Math.max(0, v.currentTime - 10);
-            this.updateProgress();
-          }
-          return true;
-        case 'ArrowRight':
-          if (v) {
-            v.currentTime = Math.min(v.duration || 0, v.currentTime + 10);
-            this.updateProgress();
-          }
-          return true;
+        case 'ArrowLeft':  if (v) this._arrowDown(-1, e); return true;
+        case 'ArrowRight': if (v) this._arrowDown(1, e);  return true;
         case 'ArrowDown':
           this._focusButton(this._currentBtnIdx >= 0 ? this._currentBtnIdx : 0); 
           return true;
@@ -3586,8 +3657,13 @@ function gridArrow(dir) {
   if (idx < 0) return; const cols = getGridColumns(); let next = idx;
   if (dir === 'right') next = Math.min(idx + 1, cards.length - 1); if (dir === 'left') next = Math.max(idx - 1, 0);
   if (dir === 'down') next = Math.min(idx + cols, cards.length - 1); if (dir === 'up') next = Math.max(idx - cols, 0);
-  if (next !== idx) { cards[next].focus({ preventScroll: true }); cards[next].scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  if (next !== idx) { cards[next].focus({ preventScroll: true }); cards[next].scrollIntoView({ block: 'nearest', behavior: 'auto' }); }
 }
+
+/* Soltar ←/→ en la barra de progreso: aplica el toque (±10 s) o busca la posición alcanzada al mantener */
+document.addEventListener('keyup', (e) => {
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && tvBar && tvBar._arrow) { e.preventDefault(); tvBar._endArrow(); }
+});
 
 document.addEventListener('keydown', (e) => {
   if (e.target && e.target.id === 'searchInput') return;
@@ -3615,7 +3691,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { e.preventDefault(); handleBackAction(); return; }
   if (document.body.classList.contains('fullscreen-active')) {
     if (tvBar && !tvBar.visible) { tvBar.show(); e.preventDefault(); return; }
-    if (tvBar?.visible && tvBar.handleKey(e.key)) { e.preventDefault(); return; }
+    if (tvBar?.visible && tvBar.handleKey(e.key, e)) { e.preventDefault(); return; }
   }
   if ((e.key === ' ' || e.key === 'MediaPlayPause') && !document.body.classList.contains('fullscreen-active')) {
     const v = document.getElementById('iptv-player'); if (v && !v.paused && !v.ended) { e.preventDefault(); v.pause(); return; }
@@ -3647,7 +3723,7 @@ document.addEventListener('keydown', (e) => {
     switch (e.key) {
       case 'ArrowRight': e.preventDefault(); _focusH(cats[Math.min(idx + 1, cats.length - 1)], bar); break;
       case 'ArrowLeft': e.preventDefault(); _focusH(cats[Math.max(idx - 1, 0)], bar); break;
-      case 'ArrowDown': { e.preventDefault(); const first = document.querySelector('.poster-card'); if (first) { first.focus({ preventScroll: true }); first.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } break; }
+      case 'ArrowDown': { e.preventDefault(); const first = document.querySelector('.poster-card'); if (first) { first.focus({ preventScroll: true }); first.scrollIntoView({ block: 'nearest', behavior: 'auto' }); } break; }
       case 'ArrowUp': e.preventDefault(); break;
       case 'Enter': case ' ': e.preventDefault(); focused.click(); break;
     } return;
