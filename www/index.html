@@ -3155,11 +3155,36 @@ function _processInterceptedM3u8(m3u8Url, referer) {
   const waiting = window._embedWaiting;
   if (!waiting) return;
   window._embedWaiting = null; window._lastInterceptedM3u8 = m3u8Url;
-  clearTimeout(window._embedTimer); _captureGuard(false);
+  clearTimeout(window._embedTimer);
   if (waiting.host) _embedSbSave(waiting.host, !!waiting.sandbox);
-  document.getElementById('embedWrapper')?.remove();
+  const _capWrapper = document.getElementById('embedWrapper');
   _markClosed(waiting.url); window._activeUrl = null;
   if (typeof waiting.onCaptured === 'function') waiting.onCaptured(m3u8Url, referer);
+  _dropCaptureFrameWhenCovered(_capWrapper);
+}
+
+/* El iframe de captura ya no se quita en el mismo instante en que se atrapa la URL: se espera a que el reproductor
+   (pantalla completa) ya cubra la pantalla, para que cualquier repintado del WebView al destruirlo no se vea.
+   El guardián nativo de navegación se mantiene hasta ese momento. */
+function _dropCaptureFrameWhenCovered(w) {
+  if (!w) { if (!window._embedWaiting) _captureGuard(false); return; }
+  let done = false;
+  const finish = () => {
+    if (done) return; done = true;
+    if (w.isConnected) w.remove();
+    if (!window._embedWaiting) _captureGuard(false);
+  };
+  const t0 = Date.now();
+  const poll = () => {
+    if (done) return;
+    if (document.body.classList.contains('fullscreen-active')) {
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(finish, 150)));
+      return;
+    }
+    if (Date.now() - t0 > 2500) { finish(); return; }
+    requestAnimationFrame(poll);
+  };
+  poll();
 }
 
 function _enterFullscreen() {
