@@ -1482,7 +1482,7 @@ const PROV_DEFAULTS = new Set([
 function provDefault(key) { return PROV_DEFAULTS.has(key) || String(key).indexOf('cuevana') === 0; }
 
 /* Filtro fijo de hosts: solo pasan embeds de estos 6 (el resto se descarta en silencio) */
-const ALLOWED_HOSTS = ['vidhide', 'streamwish', 'filemoon', 'vimeus', 'voe', 'morencius'];
+const ALLOWED_HOSTS = ['vidhide', 'streamwish', 'filemoon', 'vimeos', 'voe', 'morencius'];
 
 let allPlugins = []; // Todos los 53 plugins
 let activePlugins = new Set(); // Los que el usuario eligió
@@ -3918,4 +3918,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html>
+</html>
