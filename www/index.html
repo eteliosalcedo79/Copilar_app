@@ -966,8 +966,8 @@ input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(22px); }
 
 /* ══════════════════ FULLSCREEN / TV BAR ══════════════════ */
-body.fullscreen-active .main-area,
-
+/* Solo el reproductor cambia al entrar en pantalla completa. Antes esta regla también tocaba .main-area
+   (fondo negro + z-index), lo que obligaba al WebView a repintar toda la página justo en ese instante. */
 body.fullscreen-active #tvPlayerCol {
   position: fixed; inset: 0;
   width: 100%; height: 100%;
@@ -3806,6 +3806,8 @@ function _focusBackToBrowse() {
 document.addEventListener('DOMContentLoaded', () => {
   initPlayer(); setupBackButton(); setPlayerLoader('idle');
   loadPluginsFromManifest().catch(() => {});
+  /* Precarga y decodifica la imagen de fondo del reproductor para que no se decodifique justo al abrirlo */
+  try { const _pb = new Image(); _pb.src = 'player_bg.webp'; if (_pb.decode) _pb.decode().catch(() => {}); window._playerBgImg = _pb; } catch (_) {}
   window.addEventListener('online', () => {
     if (_wasOffline && _ctx) {
       showReconnectOkOverlay();
