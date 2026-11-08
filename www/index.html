@@ -716,20 +716,6 @@ html, body {
   padding: clamp(16px, 3vh, 40px) 20px;
 }
 .sources-modal.open { display: flex; animation: fadeInUp .22s ease; }
-
-/* Captura de embeds: mismo recuadro que el modal, un nivel por debajo (z 699 < 700), sin recibir toques.
-   Solo existe mientras el modal está abierto; al cerrarlo desaparece. */
-#embedCaptureHost {
-  position: fixed;
-  top: var(--tv-topbar-h);
-  left: 0; right: var(--modal-right); bottom: 0;
-  padding: clamp(16px, 3vh, 40px) 20px;
-  z-index: 699;
-  display: none;
-  align-items: center; justify-content: center;
-  pointer-events: none;
-}
-#sourcesModal.open ~ #embedCaptureHost { display: flex; }
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -1401,9 +1387,6 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     <div class="sources-list" id="sourcesList"></div>
   </div>
 </div>
-<!-- Soporte del iframe de captura de embeds: va DETRÁS de la tarjeta de servidores (la tarjeta es opaca y lo tapa) -->
-<div id="embedCaptureHost" aria-hidden="true"></div>
-
 <!-- ══════ SETTINGS MODAL (Proveedores) ══════ -->
 <div class="exit-modal-overlay" id="settingsModal">
   <div class="exit-modal-card" style="max-width: 450px; width: 60%; height: 85vh; align-items: flex-start; padding: 20px; position: relative; background: var(--surface); border: 2px solid var(--accent); box-shadow: 0 0 30px rgba(0,204,68,0.2);">
@@ -3064,12 +3047,7 @@ function _captureEmbed(url, seq, cb) {
   if (typeof window.SSNative === 'undefined' || !window.SSNative.capture) {
     setTimeout(() => cb(null), 1500); return;
   }
-  /* Con el modal de servidores abierto el iframe va detrás de la tarjeta (520×292); si no, donde estaba antes */
-  const _pickContainer = () => {
-    const sm = document.getElementById('sourcesModal');
-    const ch = document.getElementById('embedCaptureHost');
-    return (ch && sm && sm.classList.contains('open')) ? { el: ch, inHost: true } : { el: getActivePlayerContainer(), inHost: false };
-  };
+  const container = getActivePlayerContainer();
   let retry = 0;
   const host = (() => { try { return new URL(url).hostname; } catch (_) { return url; } })();
   let useSandbox = _embedSbGet(host);
@@ -3088,10 +3066,7 @@ function _captureEmbed(url, seq, cb) {
 
     const wrapper = document.createElement('div');
     wrapper.id = 'embedWrapper';
-    const _cont = _pickContainer();
-    wrapper.style.cssText = _cont.inHost
-      ? 'position:relative;flex:0 0 auto;width:100%;max-width:520px;aspect-ratio:16/9;overflow:hidden;background:transparent;opacity:0.01;pointer-events:none;'
-      : 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;background:transparent;z-index:10;opacity:0.01;pointer-events:none;';
+    wrapper.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;background:transparent;z-index:10;opacity:0.01;pointer-events:none;';
 
     const iframe = document.createElement('iframe');
     iframe.id = 'embedFrame'; iframe.src = url;
@@ -3128,7 +3103,7 @@ function _captureEmbed(url, seq, cb) {
       if (_iframeLoadMs + remaining > EMBED_TIMEOUT_MS) armTimer(remaining);
     });
 
-    wrapper.appendChild(iframe); _cont.el.appendChild(wrapper); armTimer(EMBED_TIMEOUT_MS);
+    wrapper.appendChild(iframe); container.appendChild(wrapper); armTimer(EMBED_TIMEOUT_MS);
   };
   attempt(false);
 }
