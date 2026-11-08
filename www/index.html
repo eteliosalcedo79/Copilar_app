@@ -957,6 +957,11 @@ html, body {
   box-shadow: 0 4px 15px rgba(255,23,68,.4);
 }
 
+/* Consola de depuración en pantalla (Ajustes → 🐞) */
+#ssDbg { display:none; position:fixed; right:0; top:0; width:50vw; max-height:70vh; overflow:hidden; z-index:2147483647;
+  background:rgba(0,0,0,.82); color:#9f9; font:11px/1.25 monospace; padding:4px 6px; pointer-events:none; word-break:break-all; }
+#ssDbg.on { display:block; }
+#ssDbg .e { color:#ff6b6b; } #ssDbg .w { color:#ffd166; } #ssDbg .k { color:#6cf; }
 /* Filas de proveedores navegables con el control */
 .plg-item { outline: none; transition: border-color .15s, background-color .15s, box-shadow .15s; }
 .plg-item:focus, .plg-item.focused {
@@ -1554,8 +1559,13 @@ async function openSettings() {
   await loadPluginsFromManifest();
   container.innerHTML = '';
 
-  allPlugins.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
-    const isChecked = activePlugins.has(p.id) ? 'checked' : '';
+  const special = [
+    { id: '__debug',   nombre: '🐞 Consola de depuración', url: 'muestra un log en pantalla', checked: _dbgOn },
+    { id: '__fsclick', nombre: '⛶ Pantalla completa al elegir', url: 'apagado = modo anterior', checked: _fsOnClick() },
+    { id: '__nativefs', nombre: '📺 Pantalla completa nativa', url: 'apagado = solo CSS (sin salto)', checked: _nativeFs() }
+  ];
+  special.concat(allPlugins.slice().sort((a,b) => a.nombre.localeCompare(b.nombre))).forEach(p => {
+    const isChecked = (p.checked !== undefined ? p.checked : activePlugins.has(p.id)) ? 'checked' : '';
     const item = document.createElement('div');
     // Estilos optimizados para que quepan más elementos en pantalla
     item.className = 'plg-item'; item.tabIndex = 0; item.dataset.pid = p.id;
@@ -1583,6 +1593,9 @@ function closeSettings() {
 
 // 4. Guardar selección en el teléfono
 function togglePlugin(id, isChecked) {
+  if (id === '__debug') { setDebug(isChecked); return; }
+  if (id === '__fsclick') { try { localStorage.setItem('ss_fs_click', isChecked ? '1' : '0'); } catch (_) {} return; }
+  if (id === '__nativefs') { try { localStorage.setItem('ss_native_fs', isChecked ? '1' : '0'); } catch (_) {} return; }
   if (isChecked) activePlugins.add(id);
   else activePlugins.delete(id);
   localStorage.setItem('user_plugins', JSON.stringify([...activePlugins]));
@@ -1651,6 +1664,60 @@ let _wasFullscreen   = false;
 let _wasFullscreenTimer = null;
 let _fsFallbackTimer = null;
 let _fsLoading = false;   // pantalla completa abierta mientras se captura el embed (logo cubriendo)
+
+/* ══════════════════ CONSOLA DE DEPURACIÓN EN PANTALLA ══════════════════
+   Se activa en Ajustes → 🐞. Muestra console.*, errores y una línea de tiempo (segundos desde el clic en el embed). */
+let _dbgOn = false, _dbgT0 = performance.now(), _dbgLines = [], _dbgEl = null, _dbgRaf = null;
+try { _dbgOn = localStorage.getItem('ss_debug') === '1'; } catch (_) {}
+function _fsOnClick() { try { return localStorage.getItem('ss_fs_click') !== '0'; } catch (_) { return true; } }
+function _nativeFs()  { try { return localStorage.getItem('ss_native_fs') === '1'; } catch (_) { return false; } }
+function _dbgState() {
+  return 'vp=' + innerWidth + 'x' + innerHeight + ' css=' + (document.body.classList.contains('fullscreen-active') ? 1 : 0) +
+    ' nat=' + ((document.fullscreenElement || document.webkitFullscreenElement) ? 1 : 0) + ' load=' + (_fsLoading ? 1 : 0);
+}
+function _dbgMount() {
+  if (!_dbgEl) { _dbgEl = document.createElement('div'); _dbgEl.id = 'ssDbg'; }
+  const host = document.fullscreenElement || document.webkitFullscreenElement || document.body;
+  if (_dbgEl.parentElement !== host) host.appendChild(_dbgEl);
+  _dbgEl.classList.toggle('on', _dbgOn);
+}
+function dbg(msg, cls) {
+  if (!_dbgOn) return;
+  _dbgLines.push({ t: ((performance.now() - _dbgT0) / 1000).toFixed(2), msg: String(msg), cls: cls || '' });
+  if (_dbgLines.length > 38) _dbgLines.shift();
+  _dbgMount();
+  _dbgEl.innerHTML = _dbgLines.map(l => '<div class="' + l.cls + '">' + l.t + ' ' + escapeHtml(l.msg) + '</div>').join('');
+}
+function dbgMark(label) { if (!_dbgOn) return; _dbgT0 = performance.now(); _dbgLines = []; dbg('── ' + label + ' ──', 'k'); }
+function _dbgStart() {
+  if (_dbgRaf) return;
+  let last = performance.now();
+  const loop = (t) => {
+    if (!_dbgOn) { _dbgRaf = null; return; }
+    if (t - last > 150) dbg('⚠ tirón de ' + Math.round(t - last) + ' ms', 'w');
+    last = t; _dbgRaf = requestAnimationFrame(loop);
+  };
+  _dbgRaf = requestAnimationFrame(loop);
+}
+function setDebug(on) {
+  _dbgOn = !!on;
+  try { localStorage.setItem('ss_debug', on ? '1' : '0'); } catch (_) {}
+  _dbgMount();
+  if (_dbgOn) { _dbgStart(); dbg('Depuración ON · ' + _dbgState(), 'k'); } else if (_dbgRaf) { cancelAnimationFrame(_dbgRaf); _dbgRaf = null; }
+}
+['log', 'info', 'warn', 'error'].forEach(k => {
+  const orig = console[k];
+  console[k] = function () {
+    try { orig.apply(console, arguments); } catch (_) {}
+    if (!_dbgOn) return;
+    const txt = Array.from(arguments).map(a => { try { return typeof a === 'string' ? a : ((a && a.message) || JSON.stringify(a)); } catch (_) { return String(a); } }).join(' ');
+    dbg('[' + k + '] ' + txt.slice(0, 150), k === 'error' ? 'e' : (k === 'warn' ? 'w' : ''));
+  };
+});
+window.addEventListener('error', e => dbg('ERROR ' + e.message + ' @' + (e.lineno || ''), 'e'));
+window.addEventListener('unhandledrejection', e => dbg('REJECT ' + ((e.reason && e.reason.message) || e.reason), 'e'));
+window.addEventListener('resize', () => dbg('resize ' + _dbgState(), 'w'));
+if (_dbgOn) { _dbgMount(); _dbgStart(); dbg('Depuración ON · ' + _dbgState(), 'k'); }
 
 /* ══════════════════ UTILIDADES ══════════════════ */
 function escapeHtml(s) {
@@ -2498,6 +2565,7 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar, token) {
     const res = await ejecutarPlugin(plugin, meta, season, episode);
     if (token && token.cancelled) return;
     pendientes--;
+    dbg('plugin ' + plugin.nombre + ': ' + res.links.length + (res.error ? ' ✗ ' + res.error : '') + ' · faltan ' + pendientes);
     
     for (const l of res.links) {
       if (!l || !l.url || vistos.has(l.url)) continue;
@@ -2754,14 +2822,18 @@ function playMovieSource(link, btn) {
   _stopServerCapture();
   const seq = _capSeq;
   if (btn) { btn.classList.add('loading'); _capBtn = btn; }
+  const fsClick = _fsOnClick();
+  dbgMark('CLICK ' + (link.name || link.title || '') + ' · modo=' + (fsClick ? 'FS al elegir' : 'FS al capturar') + ' · nativo=' + (_nativeFs() ? 'sí' : 'no'));
+  dbg('estado ' + _dbgState());
 
   /* Pantalla completa YA, dentro del gesto del usuario: el reproductor con el logo cubre la captura y no hay salto al final */
-  _beginFullscreenLoading();
+  if (fsClick) _beginFullscreenLoading();
 
   _captureEmbed(link.url, seq, (m3u8, referer) => {
     if (seq !== _capSeq) return;
     _capClear();
-    if (!m3u8) { _abortFullscreenLoading(); showToast('No se pudo obtener el video. Probá con otro servidor.', 'error', 4000); return; }
+    if (!m3u8) { dbg('captura FALLÓ', 'e'); if (fsClick) _abortFullscreenLoading(); showToast('No se pudo obtener el video. Probá con otro servidor.', 'error', 4000); return; }
+    dbg('m3u8 capturado → startPlayback · ' + _dbgState(), 'k');
     if (window.SSNative && window.SSNative.setHeaders) {
       try {
         const hd = {};
@@ -2772,18 +2844,30 @@ function playMovieSource(link, btn) {
     const ctx = { kind: 'movie', movie, url: m3u8, type: 'hls' };
     _fsLoading = false;
     startPlayback(ctx, false);
-    if (_ctx !== ctx) { _abortFullscreenLoading(); return; }
-    tvBar?.updateLiveLabel();
-    requestAnimationFrame(() => requestAnimationFrame(() => tvBar?.show()));
+    if (fsClick) {
+      if (_ctx !== ctx) { _abortFullscreenLoading(); return; }
+      tvBar?.updateLiveLabel();
+      requestAnimationFrame(() => requestAnimationFrame(() => tvBar?.show()));
+    } else {
+      /* Modo anterior: pantalla completa recién al capturar */
+      if (_ctx !== ctx || !navigator.onLine) return;
+      _enterFullscreen();
+      clearTimeout(_fsFallbackTimer);
+      _fsFallbackTimer = setTimeout(() => {
+        if (_ctx && !document.body.classList.contains('fullscreen-active')) _handleEnterFullscreen();
+      }, 500);
+    }
   });
 }
 
 function _beginFullscreenLoading() {
   _fsLoading = true;
-  _enterFullscreen();            // nativo (con gesto del usuario)
+  dbg('FS: entrando · ' + _dbgState());
+  _enterFullscreen();            // nativo solo si está activado; si no, CSS
   _handleEnterFullscreen();      // CSS inmediato, sin esperar el evento fullscreenchange
   setPlayerLoader('decoding');   // logo
   tvBar?.hide();
+  dbg('FS: listo · ' + _dbgState());
 }
 
 function _abortFullscreenLoading() {
@@ -2949,6 +3033,7 @@ function startPlayback(ctx, isReconnect = false) {
   destroyStream();
   { const _v = getActiveVideoEl(); if (_v) { _v.muted = false; _v.volume = 1; } }
   const streamId = _currentStreamId;
+  dbg('startPlayback ' + ctx.type + ' · ' + _dbgState());
   window._playingUrl = ctx.url;
   _mediaRecoveries = 0;
   setPlayerLoader('decoding');
@@ -3000,6 +3085,7 @@ function _playHls(ctx, streamId) {
       setTimeout(() => tvBar?.updateQualityLabel(), 400);
     };
     hls.on(Hls.Events.ERROR, (_, d) => {
+      if (d && d.details) dbg('hls ' + d.details + (d.fatal ? ' FATAL' : ''), d.fatal ? 'e' : 'w');
       if (d && d.details) window._lastHlsErr = d.details + (d.response && d.response.code ? ' ' + d.response.code : '') + (d.fatal ? ' (fatal)' : '');
       if (!d.fatal || stale() || hlsInst !== hls) return;
       if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
@@ -3009,7 +3095,7 @@ function _playHls(ctx, streamId) {
       } else { failPlayback(); }
     });
     hls.loadSource(ctx.url); hls.attachMedia(video); fsHookHls(false);
-    hls.once(Hls.Events.MANIFEST_PARSED, onReady);
+    hls.once(Hls.Events.MANIFEST_PARSED, () => { dbg('hls MANIFEST_PARSED'); onReady(); });
     _armStartTimeout(ctx, streamId, 20000);
   } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
     _playNative(ctx, streamId);
@@ -3132,6 +3218,7 @@ function _captureEmbed(url, seq, cb) {
     }
     _cancelCapture(); window._lastInterceptedM3u8 = null;
 
+    dbg('captura intento ' + (retry + 1) + ' sandbox=' + (useSandbox ? 'sí' : 'no') + ' en ' + (_pickContainer().inHost ? 'modal' : 'reproductor') + ' · ' + host);
     const waiting = { id: ++_embedSeq, sid: seq, url, candidate: null, onCaptured: cb, blocked: false, expire: null, host, sandbox: useSandbox };
     window._embedWaiting = waiting; _captureGuard(true); window._activeUrl = url;
 
@@ -3157,6 +3244,7 @@ function _captureEmbed(url, seq, cb) {
       if (window._embedWaiting !== waiting) return;
       if (waiting.candidate) return;
       const wasBlocked = waiting.blocked;
+      dbg('captura expiró (blocked=' + wasBlocked + ', retry=' + retry + ')', 'w');
       _cancelCapture();
       if (wasBlocked) {
         if (blockedSwitches < 1) { blockedSwitches++; useSandbox = !useSandbox; attempt(true); return; }
@@ -3172,6 +3260,7 @@ function _captureEmbed(url, seq, cb) {
     iframe.addEventListener('load', () => {
       if (window._embedWaiting !== waiting) return;
       _iframeLoadMs = Date.now() - _tOpen;
+      dbg('iframe load ' + _iframeLoadMs + ' ms');
       if (_fsLoading) { try { getActivePlayerContainer()?.focus({ preventScroll: true }); } catch (_) {} }
       const wanted = Math.min(EMBED_MAX_TOTAL_MS, _iframeLoadMs + EMBED_LOAD_GRACE_MS);
       const remaining = Math.max(0, wanted - _iframeLoadMs);
@@ -3194,6 +3283,7 @@ window.onM3u8Intercepted = function (m3u8Url, referer) {
   if (waiting.candidate) return;
 
   waiting.candidate = m3u8Url;
+  dbg('m3u8 detectado ' + m3u8Url.split('://').pop().slice(0, 50));
   clearTimeout(window._m3u8InterceptDebounce);
   window._m3u8InterceptDebounce = setTimeout(() => {
     if (window._embedWaiting !== waiting || waiting.sid !== _capSeq) return;
@@ -3241,8 +3331,9 @@ function _enterFullscreen() {
   const container = document.getElementById('playerContainerInline');
   const video = document.getElementById('iptv-player');
   if (!container || !video) return;
+  if (!_nativeFs()) { dbg('FS nativo desactivado → solo CSS'); _handleEnterFullscreen(); return; }
   const fn = container.requestFullscreen || container.webkitRequestFullscreen || container.mozRequestFullScreen || container.msRequestFullscreen;
-  if (fn) { try { const p = fn.call(container); if (p && p.catch) p.catch(() => {}); } catch (_) {} }
+  if (fn) { try { const p = fn.call(container); if (p && p.then) p.then(() => dbg('requestFullscreen OK'), (e) => dbg('requestFullscreen RECHAZADO ' + ((e && e.message) || e), 'e')); } catch (e) { dbg('requestFullscreen EXC ' + e, 'e'); } }
   else if (typeof video.webkitEnterFullscreen === 'function') { try { video.webkitEnterFullscreen(); } catch (_) {} }
 }
 
@@ -3255,6 +3346,7 @@ function _exitFullscreen() {
 
 function _handleEnterFullscreen() {
   if (document.body.classList.contains('fullscreen-active')) return;
+  dbg('CSS fullscreen-active ON');
   document.body.classList.add('fullscreen-active'); _wasFullscreen = true; fsApplyAspect(true);
   tvBar?.updateLiveLabel();
   const _pc = document.getElementById('playerContainerInline');
@@ -3264,6 +3356,7 @@ function _handleEnterFullscreen() {
 
 function _handleExitFullscreen() {
   if (!document.body.classList.contains('fullscreen-active')) return;
+  dbg('CSS fullscreen-active OFF · ' + _dbgState(), 'w');
   document.body.classList.remove('fullscreen-active'); _wasFullscreen = false;
   const v = document.getElementById('iptv-player'); if (v) v.style.objectFit = '';
   tvBar?.hide(); tvBar?._detachFromFullscreen();
@@ -3316,6 +3409,7 @@ function _restoreFocusAfterFullscreen() {
 function _onFullscreenChange() {
   const video = document.getElementById('iptv-player');
   const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement || (video && video.webkitDisplayingFullscreen));
+  _dbgMount(); dbg('fullscreenchange isFs=' + isFs + ' · ' + _dbgState(), 'w');
   if (isFs) _handleEnterFullscreen(); else _handleExitFullscreen();
 }
 
@@ -3642,6 +3736,7 @@ function _tvBarInit() {
     v.addEventListener('play', () => tvBar?.updatePlayState()); 
     v.addEventListener('pause', () => tvBar?.updatePlayState());
     v.addEventListener('timeupdate', () => tvBar?.updateProgress());
+    ['loadedmetadata', 'canplay', 'playing', 'waiting', 'stalled', 'error'].forEach(ev => v.addEventListener(ev, () => dbg('video ' + ev, ev === 'error' ? 'e' : '')));
     v.addEventListener('durationchange', () => tvBar?.updateProgress());
   }
   document.addEventListener('click', (e) => {
