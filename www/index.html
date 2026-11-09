@@ -2754,6 +2754,20 @@ function playMovieSource(link, btn) {
   const seq = _capSeq;
   if (btn) { btn.classList.add('loading'); _capBtn = btn; }
 
+  /* MODO CONSOLA: solo diagnostica, no reproduce */
+  if (EXT_CONSOLE_MODE) {
+    const _dl = [];
+    const dlog = m => { _dl.push(m); console.log('[Diag]', m); };
+    const _dh = (() => { try { return _srcHost(link) || new URL(link.url).hostname; } catch (_) { return '?'; } })();
+    dlog('Host: ' + _dh + ' · proveedor: ' + (link.__prov || '?') + '\nEmbed: ' + link.url + '\n');
+    diagnoseEmbed(link, dlog).then(r => {
+      if (seq !== _capSeq) return;
+      _capClear();
+      _extHistPush(_dh, link.url, { m3u8: r.ok ? 'x' : null, ms: r.ms, status: r.status }, _dl);
+      showConsolePanel('DIAGNÓSTICO · ' + _dh + ' · ' + (r.ok ? 'OK' : 'FALLA'), _dl.join('\n'));
+    }).catch(e => { _capClear(); dlog('ERROR: ' + ((e && e.message) || e)); showConsolePanel('DIAGNÓSTICO · ERROR', _dl.join('\n')); });
+    return;
+  }
   /* PRUEBA: extractor directo, SIN iframe. Si falla, se muestra un panel con lo que respondió el servidor */
   const _log = [];
   const log = m => { _log.push(m); console.log('[Extractor]', m); };
@@ -2879,25 +2893,70 @@ function _extHistText() {
 }
 function showExtractHistory() { showExtractDebug('(historial)', { html: '', status: 0, ms: 0 }, [], true); }
 
-function showExtractDebug(embedUrl, res, lines, onlyHist) {
-  let el = document.getElementById('extDbg');
-  if (!el) {
-    el = document.createElement('div'); el.id = 'extDbg'; el.tabIndex = -1;
-    el.style.cssText = 'position:fixed;inset:5% 8%;z-index:99999;background:#0b1220;color:#e6edf7;border:2px solid #ff5d5d;border-radius:14px;padding:22px 26px;font:20px/1.35 monospace;overflow:auto;white-space:pre-wrap;word-break:break-all;';
-    document.body.appendChild(el);
-  }
-  const h = String(res.html || '');
-  if (onlyHist) {
-    el.textContent = 'CONSOLA DEL EXTRACTOR  (Atrás / OK para cerrar)\n\n' + _extHistText();
-    el.style.display = 'block'; try { el.focus(); } catch (_) {} return;
-  }
-  el.textContent = 'EXTRACTOR: FALLÓ  (Atrás / OK para cerrar)\n\nEmbed: ' + embedUrl + '\nHTTP: ' + (res.status || '?') + ' · ' + (res.ms || 0) + ' ms\n\n' +
-    lines.join('\n') + '\n\n--- Inicio del HTML (900 car.) ---\n' + h.slice(0, 900) +
-    '\n\n--- Pistas ---\npacked: ' + /eval\(function\(p,a,c,k/.test(h) + ' · json-script: ' + /type=["']application\/json["']/.test(h) + ' · "m3u8" en texto: ' + /m3u8/.test(h) + '\n\n' + _extHistText();
-  el.style.display = 'block';
-  try { el.focus(); } catch (_) {}
+/* ══════════ PANEL "CONSOLA" (con botones Cerrar y Copiar, táctil y control remoto) ══════════ */
+function _copyText(t) {
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = t; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const ok = document.execCommand('copy'); ta.remove(); return ok;
+    } catch (_) { return false; }
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(() => true).catch(() => fallback());
+  } catch (_) {}
+  return Promise.resolve(fallback());
 }
-/* Abrir la consola en cualquier momento: tecla C, botón amarillo (405) o INFO/MENÚ (457) */
+
+function _consoleEl() {
+  let el = document.getElementById('extDbg');
+  if (el) return el;
+  el = document.createElement('div'); el.id = 'extDbg';
+  el.style.cssText = 'position:fixed;inset:3% 6%;z-index:99999;background:#0b1220;color:#e6edf7;border:2px solid #f5a623;border-radius:14px;display:none;flex-direction:column;overflow:hidden;';
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:14px;align-items:center;padding:12px 16px;background:#111b30;border-bottom:1px solid #2a3a5c;flex:0 0 auto;';
+  const mk = (id, txt) => {
+    const b = document.createElement('button'); b.id = id; b.type = 'button'; b.textContent = txt;
+    b.style.cssText = 'font:700 20px/1 sans-serif;padding:12px 26px;border-radius:10px;border:2px solid #3b4d75;background:#18243f;color:#e6edf7;outline:none;';
+    b.addEventListener('focus', () => { b.style.borderColor = '#00e676'; b.style.background = '#14502d'; });
+    b.addEventListener('blur', () => { b.style.borderColor = '#3b4d75'; b.style.background = '#18243f'; });
+    return b;
+  };
+  const bClose = mk('extDbgClose', 'Cerrar'), bCopy = mk('extDbgCopy', 'Copiar');
+  const st = document.createElement('span'); st.id = 'extDbgState'; st.style.cssText = 'font:18px sans-serif;color:#7fe3a0;';
+  const title = document.createElement('span'); title.id = 'extDbgTitle'; title.style.cssText = 'font:700 18px sans-serif;color:#f5a623;margin-left:auto;';
+  bar.append(bClose, bCopy, st, title);
+  const pre = document.createElement('pre'); pre.id = 'extDbgTxt';
+  pre.style.cssText = 'margin:0;padding:16px 22px;flex:1 1 auto;overflow:auto;font:18px/1.35 monospace;white-space:pre-wrap;word-break:break-all;';
+  el.append(bar, pre);
+  document.body.appendChild(el);
+  bClose.addEventListener('click', () => { el.style.display = 'none'; });
+  bCopy.addEventListener('click', () => {
+    _copyText(pre.textContent).then(ok => { st.textContent = ok ? '✓ Copiado' : '✗ No se pudo copiar'; st.style.color = ok ? '#7fe3a0' : '#ff8a8a'; clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500); });
+  });
+  return el;
+}
+
+function showConsolePanel(title, text) {
+  const el = _consoleEl();
+  document.getElementById('extDbgTitle').textContent = title;
+  document.getElementById('extDbgState').textContent = '';
+  const pre = document.getElementById('extDbgTxt'); pre.textContent = text; pre.scrollTop = 0;
+  el.style.display = 'flex';
+  try { document.getElementById('extDbgClose').focus(); } catch (_) {}
+}
+
+function showExtractDebug(embedUrl, res, lines, onlyHist) {
+  if (onlyHist) { showConsolePanel('HISTORIAL', _extHistText()); return; }
+  const h = String(res.html || '');
+  showConsolePanel('EXTRACTOR: FALLÓ',
+    'Embed: ' + embedUrl + '\nHTTP: ' + (res.status || '?') + ' · ' + (res.ms || 0) + ' ms\n\n' + lines.join('\n') +
+    '\n\n--- Inicio del HTML (900 car.) ---\n' + h.slice(0, 900) +
+    '\n\n--- Pistas ---\npacked: ' + /eval\(function\(p,a,c,k/.test(h) + ' · json-script: ' + /type=["']application\/json["']/.test(h) + ' · "m3u8" en texto: ' + /m3u8/.test(h));
+}
+
+/* Abrir el historial en cualquier momento: tecla C, botón amarillo (405) o INFO/MENÚ (457) */
 document.addEventListener('keydown', e => {
   const el = document.getElementById('extDbg');
   if ((el && el.style.display !== 'none') || !document.getElementById('sourcesModal')?.classList.contains('open')) return;
@@ -2906,10 +2965,104 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keydown', e => {
   const el = document.getElementById('extDbg');
   if (!el || el.style.display === 'none') return;
-  if (['Escape', 'Backspace', 'Enter'].includes(e.key) || e.keyCode === 4) { e.preventDefault(); e.stopPropagation(); el.style.display = 'none'; }
-  else if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); el.scrollTop += 120; }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); el.scrollTop -= 120; }
+  const pre = document.getElementById('extDbgTxt');
+  const bC = document.getElementById('extDbgClose'), bP = document.getElementById('extDbgCopy');
+  if (['Escape', 'Backspace'].includes(e.key) || e.keyCode === 4) { e.preventDefault(); e.stopPropagation(); el.style.display = 'none'; }
+  else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); (document.activeElement === bP ? bP : bC).click(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); (document.activeElement === bC ? bP : bC).focus(); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); pre.scrollTop += 140; }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); pre.scrollTop -= 140; }
 }, true);
+
+/* ══════════ MODO CONSOLA: al elegir un embed NO se reproduce, solo se diagnostica ══════════ */
+const EXT_CONSOLE_MODE = true;
+
+function _rootRef(u) {
+  try { const h = new URL(u).hostname.split('.'); return 'https://' + (h.length > 2 ? h.slice(-2).join('.') : h.join('.')) + '/'; } catch (_) { return null; }
+}
+function _printable(t, n) { return String(t || '').slice(0, n).replace(/[^\x20-\x7E\n]/g, '·'); }
+
+async function _probe(url, headers, range, log, label) {
+  const t0 = Date.now();
+  try {
+    const h = Object.assign({}, headers);
+    if (range) h['Range'] = 'bytes=0-1023';
+    const r = await nativeFetch(url, { headers: h });
+    const txt = await r.text();
+    const g = k => { try { return r.headers.get(k) || ''; } catch (_) { return ''; } };
+    log('  [' + label + '] HTTP ' + r.status + ' · ' + (g('content-type') || 's/tipo') + ' · ' + txt.length + ' car. · ' + (Date.now() - t0) + ' ms');
+    return { status: r.status, text: txt };
+  } catch (e) {
+    log('  [' + label + '] ERROR de red: ' + ((e && e.message) || e));
+    return { status: 0, text: '' };
+  }
+}
+
+async function diagnoseEmbed(link, log) {
+  const t0 = Date.now();
+  const url = String(link.url || '');
+  let u; try { u = new URL(url); } catch (_) { log('URL inválida'); return { ok: false, ms: 0, status: 0 }; }
+  const kind = /\.m3u8$/i.test(u.pathname) ? 'm3u8' : /\.mp4$/i.test(u.pathname) ? 'mp4' : 'otro';
+  log('Tipo por URL: ' + kind);
+  log('Campos del enlace: ' + Object.keys(link).join(', '));
+  ['headers', 'referer', 'referrer', 'origin', 'userAgent', 'type', 'quality', 'language', 'lang'].forEach(k => {
+    if (link[k] !== undefined && link[k] !== null) { try { log('  ' + k + ' = ' + JSON.stringify(link[k]).slice(0, 220)); } catch (_) {} }
+  });
+
+  let target = url, tKind = kind, via = 'directo';
+  if (kind === 'otro') {
+    log('\n-- Extractor (página) --');
+    try { const ex = await extractM3u8(url, log); if (ex.m3u8) { target = ex.m3u8; tKind = 'm3u8'; via = 'extraído'; log('→ m3u8: ' + ex.m3u8); } else return { ok: false, ms: Date.now() - t0, status: ex.status || 0 }; }
+    catch (e) { log('ERROR: ' + ((e && e.message) || e)); return { ok: false, ms: Date.now() - t0, status: 0 }; }
+  }
+
+  const tu = new URL(target);
+  const origin = tu.origin + '/', root = _rootRef(target);
+  const variants = [];
+  if (link.headers && typeof link.headers === 'object') variants.push({ n: 'headers del enlace', h: link.headers });
+  variants.push({ n: 'Referer=' + origin, h: { Referer: origin } });
+  if (root && root !== origin) variants.push({ n: 'Referer=' + root, h: { Referer: root } });
+  variants.push({ n: 'sin Referer', h: {} });
+
+  log('\n-- Prueba de acceso (' + (tKind === 'mp4' ? 'MP4, solo 1 KB' : 'lista m3u8') + ') --');
+  let good = null, goodRes = null;
+  for (const v of variants) {
+    const r = await _probe(target, v.h, tKind === 'mp4', log, v.n);
+    if (!good && r.status >= 200 && r.status < 300) { good = v; goodRes = r; }
+  }
+  if (!good) { log('\nRESULTADO: el servidor RECHAZA todas las variantes de cabeceras (revisa los HTTP de arriba).'); return { ok: false, ms: Date.now() - t0, status: 0 }; }
+  log('\nVariante que funciona: ' + good.n);
+
+  if (tKind === 'mp4') {
+    const sig = goodRes.text.slice(4, 8);
+    log('Inicio del archivo: ' + _printable(goodRes.text, 40));
+    log('\nRESULTADO: MP4 accesible con "' + good.n + '"' + (sig === 'ftyp' ? ' (firma ftyp correcta)' : ' (¡no parece un MP4!)'));
+    return { ok: sig === 'ftyp', ms: Date.now() - t0, status: 200 };
+  }
+
+  const txt = goodRes.text;
+  log('Inicio de la lista:\n' + _printable(txt, 260));
+  if (!/^\s*#EXTM3U/.test(txt)) { log('\nRESULTADO: la respuesta NO es una lista m3u8.'); return { ok: false, ms: Date.now() - t0, status: 200 }; }
+  const lines = txt.split(/\r?\n/).map(x => x.trim());
+  const nextUri = arr => arr.find(l => l && l[0] !== '#');
+  const abs = (x, base) => { try { return new URL(x, base).href; } catch (_) { return null; } };
+  let mediaTxt = txt, mediaUrl = target;
+  if (/#EXT-X-STREAM-INF/.test(txt)) {
+    const v = abs(nextUri(lines), target);
+    log('\n-- Lista de variante --\n' + v);
+    if (!v) { log('RESULTADO: no se pudo resolver la variante.'); return { ok: false, ms: Date.now() - t0, status: 200 }; }
+    const rv = await _probe(v, good.h, false, log, good.n);
+    if (!(rv.status >= 200 && rv.status < 300)) { log('\nRESULTADO: la lista principal abre pero la variante falla (HTTP ' + rv.status + ').'); return { ok: false, ms: Date.now() - t0, status: rv.status }; }
+    mediaTxt = rv.text; mediaUrl = v;
+  }
+  const seg = abs(nextUri(mediaTxt.split(/\r?\n/).map(x => x.trim()).filter(l => l && !/^#/.test(l) ? true : false)), mediaUrl);
+  if (!seg) { log('\nRESULTADO: no se halló ningún segmento en la lista.'); return { ok: false, ms: Date.now() - t0, status: 200 }; }
+  log('\n-- Primer segmento --\n' + seg.slice(0, 160));
+  const rs = await _probe(seg, good.h, true, log, good.n);
+  const okSeg = rs.status >= 200 && rs.status < 300;
+  log('\nRESULTADO: ' + (okSeg ? 'lista y segmento ACCESIBLES con "' + good.n + '" → debería reproducir.' : 'la lista abre pero el SEGMENTO falla (HTTP ' + rs.status + ') → no reproducirá.'));
+  return { ok: okSeg, ms: Date.now() - t0, status: rs.status };
+}
 
 /* ══════════════════ PLAYER · NÚCLEO ══════════════════ */
 function getActiveVideoEl()       { return document.getElementById('iptv-player'); }
