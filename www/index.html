@@ -1589,15 +1589,7 @@ function togglePlugin(id, isChecked) {
 }
 
 /* ⬇️ TIEMPOS ORIGINALES RESTAURADOS (No se tocan) ⬇️ */
-const EMBED_TIMEOUT_MS       = 7500;
 const PLUGIN_TIMEOUT_MS      = 25000;   // tiempo máximo por plugin
-const EMBED_MAX_RETRY        = 2;
-const EMBED_LOAD_GRACE_MS    = 5000;
-const EMBED_MAX_TOTAL_MS     = 15000;
-const REOPEN_GUARD_MS        = 1500;
-const CLOSED_KEEP_MS         = 10000;
-const STALE_ORIGIN_MS        = 8000;
-const M3U8_INTERCEPT_DEBOUNCE_MS = 250;
 const BUF_SHOW_DELAY_MS      = 800;
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS     = 4000;
@@ -1630,11 +1622,7 @@ let _mediaRecoveries = 0;
 let _wasOffline = false;
 
 let _ctx = null;
-let _embedSeq = 0;
-window._embedWaiting = null;
-window._activeUrl    = null;
 window._playingUrl   = null;
-window._closedAt     = new Map();
 
 let _capSeq = 0;      // identifica la captura vigente; si cambia, la anterior queda cancelada
 let _capBtn = null;   // botón de servidor que muestra el spinner
@@ -1649,8 +1637,6 @@ let fsAspectIdx      = 1;
 let _tvFsQualityOpen = false;
 let _wasFullscreen   = false;
 let _wasFullscreenTimer = null;
-let _fsFallbackTimer = null;
-let _fsLoading = false;   // pantalla completa abierta mientras se captura el embed (logo cubriendo)
 
 /* ══════════════════ UTILIDADES ══════════════════ */
 function escapeHtml(s) {
@@ -2739,8 +2725,7 @@ function _capClear() {
 }
 
 function _stopServerCapture() {
-  _capSeq++;
-  if (_capBtn || window._embedWaiting) _cancelCapture();
+  _capSeq++;            // cancela la resolución en curso
   _capClear();
 }
 
@@ -2754,136 +2739,99 @@ function playMovieSource(link, btn) {
   const seq = _capSeq;
   if (btn) { btn.classList.add('loading'); _capBtn = btn; }
 
-  /* MODO CONSOLA: solo diagnostica, no reproduce */
-  if (EXT_CONSOLE_MODE) {
-    const _dl = [];
-    const dlog = m => { _dl.push(m); console.log('[Diag]', m); };
-    const _dh = (() => { try { return _srcHost(link) || new URL(link.url).hostname; } catch (_) { return '?'; } })();
-    dlog('Host: ' + _dh + ' · proveedor: ' + (link.__prov || '?') + '\nEmbed: ' + link.url + '\n');
-    diagnoseEmbed(link, dlog).then(r => {
-      if (seq !== _capSeq) return;
-      _capClear();
-      _extHistPush(_dh, link.url, { m3u8: r.ok ? 'x' : null, ms: r.ms, status: r.status }, _dl);
-      showConsolePanel('DIAGNÓSTICO · ' + _dh + ' · ' + (r.ok ? 'OK' : 'FALLA'), _dl.join('\n'));
-    }).catch(e => { _capClear(); dlog('ERROR: ' + ((e && e.message) || e)); showConsolePanel('DIAGNÓSTICO · ERROR', _dl.join('\n')); });
-    return;
-  }
-  /* PRUEBA: extractor directo, SIN iframe. Si falla, se muestra un panel con lo que respondió el servidor */
-  const _log = [];
-  const log = m => { _log.push(m); console.log('[Extractor]', m); };
-  const _hostName = (() => { try { return _srcHost(link) || new URL(link.url).hostname; } catch (_) { return '?'; } })();
-  const lh = (link.headers && typeof link.headers === 'object') ? link.headers : null;
-  let _isMp4 = false;
-  try { _isMp4 = /\.mp4$/i.test(new URL(link.url).pathname); } catch (_) {}
-  const _job = _isMp4
-    ? Promise.resolve((log('MP4 directo: se reproduce sin extractor'), { m3u8: link.url, referer: null, ms: 0, html: '', status: 0 }))
-    : extractM3u8(link.url, log, lh);
-  _job.then(res => {
+  /* Cada vez que se elige un embed se diagnostica (probando variantes de cabeceras).
+     Con EXT_CONSOLE_MODE la consola se abre SIEMPRE y el botón "Reproducir" lo manda al reproductor. */
+  const _dl = [];
+  const dlog = m => { _dl.push(m); console.log('[Diag]', m); };
+  const _dh = (() => { try { return _srcHost(link) || new URL(link.url).hostname; } catch (_) { return '?'; } })();
+  dlog('Host: ' + _dh + ' · proveedor: ' + (link.__prov || '?') + '\nEmbed: ' + link.url + '\n');
+  _resolveLink(link, dlog).then(r => {
     if (seq !== _capSeq) return;
     _capClear();
-    _extHistPush(_hostName, link.url, res, _log);
-    if (!res.m3u8) { showExtractDebug(link.url, res, _log); return; }
-    if (window.SSNative && window.SSNative.setHeaders) {
-      try {
-        let hd;
-        if (lh) hd = lh;                                   // cabeceras que trae el plugin (Referer, Origin, User-Agent…)
-        else if (res.referer) { hd = { 'Referer': res.referer }; try { hd['Origin'] = new URL(res.referer).origin; } catch (_) {} }
-        else hd = {};
-        window.SSNative.setHeaders(res.m3u8, JSON.stringify(hd));
-      } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
+    _extHistPush(_dh, link.url, { m3u8: r.ok ? 'x' : null, ms: r.ms, status: r.status }, _dl);
+    if (EXT_CONSOLE_MODE || !r.play) {
+      showConsolePanel('DIAGNÓSTICO · ' + _dh + ' · ' + (r.ok ? 'OK' : 'FALLA'), _dl.join('\n'), r.play || null);
+    } else {
+      showToast(_dh + ': listo en ' + r.ms + ' ms', 'info', 2000);
+      _playResolved(r.play);
     }
-    showToast(_hostName + ': extraído en ' + res.ms + ' ms', 'info', 2500);
-    const ctx = { kind: 'movie', movie, url: res.m3u8, type: _isMp4 ? 'native' : 'hls' };
-    startPlayback(ctx, false);
-    if (_ctx !== ctx || !navigator.onLine) return;
-    _enterFullscreen();
   }).catch(e => {
     if (seq !== _capSeq) return;
-    _capClear();
-    log('ERROR: ' + ((e && e.message) || e));
-    const _er = { m3u8: null, html: '', status: 0, ms: 0 };
-    _extHistPush(_hostName, link.url, _er, _log);
-    showExtractDebug(link.url, _er, _log);
+    _capClear(); dlog('ERROR: ' + ((e && e.message) || e));
+    showConsolePanel('DIAGNÓSTICO · ERROR', _dl.join('\n'), null);
   });
 }
 
-/* ══════════════ EXTRACTOR DIRECTO (PRUEBA) ══════════════ */
-function _unpackAll(html) {
-  const out = [];
-  const re = /eval\(function\(p,a,c,k,e,[dr]\)\{.*?\}\('((?:[^'\\]|\\.)*)',\s*(\d+),\s*(\d+),\s*'((?:[^'\\]|\\.)*)'\.split\('\|'\)/gs;
-  let m;
-  while ((m = re.exec(html))) {
+
+
+
+
+/* ══════════ EXTRACTORES REMOTOS (GitHub Pages) ══════════
+   El motor que resuelve cada embed vive en extractores.js (repositorio etelio79/extractores).
+   Se guarda en caché local y se actualiza solo cuando cambia version.json: no hace falta recompilar. */
+const SSEXT_BASE = 'https://etelio79.github.io/extractores/';
+let _ssExtReady = null, _ssExtLast = 0;
+window._ssExtSrc = 'ninguno';
+
+function _ssExtRun(code) {
+  const prev = window.SSExtractors;
+  try {
+    (0, eval)(code);
+    if (window.SSExtractors && typeof window.SSExtractors.resolve === 'function') return true;
+  } catch (e) { console.warn('[Extractores] código inválido:', e); }
+  window.SSExtractors = prev;     // si falla, se conserva la versión anterior
+  return false;
+}
+
+function ssExtInit(force) {
+  if (_ssExtReady && !force && Date.now() - _ssExtLast < 10 * 60 * 1000) return _ssExtReady;
+  _ssExtLast = Date.now();
+  _ssExtReady = (async () => {
+    let cachedV = '', cachedC = '';
+    try { cachedV = localStorage.getItem('ss_ext_ver') || ''; cachedC = localStorage.getItem('ss_ext_code') || ''; } catch (_) {}
+    let loaded = !!(window.SSExtractors && window.SSExtractors.resolve);
+    if (!loaded && cachedC && _ssExtRun(cachedC)) { loaded = true; window._ssExtSrc = 'caché'; }
     try {
-      let pl = m[1].replace(/\\'/g, "'").replace(/\\\\/g, '\\');
-      const a = +m[2]; let c = +m[3]; const k = m[4].split('|');
-      const enc = n => (n < a ? '' : enc(Math.floor(n / a))) + ((n = n % a) > 35 ? String.fromCharCode(n + 29) : n.toString(36));
-      const d = {};
-      while (c--) d[enc(c)] = k[c] || enc(c);
-      out.push(pl.replace(/\b\w+\b/g, w => (d[w] !== undefined ? d[w] : w)));
-    } catch (_) {}
-  }
-  return out;
+      const rv = await nativeFetch(SSEXT_BASE + 'version.json?t=' + Date.now(), { headers: { 'Cache-Control': 'no-cache' } });
+      if (rv.ok) {
+        const remoteV = String((await rv.json()).version || '');
+        const curV = (window.SSExtractors && window.SSExtractors.version) || cachedV;
+        if (remoteV && (remoteV !== curV || !loaded)) {
+          const rc = await nativeFetch(SSEXT_BASE + 'extractores.js?v=' + encodeURIComponent(remoteV) + '&t=' + Date.now());
+          if (rc.ok) {
+            const code = await rc.text();
+            if (_ssExtRun(code)) {
+              loaded = true; window._ssExtSrc = 'GitHub';
+              try { localStorage.setItem('ss_ext_code', code); localStorage.setItem('ss_ext_ver', window.SSExtractors.version || remoteV); } catch (_) {}
+            }
+          }
+        }
+      }
+    } catch (e) { console.warn('[Extractores] sin conexión con GitHub:', e); }
+    return loaded;
+  })();
+  return _ssExtReady;
+}
+document.addEventListener('DOMContentLoaded', () => { ssExtInit(true); });
+
+/* Respaldo mínimo si no hay extractores (sin GitHub ni caché): solo enlaces directos .m3u8 / .mp4 */
+async function _basicResolve(link, log) {
+  log('Extractores no disponibles: modo básico (solo enlaces directos .m3u8 / .mp4)');
+  let u; try { u = new URL(link.url); } catch (_) { return { ok: false, ms: 0, status: 0 }; }
+  const kind = /\.m3u8$/i.test(u.pathname) ? 'm3u8' : /\.mp4$/i.test(u.pathname) ? 'mp4' : '';
+  if (!kind) { log('RESULTADO: este enlace necesita los extractores remotos.'); return { ok: false, ms: 0, status: 0 }; }
+  const headers = (link.headers && typeof link.headers === 'object') ? link.headers : { Referer: u.origin + '/' };
+  return { ok: true, ms: 0, status: 0, play: { url: link.url, kind, headers } };
 }
 
-function _voeDecode(html) {
-  const m = html.match(/<script[^>]*type=["']application\/json["'][^>]*>\s*\[?\s*"([^"]+)"\s*\]?\s*<\/script>/i);
-  if (!m) return null;
-  try {
-    let v = m[1].replace(/[a-zA-Z]/g, ch => { const c = ch.charCodeAt(0) + 13; return String.fromCharCode((ch <= 'Z' ? 90 : 122) >= c ? c : c - 26); });
-    ['@$', '^^', '~@', '%?', '*~', '!!', '#&'].forEach(p => { v = v.split(p).join(''); });
-    v = atob(v);
-    v = Array.from(v, ch => String.fromCharCode(ch.charCodeAt(0) - 3)).join('');
-    v = atob(v.split('').reverse().join(''));
-    return v;
-  } catch (e) { return null; }
-}
-
-function _findM3u8(html, pageUrl, log) {
-  const texts = [html.replace(/\\\//g, '/')];
-  const unp = _unpackAll(html);
-  if (unp.length) log('Script empaquetado: ' + unp.length);
-  unp.forEach(u => texts.push(u.replace(/\\\//g, '/')));
-  const voe = _voeDecode(html);
-  if (voe) { log('Bloque JSON de Voe decodificado'); texts.push(voe.replace(/\\\//g, '/')); }
-  const abs = u => { try { return new URL(u, pageUrl).href; } catch (_) { return null; } };
-  for (const t of texts) {
-    let m = t.match(/["']hls[234]?["']\s*:\s*["']([^"']+)["']/);
-    if (m) { const u = abs(m[1]); if (u) return u; }
-    m = t.match(/["'](?:source|file|src|direct_access_url)["']?\s*[:=]\s*["']([^"']+\.m3u8[^"']*)["']/);
-    if (m) { const u = abs(m[1]); if (u) return u; }
-    m = t.match(/https?:\/\/[^\s"'\\<>]+?\.m3u8[^\s"'\\<>]*/);
-    if (m) return m[0];
+async function _resolveLink(link, log) {
+  try { await Promise.race([ssExtInit(), new Promise(r => setTimeout(r, 4000))]); } catch (_) {}
+  const X = window.SSExtractors;
+  if (X && typeof X.resolve === 'function') {
+    log('Extractores v' + X.version + ' (' + window._ssExtSrc + ')');
+    return X.resolve(link, log, { nativeFetch });
   }
-  return null;
-}
-
-async function extractM3u8(embedUrl, log, hdrs) {
-  const t0 = Date.now();
-  let url = embedUrl, referer = null, html = '', status = 0;
-  /* Muchos "embeds" ya son el master.m3u8 directo: no hace falta pedir nada */
-  try {
-    if (/\.m3u8$/i.test(new URL(url).pathname)) {
-      log('El embed ya es un .m3u8: se usa directo');
-      return { m3u8: url, referer: new URL(url).origin + '/', ms: Date.now() - t0, html: '', status: 0 };
-    }
-  } catch (_) {}
-  for (let hop = 0; hop < 3; hop++) {
-    const reqH = hdrs ? Object.assign({ 'Accept': 'text/html,application/xhtml+xml,*/*' }, hdrs)
-                      : { 'Accept': 'text/html,application/xhtml+xml,*/*', 'Referer': referer || (new URL(url).origin + '/') };
-    if (hdrs) log('Cabeceras del enlace: ' + Object.keys(hdrs).join(', '));
-    const r = await nativeFetch(url, { headers: reqH });
-    status = r.status;
-    html = await r.text();
-    log('GET ' + url + ' → ' + status + ' · ' + html.length + ' bytes · ' + (Date.now() - t0) + ' ms');
-    if (/^\s*#EXTM3U/.test(html)) { log('La respuesta ya es una lista m3u8'); return { m3u8: url, referer: new URL(url).origin + '/', ms: Date.now() - t0, html, status }; }
-    const found = _findM3u8(html, url, log);
-    if (found) { log('m3u8: ' + found); return { m3u8: found, referer: url, ms: Date.now() - t0, html, status }; }
-    const m = html.match(/(?:window\.)?location(?:\.href)?\s*=\s*['"](https?:\/\/[^'"]+)['"]/);
-    if (m) { referer = url; url = m[1]; log('Redirige a ' + url); continue; }
-    break;
-  }
-  log('No se encontró ningún m3u8');
-  return { m3u8: null, html, status, ms: Date.now() - t0 };
+  return _basicResolve(link, log);
 }
 
 /* Historial ("consola"): cada intento queda registrado por host para decidir qué extractores faltan */
@@ -2926,7 +2874,7 @@ function _consoleEl() {
   el = document.createElement('div'); el.id = 'extDbg';
   el.style.cssText = 'position:fixed;inset:3% 6%;z-index:99999;background:#0b1220;color:#e6edf7;border:2px solid #f5a623;border-radius:14px;display:none;flex-direction:column;overflow:hidden;';
   const bar = document.createElement('div');
-  bar.style.cssText = 'display:flex;gap:14px;align-items:center;padding:12px 16px;background:#111b30;border-bottom:1px solid #2a3a5c;flex:0 0 auto;';
+  bar.style.cssText = 'display:flex;gap:14px;align-items:center;padding:12px 16px;background:#111b30;border-bottom:1px solid #2a3a5c;flex:0 0 auto;flex-wrap:wrap;';
   const mk = (id, txt) => {
     const b = document.createElement('button'); b.id = id; b.type = 'button'; b.textContent = txt;
     b.style.cssText = 'font:700 20px/1 sans-serif;padding:12px 26px;border-radius:10px;border:2px solid #3b4d75;background:#18243f;color:#e6edf7;outline:none;';
@@ -2934,36 +2882,51 @@ function _consoleEl() {
     b.addEventListener('blur', () => { b.style.borderColor = '#3b4d75'; b.style.background = '#18243f'; });
     return b;
   };
-  const bClose = mk('extDbgClose', 'Cerrar'), bCopy = mk('extDbgCopy', 'Copiar'), bMode = mk('extDbgMode', '');
-  const modeLabel = () => { bMode.textContent = 'Modo: ' + (EXT_CONSOLE_MODE ? 'CONSOLA (no reproduce)' : 'REPRODUCIR'); };
-  modeLabel();
+  const bClose = mk('extDbgClose', 'Cerrar'), bCopy = mk('extDbgCopy', 'Copiar'), bPlay = mk('extDbgPlay', 'Reproducir');
   const st = document.createElement('span'); st.id = 'extDbgState'; st.style.cssText = 'font:18px sans-serif;color:#7fe3a0;';
   const title = document.createElement('span'); title.id = 'extDbgTitle'; title.style.cssText = 'font:700 18px sans-serif;color:#f5a623;margin-left:auto;';
-  bar.append(bClose, bCopy, bMode, st, title);
+  bar.append(bClose, bCopy, bPlay, st, title);
   const pre = document.createElement('pre'); pre.id = 'extDbgTxt';
   pre.style.cssText = 'margin:0;padding:16px 22px;flex:1 1 auto;overflow:auto;font:18px/1.35 monospace;white-space:pre-wrap;word-break:break-all;';
   el.append(bar, pre);
   document.body.appendChild(el);
+  const flash = (msg, ok) => { st.textContent = msg; st.style.color = ok ? '#7fe3a0' : '#ff8a8a'; clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500); };
   bClose.addEventListener('click', () => { el.style.display = 'none'; });
-  bMode.addEventListener('click', () => {
-    EXT_CONSOLE_MODE = !EXT_CONSOLE_MODE;
-    try { localStorage.setItem('ss_ext_console', EXT_CONSOLE_MODE ? '1' : '0'); } catch (_) {}
-    modeLabel(); st.textContent = EXT_CONSOLE_MODE ? 'Ahora: solo diagnostica' : 'Ahora: reproduce'; st.style.color = '#7fe3a0';
-    clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500);
-  });
-  bCopy.addEventListener('click', () => {
-    _copyText(pre.textContent).then(ok => { st.textContent = ok ? '✓ Copiado' : '✗ No se pudo copiar'; st.style.color = ok ? '#7fe3a0' : '#ff8a8a'; clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500); });
+  bCopy.addEventListener('click', () => { _copyText(pre.textContent).then(ok => flash(ok ? '✓ Copiado' : '✗ No se pudo copiar', ok)); });
+  bPlay.addEventListener('click', () => {
+    const pl = el._play;
+    if (!pl) { flash('No hay enlace reproducible', false); return; }
+    el.style.display = 'none';
+    _playResolved(pl);
   });
   return el;
 }
 
-function showConsolePanel(title, text) {
+function showConsolePanel(title, text, play) {
   const el = _consoleEl();
+  el._play = play || null;
   document.getElementById('extDbgTitle').textContent = title;
   document.getElementById('extDbgState').textContent = '';
+  const bPlay = document.getElementById('extDbgPlay');
+  bPlay.disabled = !play;
+  bPlay.textContent = play ? 'Reproducir' : 'Reproducir ✗';
+  bPlay.style.opacity = play ? '1' : '0.4';
   const pre = document.getElementById('extDbgTxt'); pre.textContent = text; pre.scrollTop = 0;
   el.style.display = 'flex';
-  try { document.getElementById('extDbgClose').focus(); } catch (_) {}
+  try { (play ? bPlay : document.getElementById('extDbgClose')).focus(); } catch (_) {}
+}
+
+/* Reproduce un enlace ya resuelto: { url, kind: 'm3u8'|'mp4', headers } */
+function _playResolved(pl) {
+  const movie = currentMovie;
+  if (!movie) return;
+  if (window.SSNative && window.SSNative.setHeaders) {
+    try { window.SSNative.setHeaders(pl.url, JSON.stringify(pl.headers || {})); } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
+  }
+  const ctx = { kind: 'movie', movie, url: pl.url, type: pl.kind === 'mp4' ? 'native' : 'hls' };
+  startPlayback(ctx, false);
+  if (_ctx !== ctx || !navigator.onLine) return;
+  _enterFullscreen();
 }
 
 function showExtractDebug(embedUrl, res, lines, onlyHist) {
@@ -2985,8 +2948,8 @@ document.addEventListener('keydown', e => {
   const el = document.getElementById('extDbg');
   if (!el || el.style.display === 'none') return;
   const pre = document.getElementById('extDbgTxt');
-  const bC = document.getElementById('extDbgClose'), bP = document.getElementById('extDbgCopy'), bM = document.getElementById('extDbgMode');
-  const btns = [bC, bP, bM];
+  const btns = ['extDbgClose', 'extDbgCopy', 'extDbgPlay'].map(id => document.getElementById(id)).filter(b => b && !b.disabled);
+  const bC = btns[0];
   if (['Escape', 'Backspace'].includes(e.key) || e.keyCode === 4) { e.preventDefault(); e.stopPropagation(); el.style.display = 'none'; }
   else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); (btns.includes(document.activeElement) ? document.activeElement : bC).click(); }
   else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -2999,95 +2962,44 @@ document.addEventListener('keydown', e => {
 }, true);
 
 /* ══════════ MODO CONSOLA: al elegir un embed NO se reproduce, solo se diagnostica ══════════ */
-let EXT_CONSOLE_MODE = true;   // true = solo diagnostica · false = reproduce de verdad (se cambia con el botón "Modo" de la consola)
+/* true = al elegir un embed SIEMPRE se abre la consola (diagnóstico + botón Reproducir) · false = reproduce directo con el mejor método */
+let EXT_CONSOLE_MODE = true;
 try { const _m = localStorage.getItem('ss_ext_console'); if (_m !== null) EXT_CONSOLE_MODE = (_m === '1'); } catch (_) {}
 
-function _rootRef(u) {
-  try { const h = new URL(u).hostname.split('.'); return 'https://' + (h.length > 2 ? h.slice(-2).join('.') : h.join('.')) + '/'; } catch (_) { return null; }
+/* Botón fijo arriba a la izquierda: activa/desactiva la consola. También: tecla T o botón verde/rojo del control */
+function _consoleToggleBtn() {
+  let b = document.getElementById('extConsoleToggle');
+  if (b) return b;
+  b = document.createElement('button'); b.id = 'extConsoleToggle'; b.type = 'button';
+  b.style.cssText = 'position:fixed;top:4px;left:4px;z-index:100001;font:700 14px/1 sans-serif;padding:8px 10px;border-radius:8px;border:2px solid #3b4d75;color:#fff;outline:none;opacity:.85;';
+  b.addEventListener('click', e => { e.stopPropagation(); _setConsoleMode(!EXT_CONSOLE_MODE); });
+  document.body.appendChild(b);
+  _paintConsoleToggle();
+  return b;
 }
-function _printable(t, n) { return String(t || '').slice(0, n).replace(/[^\x20-\x7E\n]/g, '·'); }
-
-async function _probe(url, headers, range, log, label) {
-  const t0 = Date.now();
-  try {
-    const h = Object.assign({}, headers);
-    if (range) h['Range'] = 'bytes=0-1023';
-    const r = await nativeFetch(url, { headers: h });
-    const txt = await r.text();
-    const g = k => { try { return r.headers.get(k) || ''; } catch (_) { return ''; } };
-    log('  [' + label + '] HTTP ' + r.status + ' · ' + (g('content-type') || 's/tipo') + ' · ' + txt.length + ' car. · ' + (Date.now() - t0) + ' ms');
-    return { status: r.status, text: txt };
-  } catch (e) {
-    log('  [' + label + '] ERROR de red: ' + ((e && e.message) || e));
-    return { status: 0, text: '' };
-  }
+function _paintConsoleToggle() {
+  const b = document.getElementById('extConsoleToggle'); if (!b) return;
+  b.textContent = EXT_CONSOLE_MODE ? 'Consola ON' : 'Consola OFF';
+  b.style.background = EXT_CONSOLE_MODE ? '#14502d' : '#5a1f1f';
+  b.style.borderColor = EXT_CONSOLE_MODE ? '#00e676' : '#ff6b6b';
 }
-
-async function diagnoseEmbed(link, log) {
-  const t0 = Date.now();
-  const url = String(link.url || '');
-  let u; try { u = new URL(url); } catch (_) { log('URL inválida'); return { ok: false, ms: 0, status: 0 }; }
-  const kind = /\.m3u8$/i.test(u.pathname) ? 'm3u8' : /\.mp4$/i.test(u.pathname) ? 'mp4' : 'otro';
-  log('Tipo por URL: ' + kind);
-  log('Campos del enlace: ' + Object.keys(link).join(', '));
-  ['headers', 'referer', 'referrer', 'origin', 'userAgent', 'type', 'quality', 'language', 'lang'].forEach(k => {
-    if (link[k] !== undefined && link[k] !== null) { try { log('  ' + k + ' = ' + JSON.stringify(link[k]).slice(0, 220)); } catch (_) {} }
-  });
-
-  let target = url, tKind = kind, via = 'directo';
-  if (kind === 'otro') {
-    log('\n-- Extractor (página) --');
-    try { const ex = await extractM3u8(url, log, (link.headers && typeof link.headers === 'object') ? link.headers : null); if (ex.m3u8) { target = ex.m3u8; tKind = 'm3u8'; via = 'extraído'; log('→ m3u8: ' + ex.m3u8); } else return { ok: false, ms: Date.now() - t0, status: ex.status || 0 }; }
-    catch (e) { log('ERROR: ' + ((e && e.message) || e)); return { ok: false, ms: Date.now() - t0, status: 0 }; }
-  }
-
-  const tu = new URL(target);
-  const origin = tu.origin + '/', root = _rootRef(target);
-  const variants = [];
-  if (link.headers && typeof link.headers === 'object') variants.push({ n: 'headers del enlace', h: link.headers });
-  variants.push({ n: 'Referer=' + origin, h: { Referer: origin } });
-  if (root && root !== origin) variants.push({ n: 'Referer=' + root, h: { Referer: root } });
-  variants.push({ n: 'sin Referer', h: {} });
-
-  log('\n-- Prueba de acceso (' + (tKind === 'mp4' ? 'MP4, solo 1 KB' : 'lista m3u8') + ') --');
-  let good = null, goodRes = null;
-  for (const v of variants) {
-    const r = await _probe(target, v.h, tKind === 'mp4', log, v.n);
-    if (!good && r.status >= 200 && r.status < 300) { good = v; goodRes = r; }
-  }
-  if (!good) { log('\nRESULTADO: el servidor RECHAZA todas las variantes de cabeceras (revisa los HTTP de arriba).'); return { ok: false, ms: Date.now() - t0, status: 0 }; }
-  log('\nVariante que funciona: ' + good.n);
-
-  if (tKind === 'mp4') {
-    const sig = goodRes.text.slice(4, 8);
-    log('Inicio del archivo: ' + _printable(goodRes.text, 40));
-    log('\nRESULTADO: MP4 accesible con "' + good.n + '"' + (sig === 'ftyp' ? ' (firma ftyp correcta)' : ' (¡no parece un MP4!)'));
-    return { ok: sig === 'ftyp', ms: Date.now() - t0, status: 200 };
-  }
-
-  const txt = goodRes.text;
-  log('Inicio de la lista:\n' + _printable(txt, 260));
-  if (!/^\s*#EXTM3U/.test(txt)) { log('\nRESULTADO: la respuesta NO es una lista m3u8.'); return { ok: false, ms: Date.now() - t0, status: 200 }; }
-  const lines = txt.split(/\r?\n/).map(x => x.trim());
-  const nextUri = arr => arr.find(l => l && l[0] !== '#');
-  const abs = (x, base) => { try { return new URL(x, base).href; } catch (_) { return null; } };
-  let mediaTxt = txt, mediaUrl = target;
-  if (/#EXT-X-STREAM-INF/.test(txt)) {
-    const v = abs(nextUri(lines), target);
-    log('\n-- Lista de variante --\n' + v);
-    if (!v) { log('RESULTADO: no se pudo resolver la variante.'); return { ok: false, ms: Date.now() - t0, status: 200 }; }
-    const rv = await _probe(v, good.h, false, log, good.n);
-    if (!(rv.status >= 200 && rv.status < 300)) { log('\nRESULTADO: la lista principal abre pero la variante falla (HTTP ' + rv.status + ').'); return { ok: false, ms: Date.now() - t0, status: rv.status }; }
-    mediaTxt = rv.text; mediaUrl = v;
-  }
-  const seg = abs(nextUri(mediaTxt.split(/\r?\n/).map(x => x.trim()).filter(l => l && !/^#/.test(l) ? true : false)), mediaUrl);
-  if (!seg) { log('\nRESULTADO: no se halló ningún segmento en la lista.'); return { ok: false, ms: Date.now() - t0, status: 200 }; }
-  log('\n-- Primer segmento --\n' + seg.slice(0, 160));
-  const rs = await _probe(seg, good.h, true, log, good.n);
-  const okSeg = rs.status >= 200 && rs.status < 300;
-  log('\nRESULTADO: ' + (okSeg ? 'lista y segmento ACCESIBLES con "' + good.n + '" → debería reproducir.' : 'la lista abre pero el SEGMENTO falla (HTTP ' + rs.status + ') → no reproducirá.'));
-  return { ok: okSeg, ms: Date.now() - t0, status: rs.status };
+function _setConsoleMode(on) {
+  EXT_CONSOLE_MODE = !!on;
+  try { localStorage.setItem('ss_ext_console', EXT_CONSOLE_MODE ? '1' : '0'); } catch (_) {}
+  _paintConsoleToggle();
+  try { showToast(EXT_CONSOLE_MODE ? 'Consola activada: se abre al elegir un embed' : 'Consola desactivada: se reproduce directo', 'info', 2200); } catch (_) {}
 }
+if (document.body) _consoleToggleBtn(); else document.addEventListener('DOMContentLoaded', _consoleToggleBtn);
+document.addEventListener('keydown', e => {
+  if (e.key === 't' || e.key === 'T' || e.keyCode === 404 || e.keyCode === 403) {
+    if (/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+    e.preventDefault(); e.stopPropagation(); _setConsoleMode(!EXT_CONSOLE_MODE);
+  }
+}, true);
+
+
+
+
 
 /* ══════════════════ PLAYER · NÚCLEO ══════════════════ */
 function getActiveVideoEl()       { return document.getElementById('iptv-player'); }
@@ -3345,195 +3257,6 @@ function _playFlv(ctx, streamId) {
   _armStartTimeout(ctx, streamId, 15000);
 }
 
-function _captureGuard(on) {
-  try {
-    if (window.SSNative && typeof window.SSNative.capture === 'function') {
-      window.SSNative.capture(on);
-    } else if (on) { console.warn('[Capture] SSNative no disponible.'); }
-  } catch (_) {}
-}
-
-function _markClosed(url) {
-  if (!url) return;
-  const now = Date.now();
-  window._closedAt.set(url, now);
-  for (const [u, t] of window._closedAt) { if (now - t > CLOSED_KEEP_MS) window._closedAt.delete(u); }
-}
-function _reopenWait(url) {
-  const t = window._closedAt.get(url);
-  return t ? Math.max(0, REOPEN_GUARD_MS - (Date.now() - t)) : 0;
-}
-function _isFromPrevEmbed(referer, currentUrl) {
-  if (!referer) return false;
-  let ro, co;
-  try { ro = new URL(referer).origin; co = new URL(currentUrl).origin; } catch (_) { return false; }
-  if (ro === co) return false;
-  const now = Date.now();
-  for (const [u, t] of window._closedAt) {
-    if (u === currentUrl || now - t > STALE_ORIGIN_MS) continue;
-    try { if (new URL(u).origin === ro) return true; } catch (_) {}
-  }
-  return false;
-}
-
-function _cancelCapture() {
-  _captureGuard(false);
-  clearTimeout(window._embedTimer);
-  clearTimeout(window._m3u8InterceptDebounce);
-  window._embedWaiting = null;
-  document.getElementById('embedWrapper')?.remove();
-  if (window._activeUrl) { _markClosed(window._activeUrl); window._activeUrl = null; }
-}
-
-window.onEmbedBlocked = function (u) {
-  const w = window._embedWaiting;
-  if (!w || w.blocked) return;
-  w.blocked = true;
-  setTimeout(() => { if (window._embedWaiting === w && w.expire) w.expire(); }, 400);
-};
-
-const EMBED_SANDBOX_FIRST = true;
-function _embedSbGet(host) {
-  try { const m = JSON.parse(localStorage.getItem('ss_embed_sb') || '{}'); if (typeof m[host] === 'boolean') return m[host]; } catch (_) {}
-  return EMBED_SANDBOX_FIRST;
-}
-function _embedSbSave(host, v) {
-  try {
-    const m = JSON.parse(localStorage.getItem('ss_embed_sb') || '{}');
-    if (m[host] === v) return; m[host] = v;
-    localStorage.setItem('ss_embed_sb', JSON.stringify(m));
-  } catch (_) {}
-}
-
-function _captureEmbed(url, seq, cb) {
-  if (typeof window.SSNative === 'undefined' || !window.SSNative.capture) {
-    setTimeout(() => cb(null), 1500); return;
-  }
-  /* Con el modal de servidores abierto el iframe va detrás de la tarjeta (520×292); si no, donde estaba antes */
-  const _pickContainer = () => {
-    const sm = document.getElementById('sourcesModal');
-    const ch = document.getElementById('embedCaptureHost');
-    if (_fsLoading || document.body.classList.contains('fullscreen-active')) return { el: getActivePlayerContainer(), inHost: false };
-    return (ch && sm && sm.classList.contains('open')) ? { el: ch, inHost: true } : { el: getActivePlayerContainer(), inHost: false };
-  };
-  let retry = 0;
-  const host = (() => { try { return new URL(url).hostname; } catch (_) { return url; } })();
-  let useSandbox = _embedSbGet(host);
-  let blockedSwitches = 0;
-
-  const attempt = (delayed) => {
-    if (seq !== _capSeq) return;
-    if (!delayed) {
-      const wait = _reopenWait(url);
-      if (wait > 0) { setTimeout(() => attempt(true), wait); return; }
-    }
-    _cancelCapture(); window._lastInterceptedM3u8 = null;
-
-    const waiting = { id: ++_embedSeq, sid: seq, url, candidate: null, onCaptured: cb, blocked: false, expire: null, host, sandbox: useSandbox };
-    window._embedWaiting = waiting; _captureGuard(true); window._activeUrl = url;
-
-    const wrapper = document.createElement('div');
-    wrapper.id = 'embedWrapper';
-    const _cont = _pickContainer();
-    wrapper.style.cssText = _cont.inHost
-      ? 'position:relative;flex:0 0 auto;width:100%;max-width:520px;aspect-ratio:16/9;overflow:hidden;background:transparent;opacity:0.01;pointer-events:none;'
-      : 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;background:transparent;z-index:10;opacity:0.01;pointer-events:none;';
-
-    const iframe = document.createElement('iframe');
-    iframe.id = 'embedFrame'; iframe.src = url;
-    iframe.setAttribute('allowfullscreen','');
-    iframe.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
-    iframe.setAttribute('scrolling','no');
-    if (useSandbox) iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-forms allow-pointer-lock');
-    iframe.style.cssText = 'position:absolute;top:-55px;left:-1px;width:calc(100% + 2px);height:calc(100% + 55px);border:none;background:transparent;pointer-events:none;';
-
-    const _tOpen = Date.now();
-    let _iframeLoadMs = null;
-
-    const expire = () => {
-      if (window._embedWaiting !== waiting) return;
-      if (waiting.candidate) return;
-      const wasBlocked = waiting.blocked;
-      _cancelCapture();
-      if (wasBlocked) {
-        if (blockedSwitches < 1) { blockedSwitches++; useSandbox = !useSandbox; attempt(true); return; }
-        cb(null); return;
-      }
-      if (retry < EMBED_MAX_RETRY) { retry++; useSandbox = !useSandbox; attempt(false); return; }
-      cb(null);
-    };
-    waiting.expire = expire;
-
-    const armTimer = (ms) => { clearTimeout(window._embedTimer); window._embedTimer = setTimeout(expire, ms); };
-
-    iframe.addEventListener('load', () => {
-      if (window._embedWaiting !== waiting) return;
-      _iframeLoadMs = Date.now() - _tOpen;
-      if (_fsLoading) { try { getActivePlayerContainer()?.focus({ preventScroll: true }); } catch (_) {} }
-      const wanted = Math.min(EMBED_MAX_TOTAL_MS, _iframeLoadMs + EMBED_LOAD_GRACE_MS);
-      const remaining = Math.max(0, wanted - _iframeLoadMs);
-      if (_iframeLoadMs + remaining > EMBED_TIMEOUT_MS) armTimer(remaining);
-    });
-
-    wrapper.appendChild(iframe); _cont.el.appendChild(wrapper); armTimer(EMBED_TIMEOUT_MS);
-  };
-  attempt(false);
-}
-
-window.onM3u8Intercepted = function (m3u8Url, referer) {
-  if (!m3u8Url || !m3u8Url.includes('.m3u8')) return;
-  if (window._ignoreM3u8Intercept) return;
-  const waiting = window._embedWaiting;
-  if (!waiting || waiting.sid !== _capSeq) return;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) return;
-  if (window._lastInterceptedM3u8 === m3u8Url) return;
-  if (_isFromPrevEmbed(referer, waiting.url)) return;
-  if (waiting.candidate) return;
-
-  waiting.candidate = m3u8Url;
-  clearTimeout(window._m3u8InterceptDebounce);
-  window._m3u8InterceptDebounce = setTimeout(() => {
-    if (window._embedWaiting !== waiting || waiting.sid !== _capSeq) return;
-    _processInterceptedM3u8(m3u8Url, referer);
-  }, M3U8_INTERCEPT_DEBOUNCE_MS);
-};
-
-function _processInterceptedM3u8(m3u8Url, referer) {
-  const waiting = window._embedWaiting;
-  if (!waiting) return;
-  window._embedWaiting = null; window._lastInterceptedM3u8 = m3u8Url;
-  clearTimeout(window._embedTimer);
-  if (waiting.host) _embedSbSave(waiting.host, !!waiting.sandbox);
-  const _capWrapper = document.getElementById('embedWrapper');
-  _markClosed(waiting.url); window._activeUrl = null;
-  if (typeof waiting.onCaptured === 'function') waiting.onCaptured(m3u8Url, referer);
-  _dropCaptureFrameWhenCovered(_capWrapper);
-}
-
-/* El iframe de captura ya no se quita en el mismo instante en que se atrapa la URL: se espera a que el reproductor
-   (pantalla completa) ya cubra la pantalla, para que cualquier repintado del WebView al destruirlo no se vea.
-   El guardián nativo de navegación se mantiene hasta ese momento. */
-function _dropCaptureFrameWhenCovered(w) {
-  if (!w) { if (!window._embedWaiting) _captureGuard(false); return; }
-  let done = false;
-  const finish = () => {
-    if (done) return; done = true;
-    if (w.isConnected) w.remove();
-    if (!window._embedWaiting) _captureGuard(false);
-  };
-  const t0 = Date.now();
-  const poll = () => {
-    if (done) return;
-    if (document.body.classList.contains('fullscreen-active')) {
-      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(finish, 150)));
-      return;
-    }
-    if (Date.now() - t0 > 2500) { finish(); return; }
-    requestAnimationFrame(poll);
-  };
-  poll();
-}
-
 const USE_NATIVE_FS = false;
 
 function _enterFullscreen() {
@@ -3561,7 +3284,7 @@ function _handleEnterFullscreen() {
   tvBar?.updateLiveLabel();
   const _pc = document.getElementById('playerContainerInline');
   if (_pc) { try { _pc.focus({ preventScroll: true }); } catch (_) {} const tb = document.getElementById('ssToastBox'); if (tb) _pc.appendChild(tb); }
-  if (!_fsLoading) requestAnimationFrame(() => requestAnimationFrame(() => tvBar?.show()));
+  requestAnimationFrame(() => requestAnimationFrame(() => tvBar?.show()));
 }
 
 function _handleExitFullscreen() {
@@ -3577,14 +3300,11 @@ function _handleExitFullscreen() {
 
 /* Al salir de pantalla completa: el reproductor se destruye (video detenido, memoria liberada, sin sonido) */
 function _teardownPlayer() {
-  clearTimeout(_fsFallbackTimer); _fsFallbackTimer = null;
-  _fsLoading = false;
   const v = getActiveVideoEl();
   if (v) { try { v.muted = true; } catch (_) {} }
   destroyStream();                       // pausa, destruye hls/flv, quita src y cancela reconexiones
-  _stopServerCapture();                  // cancela la captura vigente, quita el iframe y el spinner del servidor
-  document.getElementById('embedWrapper')?.remove();
-  _ctx = null; window._playingUrl = null; window._lastInterceptedM3u8 = null; window._lastHlsErr = null;
+  _stopServerCapture();                  // cancela la resolución en curso y quita el spinner del servidor
+  _ctx = null; window._playingUrl = null; window._lastHlsErr = null;
   hideOfflineOverlay(); hideReconnectOverlay(); hideReconnectOkOverlay();
   setPlayerLoader('idle');
 }
@@ -4082,9 +3802,6 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'Escape') { e.preventDefault(); hideExitModal(); } return;
   }
   if (e.key === 'Escape') { e.preventDefault(); handleBackAction(); return; }
-  if (_fsLoading && document.body.classList.contains('fullscreen-active')) {   // capturando: solo Atrás
-    e.preventDefault(); if (e.key === 'Backspace') handleBackAction(); return;
-  }
   if (document.body.classList.contains('fullscreen-active')) {
     if (tvBar && !tvBar.visible) { tvBar.show(); e.preventDefault(); return; }
     if (tvBar?.visible && tvBar.handleKey(e.key, e)) { e.preventDefault(); return; }
