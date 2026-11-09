@@ -2772,20 +2772,28 @@ function playMovieSource(link, btn) {
   const _log = [];
   const log = m => { _log.push(m); console.log('[Extractor]', m); };
   const _hostName = (() => { try { return _srcHost(link) || new URL(link.url).hostname; } catch (_) { return '?'; } })();
-  extractM3u8(link.url, log).then(res => {
+  const lh = (link.headers && typeof link.headers === 'object') ? link.headers : null;
+  let _isMp4 = false;
+  try { _isMp4 = /\.mp4$/i.test(new URL(link.url).pathname); } catch (_) {}
+  const _job = _isMp4
+    ? Promise.resolve((log('MP4 directo: se reproduce sin extractor'), { m3u8: link.url, referer: null, ms: 0, html: '', status: 0 }))
+    : extractM3u8(link.url, log, lh);
+  _job.then(res => {
     if (seq !== _capSeq) return;
     _capClear();
     _extHistPush(_hostName, link.url, res, _log);
     if (!res.m3u8) { showExtractDebug(link.url, res, _log); return; }
     if (window.SSNative && window.SSNative.setHeaders) {
       try {
-        const hd = { 'Referer': res.referer };
-        try { hd['Origin'] = new URL(res.referer).origin; } catch (_) {}
+        let hd;
+        if (lh) hd = lh;                                   // cabeceras que trae el plugin (Referer, Origin, User-Agent…)
+        else if (res.referer) { hd = { 'Referer': res.referer }; try { hd['Origin'] = new URL(res.referer).origin; } catch (_) {} }
+        else hd = {};
         window.SSNative.setHeaders(res.m3u8, JSON.stringify(hd));
       } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
     }
     showToast(_hostName + ': extraído en ' + res.ms + ' ms', 'info', 2500);
-    const ctx = { kind: 'movie', movie, url: res.m3u8, type: 'hls' };
+    const ctx = { kind: 'movie', movie, url: res.m3u8, type: _isMp4 ? 'native' : 'hls' };
     startPlayback(ctx, false);
     if (_ctx !== ctx || !navigator.onLine) return;
     _enterFullscreen();
@@ -2849,7 +2857,7 @@ function _findM3u8(html, pageUrl, log) {
   return null;
 }
 
-async function extractM3u8(embedUrl, log) {
+async function extractM3u8(embedUrl, log, hdrs) {
   const t0 = Date.now();
   let url = embedUrl, referer = null, html = '', status = 0;
   /* Muchos "embeds" ya son el master.m3u8 directo: no hace falta pedir nada */
@@ -2860,7 +2868,10 @@ async function extractM3u8(embedUrl, log) {
     }
   } catch (_) {}
   for (let hop = 0; hop < 3; hop++) {
-    const r = await nativeFetch(url, { headers: { 'Accept': 'text/html,application/xhtml+xml,*/*', 'Referer': referer || (new URL(url).origin + '/') } });
+    const reqH = hdrs ? Object.assign({ 'Accept': 'text/html,application/xhtml+xml,*/*' }, hdrs)
+                      : { 'Accept': 'text/html,application/xhtml+xml,*/*', 'Referer': referer || (new URL(url).origin + '/') };
+    if (hdrs) log('Cabeceras del enlace: ' + Object.keys(hdrs).join(', '));
+    const r = await nativeFetch(url, { headers: reqH });
     status = r.status;
     html = await r.text();
     log('GET ' + url + ' → ' + status + ' · ' + html.length + ' bytes · ' + (Date.now() - t0) + ' ms');
@@ -2923,15 +2934,23 @@ function _consoleEl() {
     b.addEventListener('blur', () => { b.style.borderColor = '#3b4d75'; b.style.background = '#18243f'; });
     return b;
   };
-  const bClose = mk('extDbgClose', 'Cerrar'), bCopy = mk('extDbgCopy', 'Copiar');
+  const bClose = mk('extDbgClose', 'Cerrar'), bCopy = mk('extDbgCopy', 'Copiar'), bMode = mk('extDbgMode', '');
+  const modeLabel = () => { bMode.textContent = 'Modo: ' + (EXT_CONSOLE_MODE ? 'CONSOLA (no reproduce)' : 'REPRODUCIR'); };
+  modeLabel();
   const st = document.createElement('span'); st.id = 'extDbgState'; st.style.cssText = 'font:18px sans-serif;color:#7fe3a0;';
   const title = document.createElement('span'); title.id = 'extDbgTitle'; title.style.cssText = 'font:700 18px sans-serif;color:#f5a623;margin-left:auto;';
-  bar.append(bClose, bCopy, st, title);
+  bar.append(bClose, bCopy, bMode, st, title);
   const pre = document.createElement('pre'); pre.id = 'extDbgTxt';
   pre.style.cssText = 'margin:0;padding:16px 22px;flex:1 1 auto;overflow:auto;font:18px/1.35 monospace;white-space:pre-wrap;word-break:break-all;';
   el.append(bar, pre);
   document.body.appendChild(el);
   bClose.addEventListener('click', () => { el.style.display = 'none'; });
+  bMode.addEventListener('click', () => {
+    EXT_CONSOLE_MODE = !EXT_CONSOLE_MODE;
+    try { localStorage.setItem('ss_ext_console', EXT_CONSOLE_MODE ? '1' : '0'); } catch (_) {}
+    modeLabel(); st.textContent = EXT_CONSOLE_MODE ? 'Ahora: solo diagnostica' : 'Ahora: reproduce'; st.style.color = '#7fe3a0';
+    clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500);
+  });
   bCopy.addEventListener('click', () => {
     _copyText(pre.textContent).then(ok => { st.textContent = ok ? '✓ Copiado' : '✗ No se pudo copiar'; st.style.color = ok ? '#7fe3a0' : '#ff8a8a'; clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500); });
   });
@@ -2966,16 +2985,22 @@ document.addEventListener('keydown', e => {
   const el = document.getElementById('extDbg');
   if (!el || el.style.display === 'none') return;
   const pre = document.getElementById('extDbgTxt');
-  const bC = document.getElementById('extDbgClose'), bP = document.getElementById('extDbgCopy');
+  const bC = document.getElementById('extDbgClose'), bP = document.getElementById('extDbgCopy'), bM = document.getElementById('extDbgMode');
+  const btns = [bC, bP, bM];
   if (['Escape', 'Backspace'].includes(e.key) || e.keyCode === 4) { e.preventDefault(); e.stopPropagation(); el.style.display = 'none'; }
-  else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); (document.activeElement === bP ? bP : bC).click(); }
-  else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); (document.activeElement === bC ? bP : bC).focus(); }
+  else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); (btns.includes(document.activeElement) ? document.activeElement : bC).click(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault(); e.stopPropagation();
+    const i = Math.max(0, btns.indexOf(document.activeElement));
+    btns[(i + (e.key === 'ArrowRight' ? 1 : btns.length - 1)) % btns.length].focus();
+  }
   else if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); pre.scrollTop += 140; }
   else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); pre.scrollTop -= 140; }
 }, true);
 
 /* ══════════ MODO CONSOLA: al elegir un embed NO se reproduce, solo se diagnostica ══════════ */
-const EXT_CONSOLE_MODE = true;
+let EXT_CONSOLE_MODE = true;   // true = solo diagnostica · false = reproduce de verdad (se cambia con el botón "Modo" de la consola)
+try { const _m = localStorage.getItem('ss_ext_console'); if (_m !== null) EXT_CONSOLE_MODE = (_m === '1'); } catch (_) {}
 
 function _rootRef(u) {
   try { const h = new URL(u).hostname.split('.'); return 'https://' + (h.length > 2 ? h.slice(-2).join('.') : h.join('.')) + '/'; } catch (_) { return null; }
@@ -3012,7 +3037,7 @@ async function diagnoseEmbed(link, log) {
   let target = url, tKind = kind, via = 'directo';
   if (kind === 'otro') {
     log('\n-- Extractor (página) --');
-    try { const ex = await extractM3u8(url, log); if (ex.m3u8) { target = ex.m3u8; tKind = 'm3u8'; via = 'extraído'; log('→ m3u8: ' + ex.m3u8); } else return { ok: false, ms: Date.now() - t0, status: ex.status || 0 }; }
+    try { const ex = await extractM3u8(url, log, (link.headers && typeof link.headers === 'object') ? link.headers : null); if (ex.m3u8) { target = ex.m3u8; tKind = 'm3u8'; via = 'extraído'; log('→ m3u8: ' + ex.m3u8); } else return { ok: false, ms: Date.now() - t0, status: ex.status || 0 }; }
     catch (e) { log('ERROR: ' + ((e && e.message) || e)); return { ok: false, ms: Date.now() - t0, status: 0 }; }
   }
 
