@@ -2501,7 +2501,6 @@ async function buscarEmbedsReales(meta, season, episode, alActualizar, token) {
     
     for (const l of res.links) {
       if (!l || !l.url || vistos.has(l.url)) continue;
-      if (!_hostAllowed(l)) continue;   // host fuera de la whitelist: se ignora
       vistos.add(l.url);
       try { if (!l.__prov) l.__prov = plugin.nombre; } catch (_) {}
       todos.push(l);
@@ -2758,9 +2757,11 @@ function playMovieSource(link, btn) {
   /* PRUEBA: extractor directo, SIN iframe. Si falla, se muestra un panel con lo que respondió el servidor */
   const _log = [];
   const log = m => { _log.push(m); console.log('[Extractor]', m); };
+  const _hostName = (() => { try { return _srcHost(link) || new URL(link.url).hostname; } catch (_) { return '?'; } })();
   extractM3u8(link.url, log).then(res => {
     if (seq !== _capSeq) return;
     _capClear();
+    _extHistPush(_hostName, link.url, res, _log);
     if (!res.m3u8) { showExtractDebug(link.url, res, _log); return; }
     if (window.SSNative && window.SSNative.setHeaders) {
       try {
@@ -2769,7 +2770,7 @@ function playMovieSource(link, btn) {
         window.SSNative.setHeaders(res.m3u8, JSON.stringify(hd));
       } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
     }
-    showToast('Extraído en ' + res.ms + ' ms', 'info', 2500);
+    showToast(_hostName + ': extraído en ' + res.ms + ' ms', 'info', 2500);
     const ctx = { kind: 'movie', movie, url: res.m3u8, type: 'hls' };
     startPlayback(ctx, false);
     if (_ctx !== ctx || !navigator.onLine) return;
@@ -2778,7 +2779,9 @@ function playMovieSource(link, btn) {
     if (seq !== _capSeq) return;
     _capClear();
     log('ERROR: ' + ((e && e.message) || e));
-    showExtractDebug(link.url, { m3u8: null, html: '' }, _log);
+    const _er = { m3u8: null, html: '', status: 0, ms: 0 };
+    _extHistPush(_hostName, link.url, _er, _log);
+    showExtractDebug(link.url, _er, _log);
   });
 }
 
@@ -2858,7 +2861,25 @@ async function extractM3u8(embedUrl, log) {
   return { m3u8: null, html, status, ms: Date.now() - t0 };
 }
 
-function showExtractDebug(embedUrl, res, lines) {
+/* Historial ("consola"): cada intento queda registrado por host para decidir qué extractores faltan */
+let _extHist = [];
+try { _extHist = JSON.parse(localStorage.getItem('ss_ext_hist') || '[]'); } catch (_) {}
+function _extHistPush(host, url, res, lines) {
+  const via = res.m3u8 ? (lines.some(l => /empaquetado/.test(l)) ? 'packed' : lines.some(l => /Voe/.test(l)) ? 'voe' : /ya es un \.m3u8/.test(lines.join(' ')) ? 'directo' : /lista m3u8/.test(lines.join(' ')) ? 'lista' : 'html') : '';
+  _extHist.push({ host: String(host), ok: !!res.m3u8, ms: res.ms || 0, via, http: res.status || 0, url: String(url).slice(0, 90) });
+  if (_extHist.length > 40) _extHist = _extHist.slice(-40);
+  try { localStorage.setItem('ss_ext_hist', JSON.stringify(_extHist)); } catch (_) {}
+}
+function _extHistText() {
+  const by = {};
+  _extHist.forEach(h => { const b = by[h.host] || (by[h.host] = { ok: 0, fail: 0, last: '' }); h.ok ? b.ok++ : b.fail++; b.last = h.url; });
+  const rows = Object.keys(by).map(k => (by[k].fail ? '✗ ' : '✓ ') + k + '  OK:' + by[k].ok + '  FALLÓ:' + by[k].fail);
+  const last = _extHist.slice(-12).reverse().map(h => (h.ok ? '✓ ' : '✗ ') + h.host + ' · ' + h.ms + ' ms · ' + (h.via || ('HTTP ' + h.http)) + '\n    ' + h.url);
+  return '--- RESUMEN POR HOST ---\n' + (rows.join('\n') || '(vacío)') + '\n\n--- ÚLTIMOS INTENTOS ---\n' + (last.join('\n') || '(vacío)');
+}
+function showExtractHistory() { showExtractDebug('(historial)', { html: '', status: 0, ms: 0 }, [], true); }
+
+function showExtractDebug(embedUrl, res, lines, onlyHist) {
   let el = document.getElementById('extDbg');
   if (!el) {
     el = document.createElement('div'); el.id = 'extDbg'; el.tabIndex = -1;
@@ -2866,12 +2887,22 @@ function showExtractDebug(embedUrl, res, lines) {
     document.body.appendChild(el);
   }
   const h = String(res.html || '');
+  if (onlyHist) {
+    el.textContent = 'CONSOLA DEL EXTRACTOR  (Atrás / OK para cerrar)\n\n' + _extHistText();
+    el.style.display = 'block'; try { el.focus(); } catch (_) {} return;
+  }
   el.textContent = 'EXTRACTOR: FALLÓ  (Atrás / OK para cerrar)\n\nEmbed: ' + embedUrl + '\nHTTP: ' + (res.status || '?') + ' · ' + (res.ms || 0) + ' ms\n\n' +
     lines.join('\n') + '\n\n--- Inicio del HTML (900 car.) ---\n' + h.slice(0, 900) +
-    '\n\n--- Pistas ---\npacked: ' + /eval\(function\(p,a,c,k/.test(h) + ' · json-script: ' + /type=["']application\/json["']/.test(h) + ' · "m3u8" en texto: ' + /m3u8/.test(h);
+    '\n\n--- Pistas ---\npacked: ' + /eval\(function\(p,a,c,k/.test(h) + ' · json-script: ' + /type=["']application\/json["']/.test(h) + ' · "m3u8" en texto: ' + /m3u8/.test(h) + '\n\n' + _extHistText();
   el.style.display = 'block';
   try { el.focus(); } catch (_) {}
 }
+/* Abrir la consola en cualquier momento: tecla C, botón amarillo (405) o INFO/MENÚ (457) */
+document.addEventListener('keydown', e => {
+  const el = document.getElementById('extDbg');
+  if ((el && el.style.display !== 'none') || !document.getElementById('sourcesModal')?.classList.contains('open')) return;
+  if (e.key === 'c' || e.key === 'C' || e.keyCode === 405 || e.keyCode === 457) { e.preventDefault(); e.stopPropagation(); showExtractHistory(); }
+}, true);
 document.addEventListener('keydown', e => {
   const el = document.getElementById('extDbg');
   if (!el || el.style.display === 'none') return;
