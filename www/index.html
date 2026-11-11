@@ -1476,9 +1476,8 @@ const REPO_BASE       = JSD_BASE;
 const VERSION_URL     = JSD_BASE + 'version.json';
 const CATALOG_CFG_URL = JSD_BASE + 'catalog_config.json';
 
-/* Catálogo: URL por defecto (Nuvio) hasta que catalog_config.json diga otra cosa */
-const CATALOG_DEFAULT = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22%2C%22region%22%3A%22CO%22%7D';
-let CATALOG_ADDON = CATALOG_DEFAULT;
+/* Catálogo: la URL llega SOLO desde catalog_config.json (no hay ninguna fija en el código) */
+let CATALOG_ADDON = '';
 
 /* ── FASE 2: version.json remoto (≈1 KB). Un solo número gobierna manifest + extractores ── */
 let _remoteVerP = null, _remoteVerT = 0;
@@ -1759,7 +1758,10 @@ function showToast(msg, type = 'info', duration = 3500) {
 /* ══════════════════ CATÁLOGO ══════════════════ */
 /* Red directa por CapacitorHttp (sin CORS, sin proxy). nativeFetch cae a fetch si no hay Capacitor */
 async function fetchJSON(url) {
-  const r = await nativeFetch(url, { headers: { 'Accept': 'application/json' } });
+  const r = await Promise.race([
+    nativeFetch(url, { headers: { 'Accept': 'application/json' } }),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('Tiempo de espera agotado')), 15000))
+  ]);
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return await r.json();
 }
@@ -1830,6 +1832,7 @@ async function loadCatalog() {
     const _pickCats = (m) => ((m && m.catalogs) || [])
       .filter(c => c && (c.type === 'movie' || c.type === 'series'))
       .slice();
+    if (!CATALOG_ADDON) throw new Error('No se pudo leer catalog_config.json');
     const manifest = await fetchJSONSWR(CATALOG_ADDON + '/manifest.json', (fresh) => {
       const nc = _pickCats(fresh);
       if (!nc.length) return;
