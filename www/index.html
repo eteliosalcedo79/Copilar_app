@@ -1474,10 +1474,10 @@ const JSD_BASE        = 'https://cdn.jsdelivr.net/gh/Etelio79/extractores@main/'
 const MANIFEST_URL    = JSD_BASE + 'manifest.json';
 const REPO_BASE       = JSD_BASE;
 const VERSION_URL     = JSD_BASE + 'version.json';
-const CATALOG_CFG_URL = JSD_BASE + 'catalog_config.json';
 
-/* Catálogo: la URL llega SOLO desde catalog_config.json (no hay ninguna fija en el código) */
-let CATALOG_ADDON = '';
+/* Catálogo: URL fija en el código (Nuvio). Se descarga, se guarda en el teléfono y se revisa en segundo plano. */
+const CATALOG_ADDON = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22%2C%22region%22%3A%22CO%22%7D';
+try { localStorage.removeItem('ss_cat_cfg'); } catch (_) {}   // limpia restos del config anterior
 
 /* ── FASE 2: version.json remoto (≈1 KB). Un solo número gobierna manifest + extractores ── */
 let _remoteVerP = null, _remoteVerT = 0;
@@ -1494,44 +1494,6 @@ function getRemoteVersion(force) {
   return _remoteVerP;
 }
 
-/* ── FASE 3: catalog_config.json con caché local y revisión cada 12 h ── */
-const CATCFG_KEY = 'ss_cat_cfg';
-const CATCFG_TTL = 12 * 60 * 60 * 1000;
-function _catUrlFrom(cfg) {
-  let u = cfg && (cfg.url || cfg.catalog_url || cfg.catalogUrl || cfg.addon || cfg.catalog);
-  if (typeof u !== 'string' || !/^https?:\/\//i.test(u)) return '';
-  return u.replace(/\/manifest\.json$/i, '').replace(/\/+$/, '');
-}
-let _catCfgP = null;
-function catalogCfgInit() {
-  if (_catCfgP) return _catCfgP;
-  _catCfgP = (async () => {
-    let c = null;
-    try { c = JSON.parse(localStorage.getItem(CATCFG_KEY) || 'null'); } catch (_) {}
-    if (c && c.url) CATALOG_ADDON = c.url;
-    if (c && c.url && Date.now() - (c.t || 0) < CATCFG_TTL) return false;   // caché vigente
-    try {
-      const r = await Promise.race([
-        fetch(CATALOG_CFG_URL, { cache: 'no-store' }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3500))
-      ]);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const cfg = await r.json();
-      const url = _catUrlFrom(cfg);
-      if (!url) throw new Error('catalog_config sin URL válida');
-      const ver = String(cfg.version || '');
-      const changed = !c || c.v !== ver || c.url !== url;
-      CATALOG_ADDON = url;
-      try { localStorage.setItem(CATCFG_KEY, JSON.stringify({ v: ver, url, t: Date.now() })); } catch (_) {}
-      return changed;
-    } catch (e) {
-      console.warn('[CatalogCfg]', e.message || e);
-      if (c) { try { localStorage.setItem(CATCFG_KEY, JSON.stringify({ ...c, t: Date.now() - CATCFG_TTL + 10 * 60 * 1000 })); } catch (_) {} }
-      return false;
-    }
-  })();
-  return _catCfgP;
-}
 
 // Proveedores encendidos por defecto la primera vez (los 17 del original) + cualquier "cuevana*"
 const PROV_DEFAULTS = new Set([
@@ -1595,6 +1557,54 @@ async function _downloadManifest(ver) {
   return manifest;
 }
 
+/* ── Proveedores guardados en el teléfono (Cache API). Se descargan al instalar y se renuevan solo si cambia version.json ── */
+const PROV_CACHE = 'ss-providers-v1';
+async function _provCache() {
+  try { return ('caches' in window) ? await caches.open(PROV_CACHE) : null; } catch (_) { return null; }
+}
+async function _provGuardar(c, url, codigo) {
+  if (!c || !codigo) return;
+  try { await c.put(url, new Response(codigo, { headers: { 'Content-Type': 'text/javascript' } })); } catch (_) {}
+}
+async function getProviderCode(url) {
+  const c = await _provCache();
+  if (c) { try { const hit = await c.match(url); if (hit) { const t = await hit.text(); if (t) return t; } } catch (_) {} }
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error('Plugin HTTP ' + r.status);
+  const codigo = await r.text();
+  await _provGuardar(c, url, codigo);
+  return codigo;
+}
+async function prefetchProviders() {
+  const c = await _provCache();
+  if (!c) return;
+  const urls = allPlugins.map(p => p.url);
+  let i = 0;
+  await Promise.all(Array.from({ length: 3 }, async () => {
+    while (i < urls.length) {
+      const u = urls[i++];
+      try {
+        if (await c.match(u)) continue;
+        const r = await fetch(u, { cache: 'no-store' });
+        if (r.ok) await _provGuardar(c, u, await r.text());
+      } catch (_) {}
+    }
+  }));
+}
+async function syncContent(rv) {
+  if (!rv) return;                                   // sin conexión: se usa lo guardado
+  try {
+    const cur = localStorage.getItem('ss_content_ver') || '';
+    if (rv !== cur) {                                // versión nueva (o primera instalación): borra y descarga de nuevo
+      try { if ('caches' in window) await caches.delete(PROV_CACHE); } catch (_) {}
+      await prefetchProviders();
+      localStorage.setItem('ss_content_ver', rv);
+    } else {
+      await prefetchProviders();                     // solo rellena los que falten
+    }
+  } catch (e) { console.warn('[Sync]', e); }
+}
+
 function loadPluginsFromManifest() {
   if (_pluginsLoadPromise) return _pluginsLoadPromise;
   _pluginsLoadPromise = (async () => {
@@ -1609,17 +1619,20 @@ function loadPluginsFromManifest() {
         // Arranque instantáneo con la caché; la revisión de versión corre en segundo plano
         _applyManifest(cached);
         getRemoteVersion().then(async (rv) => {
-          if (!rv || rv === cachedVer) return;
-          try {
-            const fresh = await _downloadManifest(rv);
-            _applyManifest(fresh);
-          } catch (e) { console.warn('[Plugins] no se pudo actualizar el manifest:', e); }
+          if (rv && rv !== cachedVer) {
+            try {
+              const fresh = await _downloadManifest(rv);
+              _applyManifest(fresh);
+            } catch (e) { console.warn('[Plugins] no se pudo actualizar el manifest:', e); return; }
+          }
+          await syncContent(rv);
         });
         return allPlugins;
       }
       // Primera vez (sin caché): hay que descargarlo
       const rv = await getRemoteVersion();
       _applyManifest(await _downloadManifest(rv));
+      syncContent(rv);                                // primera instalación: baja todos los proveedores en segundo plano
       return allPlugins;
     } catch (e) {
       console.error('[Plugins] Error manifest:', e);
@@ -1760,7 +1773,7 @@ function showToast(msg, type = 'info', duration = 3500) {
 async function fetchJSON(url) {
   const r = await Promise.race([
     nativeFetch(url, { headers: { 'Accept': 'application/json' } }),
-    new Promise((_, rej) => setTimeout(() => rej(new Error('Tiempo de espera agotado')), 15000))
+    new Promise((_, rej) => setTimeout(() => rej(new Error('Tiempo de espera agotado')), 30000))
   ]);
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return await r.json();
@@ -1828,11 +1841,9 @@ async function loadCatalog() {
   grid.innerHTML = '<div class="grid-msg">Cargando catálogo…</div>';
 
   try {
-    await catalogCfgInit();   // aplica la URL de catalog_config.json (caché 12 h)
     const _pickCats = (m) => ((m && m.catalogs) || [])
       .filter(c => c && (c.type === 'movie' || c.type === 'series'))
       .slice();
-    if (!CATALOG_ADDON) throw new Error('No se pudo leer catalog_config.json');
     const manifest = await fetchJSONSWR(CATALOG_ADDON + '/manifest.json', (fresh) => {
       const nc = _pickCats(fresh);
       if (!nc.length) return;
@@ -2471,10 +2482,7 @@ function ejecutarPlugin(plugin, meta, season, episode) {
 
     try {
       if (!window.CryptoJS) throw new Error('Falta crypto-js.min.js');
-      const r = await fetch(plugin.url, { cache: 'no-store' });
-      if (terminado) return;
-      if (!r.ok) throw new Error('Plugin HTTP ' + r.status);
-      const codigoJS = await r.text();
+      const codigoJS = await getProviderCode(plugin.url);
       if (terminado) return;   // cancelado mientras se descargaba el plugin
 
       iframe = document.createElement('iframe');
