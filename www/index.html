@@ -1468,10 +1468,71 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 ════════════════════════════════════════════════════════════════ */
 
 /* ── CONSTANTES ── */
-const CATALOG_ADDON  = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22%2C%22region%22%3A%22CO%22%7D';
+/* ── Todo el contenido remoto sale de jsDelivr (CDN global), no de GitHub Raw/Pages ──
+   @main = siempre la rama principal del repositorio. */
+const JSD_BASE        = 'https://cdn.jsdelivr.net/gh/Etelio79/extractores@main/';
+const MANIFEST_URL    = JSD_BASE + 'manifest.json';
+const REPO_BASE       = JSD_BASE;
+const VERSION_URL     = JSD_BASE + 'version.json';
+const CATALOG_CFG_URL = JSD_BASE + 'catalog_config.json';
 
-const MANIFEST_URL = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/manifest.json';
-const REPO_BASE    = 'https://raw.githubusercontent.com/Droydr13/pluggin-latino/main/';
+/* Catálogo: URL por defecto (Nuvio) hasta que catalog_config.json diga otra cosa */
+const CATALOG_DEFAULT = 'https://catalog.nuvio.tv/%7B%22language%22%3A%22es-MX%22%2C%22region%22%3A%22CO%22%7D';
+let CATALOG_ADDON = CATALOG_DEFAULT;
+
+/* ── FASE 2: version.json remoto (≈1 KB). Un solo número gobierna manifest + extractores ── */
+let _remoteVerP = null, _remoteVerT = 0;
+function getRemoteVersion(force) {
+  if (_remoteVerP && !force && Date.now() - _remoteVerT < 10 * 60 * 1000) return _remoteVerP;
+  _remoteVerT = Date.now();
+  _remoteVerP = (async () => {
+    try {
+      const r = await fetch(VERSION_URL, { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return String((await r.json()).version || '');
+    } catch (e) { console.warn('[Version] sin conexión:', e); _remoteVerT = 0; return ''; }
+  })();
+  return _remoteVerP;
+}
+
+/* ── FASE 3: catalog_config.json con caché local y revisión cada 12 h ── */
+const CATCFG_KEY = 'ss_cat_cfg';
+const CATCFG_TTL = 12 * 60 * 60 * 1000;
+function _catUrlFrom(cfg) {
+  let u = cfg && (cfg.url || cfg.catalog_url || cfg.catalogUrl || cfg.addon || cfg.catalog);
+  if (typeof u !== 'string' || !/^https?:\/\//i.test(u)) return '';
+  return u.replace(/\/manifest\.json$/i, '').replace(/\/+$/, '');
+}
+let _catCfgP = null;
+function catalogCfgInit() {
+  if (_catCfgP) return _catCfgP;
+  _catCfgP = (async () => {
+    let c = null;
+    try { c = JSON.parse(localStorage.getItem(CATCFG_KEY) || 'null'); } catch (_) {}
+    if (c && c.url) CATALOG_ADDON = c.url;
+    if (c && c.url && Date.now() - (c.t || 0) < CATCFG_TTL) return false;   // caché vigente
+    try {
+      const r = await Promise.race([
+        fetch(CATALOG_CFG_URL, { cache: 'no-store' }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3500))
+      ]);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const cfg = await r.json();
+      const url = _catUrlFrom(cfg);
+      if (!url) throw new Error('catalog_config sin URL válida');
+      const ver = String(cfg.version || '');
+      const changed = !c || c.v !== ver || c.url !== url;
+      CATALOG_ADDON = url;
+      try { localStorage.setItem(CATCFG_KEY, JSON.stringify({ v: ver, url, t: Date.now() })); } catch (_) {}
+      return changed;
+    } catch (e) {
+      console.warn('[CatalogCfg]', e.message || e);
+      if (c) { try { localStorage.setItem(CATCFG_KEY, JSON.stringify({ ...c, t: Date.now() - CATCFG_TTL + 10 * 60 * 1000 })); } catch (_) {} }
+      return false;
+    }
+  })();
+  return _catCfgP;
+}
 
 // Proveedores encendidos por defecto la primera vez (los 17 del original) + cualquier "cuevana*"
 const PROV_DEFAULTS = new Set([
@@ -1492,50 +1553,74 @@ function _normKey(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 }
 
-// 1. Cargar todos los plugins del manifest
+// 1. Cargar todos los plugins del manifest (caché local + actualización por version.json)
+const MANIFEST_CACHE_KEY = 'ss_manifest', MANIFEST_VER_KEY = 'ss_manifest_ver';
+
+function _applyManifest(manifest) {
+  const list = manifest.scrapers || manifest.providers || manifest.plugins || [];
+  const next = [];
+  const seen = new Set();
+  for (const s of list) {
+    if (!s || s.enabled === false) continue;
+    let file = s.filename || s.file || s.path || '';
+    if (!file) continue;
+
+    let url = file;
+    if (!url.startsWith('http')) {
+      let cleanPath = url.replace(/^\/+/, '');
+      url = cleanPath.startsWith('providers/') ? (REPO_BASE + cleanPath) : (REPO_BASE + 'providers/' + cleanPath);
+    }
+    if (seen.has(url)) continue;
+    seen.add(url);
+    next.push({ id: _normKey(s.id || s.name), nombre: s.name || s.id || url.split('/').pop(), url });
+  }
+  allPlugins = next;
+
+  // Selección del usuario (localStorage): se conserva intacta
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('user_plugins') || 'null'); } catch (_) {}
+  if (Array.isArray(saved)) activePlugins = new Set(saved);
+  else activePlugins = new Set(allPlugins.filter(p => provDefault(p.id)).map(p => p.id));   // primera instalación
+  console.log('[Plugins] Total:', allPlugins.length, '| Activos:', activePlugins.size);
+}
+
+async function _downloadManifest(ver) {
+  const res = await fetch(MANIFEST_URL, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Manifest HTTP ' + res.status);
+  const manifest = await res.json();
+  try {
+    localStorage.removeItem(MANIFEST_CACHE_KEY);   // borra la caché vieja
+    localStorage.setItem(MANIFEST_CACHE_KEY, JSON.stringify(manifest));
+    localStorage.setItem(MANIFEST_VER_KEY, ver || '');
+  } catch (_) {}
+  return manifest;
+}
+
 function loadPluginsFromManifest() {
   if (_pluginsLoadPromise) return _pluginsLoadPromise;
   _pluginsLoadPromise = (async () => {
+    let cached = null, cachedVer = '';
     try {
-      const res = await fetch(MANIFEST_URL, { cache: 'no-store' });
-      if (!res.ok) throw new Error('Manifest HTTP ' + res.status);
-      const manifest = await res.json();
-      const list = manifest.scrapers || manifest.providers || manifest.plugins || [];
-      
-      allPlugins = [];
-      const seen = new Set();
+      cached = JSON.parse(localStorage.getItem(MANIFEST_CACHE_KEY) || 'null');
+      cachedVer = localStorage.getItem(MANIFEST_VER_KEY) || '';
+    } catch (_) {}
 
-      for (const s of list) {
-        if (!s || s.enabled === false) continue;
-        let file = s.filename || s.file || s.path || '';
-        if (!file) continue;
-
-        let url = file;
-        if (!url.startsWith('http')) {
-          let cleanPath = url.replace(/^\/+/, '');
-          url = cleanPath.startsWith('providers/') ? (REPO_BASE + cleanPath) : (REPO_BASE + 'providers/' + cleanPath);
-        }
-
-        if (seen.has(url)) continue;
-        seen.add(url);
-        allPlugins.push({ 
-          id: _normKey(s.id || s.name), 
-          nombre: s.name || s.id || url.split('/').pop(), 
-          url 
+    try {
+      if (cached) {
+        // Arranque instantáneo con la caché; la revisión de versión corre en segundo plano
+        _applyManifest(cached);
+        getRemoteVersion().then(async (rv) => {
+          if (!rv || rv === cachedVer) return;
+          try {
+            const fresh = await _downloadManifest(rv);
+            _applyManifest(fresh);
+          } catch (e) { console.warn('[Plugins] no se pudo actualizar el manifest:', e); }
         });
+        return allPlugins;
       }
-
-      // 2. Recuperar selección del usuario (localStorage)
-      let saved = null;
-      try { saved = JSON.parse(localStorage.getItem('user_plugins') || 'null'); } catch (_) {}
-      if (Array.isArray(saved)) {
-        activePlugins = new Set(saved);   // selección del usuario: se conserva intacta
-      } else {
-        // Primera instalación: se filtra el manifest con los 17 por defecto + cuevana*
-        activePlugins = new Set(allPlugins.filter(p => provDefault(p.id)).map(p => p.id));
-      }
-
-      console.log('[Plugins] Total:', allPlugins.length, '| Activos:', activePlugins.size);
+      // Primera vez (sin caché): hay que descargarlo
+      const rv = await getRemoteVersion();
+      _applyManifest(await _downloadManifest(rv));
       return allPlugins;
     } catch (e) {
       console.error('[Plugins] Error manifest:', e);
@@ -1741,6 +1826,7 @@ async function loadCatalog() {
   grid.innerHTML = '<div class="grid-msg">Cargando catálogo…</div>';
 
   try {
+    await catalogCfgInit();   // aplica la URL de catalog_config.json (caché 12 h)
     const _pickCats = (m) => ((m && m.catalogs) || [])
       .filter(c => c && (c.type === 'movie' || c.type === 'series'))
       .slice();
@@ -2769,7 +2855,7 @@ function playMovieSource(link, btn) {
 /* ══════════ EXTRACTORES REMOTOS (GitHub Pages) ══════════
    El motor que resuelve cada embed vive en extractores.js (repositorio etelio79/extractores).
    Se guarda en caché local y se actualiza solo cuando cambia version.json: no hace falta recompilar. */
-const SSEXT_BASE = 'https://etelio79.github.io/extractores/';
+const SSEXT_BASE = JSD_BASE;   // jsDelivr (@main)
 let _ssExtReady = null, _ssExtLast = 0;
 window._ssExtSrc = 'ninguno';
 
@@ -2792,22 +2878,21 @@ function ssExtInit(force) {
     let loaded = !!(window.SSExtractors && window.SSExtractors.resolve);
     if (!loaded && cachedC && _ssExtRun(cachedC)) { loaded = true; window._ssExtSrc = 'caché'; }
     try {
-      const rv = await nativeFetch(SSEXT_BASE + 'version.json?t=' + Date.now(), { headers: { 'Cache-Control': 'no-cache' } });
-      if (rv.ok) {
-        const remoteV = String((await rv.json()).version || '');
+      {
+        const remoteV = await getRemoteVersion();
         const curV = (window.SSExtractors && window.SSExtractors.version) || cachedV;
         if (remoteV && (remoteV !== curV || !loaded)) {
-          const rc = await nativeFetch(SSEXT_BASE + 'extractores.js?v=' + encodeURIComponent(remoteV) + '&t=' + Date.now());
+          const rc = await nativeFetch(SSEXT_BASE + 'extractores.js', { cache: 'no-store' });
           if (rc.ok) {
             const code = await rc.text();
             if (_ssExtRun(code)) {
-              loaded = true; window._ssExtSrc = 'GitHub';
+              loaded = true; window._ssExtSrc = 'jsDelivr';
               try { localStorage.setItem('ss_ext_code', code); localStorage.setItem('ss_ext_ver', window.SSExtractors.version || remoteV); } catch (_) {}
             }
           }
         }
       }
-    } catch (e) { console.warn('[Extractores] sin conexión con GitHub:', e); }
+    } catch (e) { console.warn('[Extractores] sin conexión con el CDN:', e); }
     return loaded;
   })();
   return _ssExtReady;
