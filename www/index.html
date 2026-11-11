@@ -142,7 +142,7 @@ html, body {
   overflow-x: hidden;
   padding: 8px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(98px, 1fr));
   gap: 8px;
   align-content: start;
   scrollbar-width: none;
@@ -747,7 +747,7 @@ html, body {
 }
 .sources-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   background: var(--surface2);
@@ -760,23 +760,23 @@ html, body {
   color: var(--accent);
   text-transform: uppercase;
 }
-.src-close {
-  width: 34px; height: 34px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  font-size: 1rem;
-  cursor: pointer;
-  outline: none;
+/* Contador de embeds con anillo giratorio mientras se buscan servidores (mismo azul que el spinner del icono de cámara) */
+.src-count-wrap {
+  position: relative;
+  width: 38px; height: 38px;
   display: flex; align-items: center; justify-content: center;
-  transition: all .15s;
+  flex-shrink: 0;
 }
-.src-close:focus-visible {
-  border-color: var(--accent2);
-  box-shadow: 0 0 0 3px rgba(0,176,255,.3);
-  color: var(--accent2);
+.src-count-wrap::after {
+  content: '';
+  position: absolute; inset: 0;
+  border: 2.5px solid rgba(0,176,255,.25);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: rotating .8s linear infinite;
+  display: none;
 }
+.src-count-wrap.searching::after { display: block; }
 
 .sources-list {
   flex: 1;
@@ -956,21 +956,6 @@ html, body {
   background: var(--red);
   box-shadow: 0 4px 15px rgba(255,23,68,.4);
 }
-
-/* Filas de proveedores navegables con el control */
-.plg-item { outline: none; transition: border-color .15s, background-color .15s, box-shadow .15s; }
-.plg-item:focus, .plg-item.focused {
-  background: rgba(0,204,68,.16) !important;
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 10px rgba(0,204,68,.35);
-}
-/* Switch Toggles para Proveedores */
-.switch { position: relative; display: inline-block; width: 46px; height: 24px; flex-shrink: 0; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 24px; }
-.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-input:checked + .slider { background-color: var(--accent); }
-input:checked + .slider:before { transform: translateX(22px); }
 
 /* ══════════════════ FULLSCREEN / TV BAR ══════════════════ */
 /* Solo el reproductor cambia al entrar en pantalla completa. Antes esta regla también tocaba .main-area
@@ -1214,17 +1199,13 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
 /* ══════════════════ MOBILE ══════════════════ */
 @media (max-width: 640px) {
   .sources-modal { right: 0; bottom: 42vh; }
-  .poster-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; padding: 6px; }
+  .poster-grid { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; padding: 6px; }
   
   .inline-episodes-wrap { padding: 10px clamp(20px, 3vw, 40px); margin-top: 15px; }
   .episode-card { min-width: 170px; max-width: 170px; height: 105px; }
   .ep-title { font-size: 1rem; }
   .ep-desc { -webkit-line-clamp: 2; }
 }
-/* ── ⚙️ Ajustes: se oculta en modo búsqueda ── */
-.categories-bar.searching #btnSettings { display: none; }
-#btnSettings { white-space: nowrap; }
-
 /* ── Botón ♡ Favoritos (detalle) ── */
 .btn-fav {
   display: flex; align-items: center; justify-content: center;
@@ -1312,7 +1293,6 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
     <button class="category-btn search-btn" id="searchBtn" aria-label="Buscar" tabindex="0">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/></svg>
     </button>
-    <button class="category-btn" id="btnSettings" aria-label="Ajustes" tabindex="0">⚙️ Ajustes</button>
     <div class="search-box" id="searchBox">
       <input id="searchInput" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar película, serie, novela o anime…">
       <button class="search-clear" id="searchClose" aria-label="Cerrar búsqueda" tabindex="0">✕</button>
@@ -1369,8 +1349,8 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
         <rect x="2.5" y="6" width="19" height="13" rx="2.5"/>
         <path d="M8 21.5h8"/>
       </svg>
-      <div class="ss-offline-title">Video no disponible</div>
-      <div class="ss-offline-sub">No se pudo conectar. Probá con otro servidor.</div>
+      <div class="ss-offline-title">Vídeo no disponible</div>
+      <div class="ss-offline-sub">No se pudo conectar, intenta con otro.</div>
     </div>
 
     <div class="ss-reconnect" id="reconnectOverlay">
@@ -1403,26 +1383,13 @@ body.fullscreen-active #ssToastBox { bottom: clamp(70px, 12vmin, 120px); }
   <div class="sources-card">
     <div class="sources-header">
       <span class="src-title">Servidores disponibles</span>
-      <span id="srcCount">0</span>
+      <div class="src-count-wrap" id="srcCountWrap"><span id="srcCount">0</span></div>
     </div>
     <div class="sources-list" id="sourcesList"></div>
   </div>
 </div>
 <!-- Soporte del iframe de captura de embeds: va DETRÁS de la tarjeta de servidores (la tarjeta es opaca y lo tapa) -->
 <div id="embedCaptureHost" aria-hidden="true"></div>
-
-<!-- ══════ SETTINGS MODAL (Proveedores) ══════ -->
-<div class="exit-modal-overlay" id="settingsModal">
-  <div class="exit-modal-card" style="max-width: 450px; width: 60%; height: 85vh; align-items: flex-start; padding: 20px; position: relative; background: var(--surface); border: 2px solid var(--accent); box-shadow: 0 0 30px rgba(0,204,68,0.2);">
-    <h2 style="font-family: 'Orbitron', sans-serif; color: var(--accent); margin-bottom: 15px; font-size: 1.2rem;">Proveedores</h2>
-    
-    <!-- Lista de plugins -->
-    <div id="settingsPluginsList" style="flex: 1; width: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px; margin-top: 10px;">
-      <!-- Se llena dinámicamente con JS -->
-      <div style="text-align: center; color: var(--text-sub); padding: 20px;">Cargando proveedores…</div>
-    </div>
-  </div>
-</div>
 
 <!-- ══════ EXIT MODAL ══════ -->
 <div class="exit-modal-overlay" id="exitModal">
@@ -1495,24 +1462,8 @@ function getRemoteVersion(force) {
 }
 
 
-// Proveedores encendidos por defecto la primera vez (los 17 del original) + cualquier "cuevana*"
-const PROV_DEFAULTS = new Set([
-  'embed69', 'cuevana', 'sololatino', 'vimeus', 'pelishax', 'pelispanda',
-  'pelisplus', 'lamovie', 'allcalidad', 'gnula', 'entrepeliculasyseries',
-  'allpeliculasse', 'hackstore', 'cinecalidad', 'animeav1', 'animejl', 'areshd'
-]);
-function provDefault(key) { return PROV_DEFAULTS.has(key) || String(key).indexOf('cuevana') === 0; }
-
-/* Filtro fijo de hosts: solo pasan embeds de estos 6 (el resto se descarta en silencio) */
-const ALLOWED_HOSTS = ['vidhide', 'streamwish', 'filemoon', 'vimeos', 'voe', 'morencius'];
-
-let allPlugins = []; // Todos los 53 plugins
-let activePlugins = new Set(); // Los que el usuario eligió
+let allPlugins = []; // Todos los proveedores habilitados del manifest
 let _pluginsLoadPromise = null;
-
-function _normKey(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-}
 
 // 1. Cargar todos los plugins del manifest (caché local + actualización por version.json)
 const MANIFEST_CACHE_KEY = 'ss_manifest', MANIFEST_VER_KEY = 'ss_manifest_ver';
@@ -1533,16 +1484,11 @@ function _applyManifest(manifest) {
     }
     if (seen.has(url)) continue;
     seen.add(url);
-    next.push({ id: _normKey(s.id || s.name), nombre: s.name || s.id || url.split('/').pop(), url });
+    next.push({ nombre: s.name || s.id || url.split('/').pop(), url });
   }
   allPlugins = next;
 
-  // Selección del usuario (localStorage): se conserva intacta
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem('user_plugins') || 'null'); } catch (_) {}
-  if (Array.isArray(saved)) activePlugins = new Set(saved);
-  else activePlugins = new Set(allPlugins.filter(p => provDefault(p.id)).map(p => p.id));   // primera instalación
-  console.log('[Plugins] Total:', allPlugins.length, '| Activos:', activePlugins.size);
+  console.log('[Plugins] Total:', allPlugins.length);
 }
 
 async function _downloadManifest(ver) {
@@ -1642,51 +1588,8 @@ function loadPluginsFromManifest() {
   return _pluginsLoadPromise;
 }
 
-// 3. Funciones para el Modal de Ajustes
-async function openSettings() {
-  document.getElementById('settingsModal').classList.add('open');
-  const container = document.getElementById('settingsPluginsList');
-  container.innerHTML = '<div style="text-align:center; padding: 20px;">Cargando…</div>';
-  
-  await loadPluginsFromManifest();
-  container.innerHTML = '';
-
-  allPlugins.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
-    const isChecked = activePlugins.has(p.id) ? 'checked' : '';
-    const item = document.createElement('div');
-    // Estilos optimizados para que quepan más elementos en pantalla
-    item.className = 'plg-item'; item.tabIndex = 0; item.dataset.pid = p.id;
-    item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);';
-    item.innerHTML = `
-      <div style="flex: 1; min-width: 0; text-align: left;">
-        <div style="font-weight: 700; color: #fff; font-size: 0.85rem;">${escapeHtml(p.nombre)}</div>
-        <div style="font-size: 0.65rem; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.url.split('/').pop())}</div>
-      </div>
-      <label class="switch" style="transform: scale(0.85); transform-origin: right center; margin-left: 10px;">
-        <input type="checkbox" data-id="${p.id}" ${isChecked} onchange="togglePlugin('${p.id}', this.checked)">
-        <span class="slider"></span>
-      </label>
-    `;
-    container.appendChild(item);
-  });
-  const first = container.querySelector('.plg-item');
-  if (first) setTimeout(() => first.focus({ preventScroll: true }), 50);
-}
-
-function closeSettings() {
-  document.getElementById('settingsModal').classList.remove('open');
-  setTimeout(() => document.getElementById('btnSettings')?.focus({ preventScroll: true }), 50);
-}
-
-// 4. Guardar selección en el teléfono
-function togglePlugin(id, isChecked) {
-  if (isChecked) activePlugins.add(id);
-  else activePlugins.delete(id);
-  localStorage.setItem('user_plugins', JSON.stringify([...activePlugins]));
-}
-
-/* ⬇️ TIEMPOS ORIGINALES RESTAURADOS (No se tocan) ⬇️ */
-const PLUGIN_TIMEOUT_MS      = 25000;   // tiempo máximo por plugin
+/* ── Tiempos ── */
+const PLUGIN_TIMEOUT_MS      = 15000;   // tiempo máximo por plugin
 const BUF_SHOW_DELAY_MS      = 800;
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS     = 4000;
@@ -1941,9 +1844,6 @@ function renderCategories() {
     const firstReal = bar.querySelector('.category-btn[data-cat="' + CSS.escape(categories[0].id) + '"]');
     (firstReal || bar.querySelector('.category-btn[data-cat]'))?.classList.add('active');
   }
-  // ⚙️ Ajustes siempre al final de la barra (después de todas las categorías)
-  const sb = document.getElementById('btnSettings');
-  if (sb) bar.appendChild(sb);
 }
 
 
@@ -2202,7 +2102,6 @@ function closeSearch() {
   const input = document.getElementById('searchInput');
   document.getElementById('searchBtn').addEventListener('click', openSearch);
   document.getElementById('searchClose').addEventListener('click', closeSearch);
-  document.getElementById('btnSettings').addEventListener('click', openSettings);
 
   input.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -2544,22 +2443,11 @@ function ejecutarPlugin(plugin, meta, season, episode) {
 }
 
 /* ⬇️ CARGA EN LOTES DE 2 EN 2 PARA NO SATURAR EL WEBVIEW DE ANDROID ⬇️ */
-/* Pasa solo si el host detectado (o el dominio real de la URL) es uno de los permitidos */
-function _hostAllowed(link) {
-  const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const label = norm(_srcHost(link));
-  if (label && ALLOWED_HOSTS.some(h => label.indexOf(h) !== -1)) return true;
-  try {
-    const hn = new URL(link.url).hostname.toLowerCase();
-    return ALLOWED_HOSTS.some(h => hn.indexOf(h) !== -1);
-  } catch (_) { return false; }
-}
-
 async function buscarEmbedsReales(meta, season, episode, alActualizar, token) {
   await loadPluginsFromManifest();
 
-  // Filtramos solo los que el usuario encendió en los ajustes
-  const PLUGINS_TO_USE = allPlugins.filter(p => activePlugins.has(p.id));
+  // Todos los proveedores habilitados del manifest
+  const PLUGINS_TO_USE = allPlugins;
 
   if (!PLUGINS_TO_USE.length) {
     if (alActualizar) alActualizar([], 0);
@@ -2717,6 +2605,7 @@ function _srcPaint(st) {
   const list = document.getElementById('sourcesList');
   const count = document.getElementById('srcCount');
   if (count) count.textContent = st.links.length;
+  document.getElementById('srcCountWrap')?.classList.toggle('searching', !st.done);
 
   if (!st.links.length) {
     if (!st.done) return;
@@ -2729,19 +2618,12 @@ function _srcPaint(st) {
     return;
   }
 
-  list.querySelectorAll('.src-first, .src-empty').forEach(n => n.remove());
-  let more = list.querySelector('.src-more');
+  list.querySelectorAll('.src-empty').forEach(n => n.remove());
   for (let i = _srcRendered; i < st.links.length; i++) {
     const l = st.links[i];
-    if (l && l.url) _srcAddItem(list, l, more);
+    if (l && l.url) _srcAddItem(list, l, null);
   }
   _srcRendered = st.links.length;
-
-  if (st.pendientes > 0) {
-    if (!more) { more = document.createElement('div'); more.className = 'src-loading src-more'; list.appendChild(more); }
-    more.innerHTML = '<div class="spin-anim"></div><div>Buscando en ' + st.pendientes + (st.pendientes === 1 ? ' sitio más…' : ' sitios más…') + '</div>';
-  } else if (more) { more.remove(); }
-
 
   if (!_srcFocused) {
     const target = list.querySelector('.src-item.is-selected') || list.querySelector('.src-item');
@@ -2752,9 +2634,7 @@ function _srcPaint(st) {
 async function openSourcesWithEpisode(season, episode) {
   if (!currentMovie) return;
   const list = document.getElementById('sourcesList');
-  const epText = season ? ` (T${season}E${episode})` : '';
   const key = _embedKey(season, episode);
-  const loadingHtml = '<div class="src-loading src-first"><div class="spin-anim"></div><div>Buscando servidores' + epText + '…</div></div>';
   _srcRendered = 0; _srcFocused = false;
   document.getElementById('sourcesModal').classList.add('open');
 
@@ -2763,8 +2643,7 @@ async function openSourcesWithEpisode(season, episode) {
   if (prev && prev.key === key && (!prev.done || prev.links.length)) {
     list.innerHTML = '';
     prev.paint = () => _srcPaint(prev);
-    if (prev.links.length) _srcPaint(prev);
-    else { list.innerHTML = loadingHtml; document.getElementById('srcCount').textContent = '0'; }
+    _srcPaint(prev);
     return;
   }
 
@@ -2774,8 +2653,9 @@ async function openSourcesWithEpisode(season, episode) {
   _embedState = st;
   _selectedEmbedUrl = null;
   st.paint = () => _srcPaint(st);
-  list.innerHTML = loadingHtml;
+  list.innerHTML = '';
   document.getElementById('srcCount').textContent = '0';
+  document.getElementById('srcCountWrap')?.classList.add('searching');
 
   buscarEmbedsReales(currentMovie, season, episode, (links, pendientes) => {
     st.links = links; st.pendientes = pendientes;
@@ -2836,28 +2716,15 @@ function playMovieSource(link, btn) {
   const seq = _capSeq;
   if (btn) { btn.classList.add('loading'); _capBtn = btn; }
 
-  /* Cada vez que se elige un embed se diagnostica (probando variantes de cabeceras).
-     Con EXT_CONSOLE_MODE la consola se abre SIEMPRE y el botón "Reproducir" lo manda al reproductor. */
-  const _dl = [];
-  const dlog = m => { _dl.push(m); console.log('[Diag]', m); };
-  const _dh = (() => { try { return _srcHost(link) || new URL(link.url).hostname; } catch (_) { return '?'; } })();
-  dlog('Host: ' + _dh + ' · proveedor: ' + (link.__prov || '?') + '\nEmbed: ' + link.url + '\n');
-  _resolveLink(link, dlog).then(r => {
+  const _fail = () => { _capClear(); showToast('No se pudo conectar, intenta con otro.', 'error'); };
+  _resolveLink(link, () => {}).then(r => {
     if (seq !== _capSeq) return;
     _capClear();
-    _extHistPush(_dh, link.url, { m3u8: r.ok ? 'x' : null, ms: r.ms, status: r.status }, _dl);
-    if (EXT_CONSOLE_MODE || !r.play) {
-      showConsolePanel('DIAGNÓSTICO · ' + _dh + ' · ' + (r.ok ? 'OK' : 'FALLA'), _dl.join('\n'), r.play || null);
-    } else {
-      showToast(_dh + ': listo en ' + r.ms + ' ms', 'info', 2000);
-      _playResolved(r.play);
-    }
-  }).catch(e => {
-    if (seq !== _capSeq) return;
-    _capClear(); dlog('ERROR: ' + ((e && e.message) || e));
-    showConsolePanel('DIAGNÓSTICO · ERROR', _dl.join('\n'), null);
-  });
+    if (r && r.play) _playResolved(r.play);
+    else showToast('No se pudo conectar, intenta con otro.', 'error');
+  }).catch(() => { if (seq === _capSeq) _fail(); });
 }
+
 
 
 
@@ -2930,88 +2797,6 @@ async function _resolveLink(link, log) {
   return _basicResolve(link, log);
 }
 
-/* Historial ("consola"): cada intento queda registrado por host para decidir qué extractores faltan */
-let _extHist = [];
-try { _extHist = JSON.parse(localStorage.getItem('ss_ext_hist') || '[]'); } catch (_) {}
-function _extHistPush(host, url, res, lines) {
-  const via = res.m3u8 ? (lines.some(l => /empaquetado/.test(l)) ? 'packed' : lines.some(l => /Voe/.test(l)) ? 'voe' : /ya es un \.m3u8/.test(lines.join(' ')) ? 'directo' : /lista m3u8/.test(lines.join(' ')) ? 'lista' : 'html') : '';
-  _extHist.push({ host: String(host), ok: !!res.m3u8, ms: res.ms || 0, via, http: res.status || 0, url: String(url).slice(0, 90) });
-  if (_extHist.length > 40) _extHist = _extHist.slice(-40);
-  try { localStorage.setItem('ss_ext_hist', JSON.stringify(_extHist)); } catch (_) {}
-}
-function _extHistText() {
-  const by = {};
-  _extHist.forEach(h => { const b = by[h.host] || (by[h.host] = { ok: 0, fail: 0, last: '' }); h.ok ? b.ok++ : b.fail++; b.last = h.url; });
-  const rows = Object.keys(by).map(k => (by[k].fail ? '✗ ' : '✓ ') + k + '  OK:' + by[k].ok + '  FALLÓ:' + by[k].fail);
-  const last = _extHist.slice(-12).reverse().map(h => (h.ok ? '✓ ' : '✗ ') + h.host + ' · ' + h.ms + ' ms · ' + (h.via || ('HTTP ' + h.http)) + '\n    ' + h.url);
-  return '--- RESUMEN POR HOST ---\n' + (rows.join('\n') || '(vacío)') + '\n\n--- ÚLTIMOS INTENTOS ---\n' + (last.join('\n') || '(vacío)');
-}
-function showExtractHistory() { showExtractDebug('(historial)', { html: '', status: 0, ms: 0 }, [], true); }
-
-/* ══════════ PANEL "CONSOLA" (con botones Cerrar y Copiar, táctil y control remoto) ══════════ */
-function _copyText(t) {
-  const fallback = () => {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = t; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
-      document.body.appendChild(ta); ta.focus(); ta.select();
-      const ok = document.execCommand('copy'); ta.remove(); return ok;
-    } catch (_) { return false; }
-  };
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(() => true).catch(() => fallback());
-  } catch (_) {}
-  return Promise.resolve(fallback());
-}
-
-function _consoleEl() {
-  let el = document.getElementById('extDbg');
-  if (el) return el;
-  el = document.createElement('div'); el.id = 'extDbg';
-  el.style.cssText = 'position:fixed;inset:3% 6%;z-index:99999;background:#0b1220;color:#e6edf7;border:2px solid #f5a623;border-radius:14px;display:none;flex-direction:column;overflow:hidden;';
-  const bar = document.createElement('div');
-  bar.style.cssText = 'display:flex;gap:14px;align-items:center;padding:12px 16px;background:#111b30;border-bottom:1px solid #2a3a5c;flex:0 0 auto;flex-wrap:wrap;';
-  const mk = (id, txt) => {
-    const b = document.createElement('button'); b.id = id; b.type = 'button'; b.textContent = txt;
-    b.style.cssText = 'font:700 20px/1 sans-serif;padding:12px 26px;border-radius:10px;border:2px solid #3b4d75;background:#18243f;color:#e6edf7;outline:none;';
-    b.addEventListener('focus', () => { b.style.borderColor = '#00e676'; b.style.background = '#14502d'; });
-    b.addEventListener('blur', () => { b.style.borderColor = '#3b4d75'; b.style.background = '#18243f'; });
-    return b;
-  };
-  const bClose = mk('extDbgClose', 'Cerrar'), bCopy = mk('extDbgCopy', 'Copiar'), bPlay = mk('extDbgPlay', 'Reproducir');
-  const st = document.createElement('span'); st.id = 'extDbgState'; st.style.cssText = 'font:18px sans-serif;color:#7fe3a0;';
-  const title = document.createElement('span'); title.id = 'extDbgTitle'; title.style.cssText = 'font:700 18px sans-serif;color:#f5a623;margin-left:auto;';
-  bar.append(bClose, bCopy, bPlay, st, title);
-  const pre = document.createElement('pre'); pre.id = 'extDbgTxt';
-  pre.style.cssText = 'margin:0;padding:16px 22px;flex:1 1 auto;overflow:auto;font:18px/1.35 monospace;white-space:pre-wrap;word-break:break-all;';
-  el.append(bar, pre);
-  document.body.appendChild(el);
-  const flash = (msg, ok) => { st.textContent = msg; st.style.color = ok ? '#7fe3a0' : '#ff8a8a'; clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500); };
-  bClose.addEventListener('click', () => { el.style.display = 'none'; });
-  bCopy.addEventListener('click', () => { _copyText(pre.textContent).then(ok => flash(ok ? '✓ Copiado' : '✗ No se pudo copiar', ok)); });
-  bPlay.addEventListener('click', () => {
-    const pl = el._play;
-    if (!pl) { flash('No hay enlace reproducible', false); return; }
-    el.style.display = 'none';
-    _playResolved(pl);
-  });
-  return el;
-}
-
-function showConsolePanel(title, text, play) {
-  const el = _consoleEl();
-  el._play = play || null;
-  document.getElementById('extDbgTitle').textContent = title;
-  document.getElementById('extDbgState').textContent = '';
-  const bPlay = document.getElementById('extDbgPlay');
-  bPlay.disabled = !play;
-  bPlay.textContent = play ? 'Reproducir' : 'Reproducir ✗';
-  bPlay.style.opacity = play ? '1' : '0.4';
-  const pre = document.getElementById('extDbgTxt'); pre.textContent = text; pre.scrollTop = 0;
-  el.style.display = 'flex';
-  try { (play ? bPlay : document.getElementById('extDbgClose')).focus(); } catch (_) {}
-}
-
 /* Reproduce un enlace ya resuelto: { url, kind: 'm3u8'|'mp4', headers } */
 function _playResolved(pl) {
   const movie = currentMovie;
@@ -3025,81 +2810,8 @@ function _playResolved(pl) {
   _enterFullscreen();
 }
 
-function showExtractDebug(embedUrl, res, lines, onlyHist) {
-  if (onlyHist) { showConsolePanel('HISTORIAL', _extHistText()); return; }
-  const h = String(res.html || '');
-  showConsolePanel('EXTRACTOR: FALLÓ',
-    'Embed: ' + embedUrl + '\nHTTP: ' + (res.status || '?') + ' · ' + (res.ms || 0) + ' ms\n\n' + lines.join('\n') +
-    '\n\n--- Inicio del HTML (900 car.) ---\n' + h.slice(0, 900) +
-    '\n\n--- Pistas ---\npacked: ' + /eval\(function\(p,a,c,k/.test(h) + ' · json-script: ' + /type=["']application\/json["']/.test(h) + ' · "m3u8" en texto: ' + /m3u8/.test(h));
-}
-
-/* Abrir el historial en cualquier momento: tecla C, botón amarillo (405) o INFO/MENÚ (457) */
-document.addEventListener('keydown', e => {
-  const el = document.getElementById('extDbg');
-  if ((el && el.style.display !== 'none') || !document.getElementById('sourcesModal')?.classList.contains('open')) return;
-  if (e.key === 'c' || e.key === 'C' || e.keyCode === 405 || e.keyCode === 457) { e.preventDefault(); e.stopPropagation(); showExtractHistory(); }
-}, true);
-document.addEventListener('keydown', e => {
-  const el = document.getElementById('extDbg');
-  if (!el || el.style.display === 'none') return;
-  const pre = document.getElementById('extDbgTxt');
-  const btns = ['extDbgClose', 'extDbgCopy', 'extDbgPlay'].map(id => document.getElementById(id)).filter(b => b && !b.disabled);
-  const bC = btns[0];
-  if (['Escape', 'Backspace'].includes(e.key) || e.keyCode === 4) { e.preventDefault(); e.stopPropagation(); el.style.display = 'none'; }
-  else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); (btns.includes(document.activeElement) ? document.activeElement : bC).click(); }
-  else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-    e.preventDefault(); e.stopPropagation();
-    const i = Math.max(0, btns.indexOf(document.activeElement));
-    btns[(i + (e.key === 'ArrowRight' ? 1 : btns.length - 1)) % btns.length].focus();
-  }
-  else if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); pre.scrollTop += 140; }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); pre.scrollTop -= 140; }
-}, true);
-
-/* ══════════ MODO CONSOLA: al elegir un embed NO se reproduce, solo se diagnostica ══════════ */
-/* true = al elegir un embed SIEMPRE se abre la consola (diagnóstico + botón Reproducir) · false = reproduce directo con el mejor método */
-let EXT_CONSOLE_MODE = true;
-try { const _m = localStorage.getItem('ss_ext_console'); if (_m !== null) EXT_CONSOLE_MODE = (_m === '1'); } catch (_) {}
-
-/* Botón fijo arriba a la izquierda: activa/desactiva la consola. También: tecla T o botón verde/rojo del control */
-function _consoleToggleBtn() {
-  let b = document.getElementById('extConsoleToggle');
-  if (b) return b;
-  b = document.createElement('button'); b.id = 'extConsoleToggle'; b.type = 'button';
-  b.style.cssText = 'position:fixed;top:4px;left:4px;z-index:100001;font:700 14px/1 sans-serif;padding:8px 10px;border-radius:8px;border:2px solid #3b4d75;color:#fff;outline:none;opacity:.85;';
-  b.addEventListener('click', e => { e.stopPropagation(); _setConsoleMode(!EXT_CONSOLE_MODE); });
-  document.body.appendChild(b);
-  _paintConsoleToggle();
-  return b;
-}
-function _paintConsoleToggle() {
-  const b = document.getElementById('extConsoleToggle'); if (!b) return;
-  b.textContent = EXT_CONSOLE_MODE ? 'Consola ON' : 'Consola OFF';
-  b.style.background = EXT_CONSOLE_MODE ? '#14502d' : '#5a1f1f';
-  b.style.borderColor = EXT_CONSOLE_MODE ? '#00e676' : '#ff6b6b';
-}
-function _setConsoleMode(on) {
-  EXT_CONSOLE_MODE = !!on;
-  try { localStorage.setItem('ss_ext_console', EXT_CONSOLE_MODE ? '1' : '0'); } catch (_) {}
-  _paintConsoleToggle();
-  try { showToast(EXT_CONSOLE_MODE ? 'Consola activada: se abre al elegir un embed' : 'Consola desactivada: se reproduce directo', 'info', 2200); } catch (_) {}
-}
-if (document.body) _consoleToggleBtn(); else document.addEventListener('DOMContentLoaded', _consoleToggleBtn);
-document.addEventListener('keydown', e => {
-  if (e.key === 't' || e.key === 'T' || e.keyCode === 404 || e.keyCode === 403) {
-    if (/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
-    e.preventDefault(); e.stopPropagation(); _setConsoleMode(!EXT_CONSOLE_MODE);
-  }
-}, true);
-
-
-
-
-
 /* ══════════════════ PLAYER · NÚCLEO ══════════════════ */
 function getActiveVideoEl()       { return document.getElementById('iptv-player'); }
-function getActivePlayerContainer() { return document.getElementById('playerContainerInline'); }
 
 function setPlayerLoader(state) {
   const el = document.getElementById('playerLoaderInline');
@@ -3283,10 +2995,6 @@ function scheduleReconnect(ctx, streamId) {
 }
 
 function failPlayback() {
-  try {
-    const sub = document.querySelector('.ss-offline-sub');
-    if (sub) sub.textContent = 'No se pudo conectar. Probá con otro servidor.' + (window._lastHlsErr ? ' [' + window._lastHlsErr + ']' : '') + (window._playingUrl ? ' · ' + String(window._playingUrl).split('://').pop().slice(0, 40) : '');
-  } catch (_) {}
   destroyStream(); setPlayerLoader('hidden'); hideReconnectOverlay(); showOfflineOverlay();
 }
 
@@ -3305,7 +3013,6 @@ function _playHls(ctx, streamId) {
       setTimeout(() => tvBar?.updateQualityLabel(), 400);
     };
     hls.on(Hls.Events.ERROR, (_, d) => {
-      if (d && d.details) window._lastHlsErr = d.details + (d.response && d.response.code ? ' ' + d.response.code : '') + (d.fatal ? ' (fatal)' : '');
       if (!d.fatal || stale() || hlsInst !== hls) return;
       if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
         try { hls.stopLoad(); } catch (_) {} retry();
@@ -3400,7 +3107,7 @@ function _teardownPlayer() {
   if (v) { try { v.muted = true; } catch (_) {} }
   destroyStream();                       // pausa, destruye hls/flv, quita src y cancela reconexiones
   _stopServerCapture();                  // cancela la resolución en curso y quita el spinner del servidor
-  _ctx = null; window._playingUrl = null; window._lastHlsErr = null;
+  _ctx = null; window._playingUrl = null;
   hideOfflineOverlay(); hideReconnectOverlay(); hideReconnectOkOverlay();
   setPlayerLoader('idle');
 }
@@ -3820,7 +3527,6 @@ function forceExitApp() {
 function handleBackAction() {
   if (_tvFsQualityOpen) { _tvFsQualityClose(); return; }
   if (document.getElementById('exitModal')?.classList.contains('open')) { hideExitModal(); return; }
-  if (document.getElementById('settingsModal')?.classList.contains('open')) { closeSettings(); return; }
   if (document.body.classList.contains('fullscreen-active') || document.fullscreenElement) {
     _wasFullscreen = false; if (_wasFullscreenTimer) { clearTimeout(_wasFullscreenTimer); _wasFullscreenTimer = null; }
     _exitFullscreen(); _handleExitFullscreen(); return;
@@ -3861,25 +3567,6 @@ document.addEventListener('keyup', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.target && e.target.id === 'searchInput') return;
-  if (document.getElementById('settingsModal')?.classList.contains('open')) {
-    const items = Array.from(document.querySelectorAll('#settingsPluginsList .plg-item')); const cur = document.activeElement; const idx = items.indexOf(cur);
-    const go = (n) => { const t = items[n]; if (t) { t.focus({ preventScroll: true }); t.scrollIntoView({ block: 'nearest', behavior: 'auto' }); } };
-    switch (e.key) {
-      case 'ArrowDown': e.preventDefault(); go(idx < 0 ? 0 : Math.min(idx + 1, items.length - 1)); break;
-      case 'ArrowUp': e.preventDefault(); go(idx < 0 ? 0 : Math.max(idx - 1, 0)); break;
-      case 'ArrowLeft': case 'ArrowRight': e.preventDefault(); break;
-      case 'Enter': case ' ': {
-        if (cur && cur.classList.contains('plg-item')) {
-          e.preventDefault();
-          const cb = cur.querySelector('input[type=checkbox]');
-          if (cb) { cb.checked = !cb.checked; togglePlugin(cb.dataset.id, cb.checked); }
-        }
-        break;
-      }
-      case 'Escape': case 'Backspace': e.preventDefault(); closeSettings(); break;
-    }
-    return;
-  }
   if (!document.body.classList.contains('fullscreen-active') && document.getElementById('sourcesModal')?.classList.contains('open')) {
     const items = Array.from(document.querySelectorAll('#sourcesList .src-item')); const cur = document.activeElement; const idx = items.indexOf(cur);
     switch (e.key) {
@@ -3984,12 +3671,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ── Helpers de foco ── */
-let _lastBrowseFocus = null;
-document.addEventListener('focusin', (e) => {
-  const t = e.target;
-  if (t && t.matches && t.matches('.poster-card, .category-btn, .season-btn, .episode-card, #btnPlayMain, #btnFav')) _lastBrowseFocus = t;
-});
-
 /* Enfoca un elemento y lo centra con scroll horizontal dentro de su contenedor */
 function _focusH(el, scroller) {
   if (!el) return;
@@ -3999,17 +3680,6 @@ function _focusH(el, scroller) {
   const r = el.getBoundingClientRect(), c = sc.getBoundingClientRect();
   const left = sc.scrollLeft + (r.left - c.left) - (c.width - r.width) / 2;
   try { sc.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); } catch (_) { sc.scrollLeft = Math.max(0, left); }
-}
-
-function _focusBackToBrowse() {
-  let t = _lastBrowseFocus;
-  if (!t || !document.contains(t) || !t.getClientRects().length) {
-    const dv = document.getElementById('detailView');
-    if (dv && dv.classList.contains('open')) {
-      t = currentMovie?.type === 'series' ? (document.querySelector('#detEpisodesList .episode-card') || document.querySelector('.season-btn.active')) : document.getElementById('btnPlayMain');
-    } else t = document.querySelector('.poster-card.now-playing') || document.querySelector('.poster-card');
-  }
-  if (t) t.focus({ preventScroll: true });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
