@@ -5209,6 +5209,18 @@ function _tvOrigin(u) { try { return new URL(u).origin; } catch (_) { return '';
 function _tvHost(u) { try { return new URL(u).hostname; } catch (_) { return '?'; } }
 function _tvOneLine(t, n) { return String(t || '').replace(/\s+/g, ' ').trim().slice(0, n); }
 
+function _tvAround(html) {
+  const out = [];
+  const re = /m3u8|playlist|token=|\.php\?|"source"|sources?\s*[:=]/gi;
+  let m, last = -1000;
+  while ((m = re.exec(html)) && out.length < 8) {
+    if (m.index - last < 400) continue;
+    last = m.index;
+    out.push('  @' + m.index + ': ' + _tvOneLine(html.slice(Math.max(0, m.index - 150), m.index + 250), 400));
+  }
+  return out.length ? '\nfragmentos alrededor de m3u8/playlist/token/source (posición en el texto):\n' + out.join('\n') : '';
+}
+
 function _tvHints(html, base) {
   const out = [];
   const uniq = a => [...new Set(a)];
@@ -5238,6 +5250,7 @@ function _tvHints(html, base) {
   const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(s => s.trim().length > 30);
   out.push('scripts en línea: ' + inline.length);
   inline.slice(0, 5).forEach((s, i) => out.push('  [script ' + (i + 1) + ', ' + s.length + ' car.] ' + _tvOneLine(s, 1200)));
+  out.push(_tvAround(html));
   out.push('\n--- Inicio del HTML (1500 car.) ---\n' + _tvOneLine(html, 1500));
   return out.join('\n');
 }
@@ -5322,10 +5335,10 @@ function _tvConsoleEl() {
     b.addEventListener('blur', () => { b.style.borderColor = '#3b4d75'; b.style.background = '#18243f'; });
     return b;
   };
-  const bClose = mk('tvDbgClose', 'Cerrar'), bCopy = mk('tvDbgCopy', 'Copiar'), bPlay = mk('tvDbgPlay', 'Reproducir'), bWv = mk('tvDbgWv', 'WebView');
+  const bClose = mk('tvDbgClose', 'Cerrar'), bCopy = mk('tvDbgCopy', 'Copiar'), bPlay = mk('tvDbgPlay', 'Reproducir'), bWv = mk('tvDbgWv', 'WebView'), bDump = mk('tvDbgDump', 'Volcar');
   const st = document.createElement('span'); st.id = 'tvDbgState'; st.style.cssText = 'font:18px sans-serif;color:#7fe3a0;';
   const title = document.createElement('span'); title.id = 'tvDbgTitle'; title.style.cssText = 'font:700 18px sans-serif;color:#f5a623;margin-left:auto;';
-  bar.append(bClose, bCopy, bPlay, bWv, st, title);
+  bar.append(bClose, bCopy, bPlay, bWv, bDump, st, title);
   const pre = document.createElement('pre'); pre.id = 'tvDbgTxt';
   pre.style.cssText = 'margin:0;padding:16px 22px;flex:1 1 auto;overflow:auto;font:18px/1.35 monospace;white-space:pre-wrap;word-break:break-all;';
   el.append(bar, pre);
@@ -5336,6 +5349,7 @@ function _tvConsoleEl() {
   bCopy.addEventListener('click', () => { _copyText(pre.textContent).then(ok => flash(ok ? '✓ Copiado' : '✗ No se pudo copiar', ok)); });
   bPlay.addEventListener('click', () => _tvConsolePlay());
   bWv.addEventListener('click', () => _tvConsoleWebView());
+  bDump.addEventListener('click', () => _tvConsoleDump());
   return el;
 }
 
@@ -5360,6 +5374,7 @@ function _tvConsoleShow(arriba) {
   const puedeReproducir = !!st.play && !st.busy;
   bPlay.disabled = !puedeReproducir; bPlay.textContent = puedeReproducir ? 'Reproducir' : 'Reproducir ✗'; bPlay.style.opacity = puedeReproducir ? '1' : '0.4';
   bWv.disabled = st.busy; bWv.style.opacity = st.busy ? '0.4' : '1';
+  const bDump = document.getElementById('tvDbgDump'); bDump.disabled = st.busy; bDump.style.opacity = st.busy ? '0.4' : '1';
   if (!st.focused) { st.focused = true; try { document.getElementById('tvDbgClose').focus(); } catch (_) {} }
   if (!st.busy && !st.focusedDone) { st.focusedDone = true; try { (puedeReproducir ? bPlay : document.getElementById('tvDbgClose')).focus(); } catch (_) {} }
 }
@@ -5383,6 +5398,42 @@ function _tvConsoleRun(src, seq) {
       dlog('\nEXTRACTOR: no devolvió ningún enlace. Esto es lo que devuelve la página:\n');
       await _tvProbePage(src.url, dlog, st);
     }
+    if (st.cancelled) return;
+    st.busy = false;
+    _tvConsoleShow(true);
+  })();
+}
+
+/* Botón Volcar: baja la página del embed y la siguiente (stream.php o iframe), con tiempos y fragmentos clave */
+function _tvConsoleDump() {
+  const st = _tvDiag;
+  if (!st || st.busy || !pm || pm.seq !== st.seq) return;
+  st.busy = true;
+  const dlog = m => { st.lines.push(String(m)); if (!st.cancelled && _tvDiag === st) _tvConsoleShow(false); };
+  dlog('\n══════ Volcado de páginas (2 niveles) ══════');
+  (async () => {
+    const get = async (url, ref) => {
+      const t0 = Date.now();
+      let r = null;
+      try { r = await Promise.race([nativeFetch(url, { headers: { 'User-Agent': _TV_UA, Accept: 'text/html,*/*;q=0.8', 'Accept-Language': 'es-MX,es;q=0.9', Referer: ref } }), _tvTimeout(30000)]); }
+      catch (e) { dlog('Error: ' + ((e && e.message) || e)); return ''; }
+      if (!r) { dlog('Sin respuesta en 30 s: ' + url); return ''; }
+      let tx = ''; try { tx = (await r.text()) || ''; } catch (_) {}
+      dlog('GET ' + url + '\n  HTTP ' + r.status + ' · ' + tx.length + ' B · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+      return tx;
+    };
+    const url1 = st.src.url;
+    const h1 = await get(url1, _tvOrigin(url1) + '/');
+    if (st.cancelled) return;
+    if (h1) dlog(_tvHints(h1, url1));
+    const limpio = h1.replace(/\\\//g, '/');
+    let next = (limpio.match(/https?:\/\/[^"'\s<>\\)]+stream\.php[^"'\s<>\\)]*/i) || [])[0] || (h1.match(/<iframe[^>]+src=["']([^"']+)["']/i) || [])[1] || '';
+    try { next = next ? new URL(next, url1).href : ''; } catch (_) { next = ''; }
+    if (next && next !== url1) {
+      dlog('\n── Siguiente nivel ──');
+      const h2 = await get(next, url1);
+      if (!st.cancelled && h2) dlog(_tvHints(h2, next));
+    } else dlog('\n(no encontré una segunda URL literal: stream.php o iframe; mira los fragmentos de arriba para ver cómo se arma)');
     if (st.cancelled) return;
     st.busy = false;
     _tvConsoleShow(true);
@@ -5446,7 +5497,7 @@ document.addEventListener('keydown', e => {
   if (!_tvConsoleOpen()) return;
   const stop = () => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
   const pre = document.getElementById('tvDbgTxt');
-  const btns = ['tvDbgClose', 'tvDbgCopy', 'tvDbgPlay', 'tvDbgWv'].map(id => document.getElementById(id)).filter(b => b && !b.disabled);
+  const btns = ['tvDbgClose', 'tvDbgCopy', 'tvDbgPlay', 'tvDbgWv', 'tvDbgDump'].map(id => document.getElementById(id)).filter(b => b && !b.disabled);
   if (['Escape', 'Backspace'].includes(e.key) || e.keyCode === 4) { stop(); _tvConsoleClose(); }
   else if (e.key === 'Enter' || e.key === ' ') { stop(); (btns.includes(document.activeElement) ? document.activeElement : btns[0]).click(); }
   else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
