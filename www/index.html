@@ -2132,22 +2132,13 @@ let currentMode = null;
 let _currentStreamId = 0;
 
 const MSG_START              = 'Para empezar, reprodusca un canal';
-const EMBED_TIMEOUT_MS       = 7500;
-const EMBED_MAX_RETRY        = 2;
-const REOPEN_GUARD_MS        = 1500;
-const CLOSED_KEEP_MS         = 10000;
-const STALE_ORIGIN_MS        = 8000;
 const BUF_SHOW_DELAY_MS      = 800;
 const HLS_VERIFY_MS          = 12000;
 const FLV_VERIFY_MS          = 7000;
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS     = 4000;
 
-let   _embedSeq          = 0;
-window._embedWaiting     = null;
-window._activeUrl        = null;
 window._playingUrl       = null;
-window._closedAt         = new Map();
 
 let _ctx              = null;
 let _startedId        = 0;
@@ -2170,7 +2161,6 @@ async function _releaseWakeLock() {
   if (_wakeLock) { try { await _wakeLock.release(); } catch(_) {} _wakeLock = null; }
 }
 
-const M3U8_INTERCEPT_DEBOUNCE_MS = 250;
 
 let currentChannel   = null;
 let channelsData     = [];
@@ -2736,34 +2726,6 @@ function setPlayerLoader(state, text) {
   el.className = 'plyr-loader ' + state;
   const txtEl = document.getElementById('loaderTxtInline');
   if (txtEl && text !== undefined && text !== null) txtEl.textContent = text;
-}
-
-function _markClosed(url) {
-  if (!url) return;
-  const now = Date.now();
-  window._closedAt.set(url, now);
-  for (const [u, t] of window._closedAt) {
-    if (now - t > CLOSED_KEEP_MS) window._closedAt.delete(u);
-  }
-}
-
-function _reopenWait(url) {
-  const t = window._closedAt.get(url);
-  if (!t) return 0;
-  return Math.max(0, REOPEN_GUARD_MS - (Date.now() - t));
-}
-
-function _isFromPrevEmbed(referer, currentUrl) {
-  if (!referer) return false;
-  let ro, co;
-  try { ro = new URL(referer).origin; co = new URL(currentUrl).origin; } catch(_) { return false; }
-  if (ro === co) return false;
-  const now = Date.now();
-  for (const [u, t] of window._closedAt) {
-    if (u === currentUrl || now - t > STALE_ORIGIN_MS) continue;
-    try { if (new URL(u).origin === ro) return true; } catch(_) {}
-  }
-  return false;
 }
 
 function _safePlay(video, _stale, _fail, tag) {
@@ -3374,146 +3336,6 @@ function probeNative(url, cb) {
   return () => done(false, true);
 }
 
-function _cancelCapture() {
-  _captureGuard(false);
-  clearTimeout(window._embedTimer);
-  clearTimeout(window._m3u8InterceptDebounce);
-  window._embedWaiting = null;
-  document.getElementById('embedWrapper')?.remove();
-  if (window._activeUrl) { _markClosed(window._activeUrl); window._activeUrl = null; }
-}
-
-window.onEmbedBlocked = function (u) {
-  const w = window._embedWaiting;
-  if (!w || w.blocked) return;
-  w.blocked = true;
-  console.warn('[Embed] #' + w.id + ' la página cargó block.html (bloqueo del embed)');
-  setTimeout(() => { if (window._embedWaiting === w && w.expire) w.expire(); }, 400);
-};
-function _captureGuard(on) { try { if (window.SSNative && window.SSNative.capture) window.SSNative.capture(on); } catch (_) {} }
-
-const EMBED_SANDBOX_FIRST = true;
-function _embedSbGet(host) {
-  try { const m = JSON.parse(localStorage.getItem('ss_embed_sb') || '{}'); if (typeof m[host] === 'boolean') return m[host]; } catch (_) {}
-  return EMBED_SANDBOX_FIRST;
-}
-function _embedSbSave(host, v) {
-  try {
-    const m = JSON.parse(localStorage.getItem('ss_embed_sb') || '{}');
-    if (m[host] === v) return;
-    m[host] = v;
-    localStorage.setItem('ss_embed_sb', JSON.stringify(m));
-  } catch (_) {}
-}
-const EMBED_LOAD_GRACE_MS = 5000;
-const EMBED_MAX_TOTAL_MS  = 15000;
-
-function _captureEmbed(url, seq, cb) {
-  const container = getActivePlayerContainer();
-  let retry = 0;
-  const host = (() => { try { return new URL(url).hostname; } catch (_) { return url; } })();
-  let useSandbox = _embedSbGet(host);
-  let blockedSwitches = 0;
-
-  const attempt = (delayed) => {
-    if (!pm || pm.seq !== seq) return;
-    if (!delayed) {
-      const wait = _reopenWait(url);
-      if (wait > 0) {
-        console.log('[Embed] Misma url reabierta, esperando', wait, 'ms:', url);
-        setTimeout(() => attempt(true), wait);
-        return;
-      }
-    }
-    _cancelCapture();
-    window._lastInterceptedM3u8 = null;
-
-    const waiting = { id: ++_embedSeq, sid: seq, url, candidate: null, onCaptured: cb, blocked: false, expire: null };
-    waiting.host = host; waiting.sandbox = useSandbox;
-    window._embedWaiting = waiting;
-    _captureGuard(true);
-    window._activeUrl    = url;
-
-    const wrapper = document.createElement('div');
-    wrapper.id = 'embedWrapper';
-    wrapper.style.cssText = [
-      'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:100%',
-      'overflow:hidden', 'background:transparent', 'z-index:10',
-      'opacity:0.01', 'pointer-events:none'
-    ].join(';');
-
-    const iframe = document.createElement('iframe');
-    iframe.id  = 'embedFrame';
-    iframe.src = url;
-    iframe.setAttribute('allowfullscreen', '');
-    iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
-    iframe.setAttribute('scrolling', 'no');
-    if (useSandbox) {
-      iframe.setAttribute('sandbox', [
-        'allow-scripts', 'allow-same-origin', 'allow-presentation', 'allow-forms', 'allow-pointer-lock'
-      ].join(' '));
-    }
-    iframe.style.cssText = [
-      'position:absolute', 'top:-55px', 'left:-1px',
-      'width:calc(100% + 2px)', 'height:calc(100% + 55px)',
-      'border:none', 'background:transparent', 'pointer-events:none'
-    ].join(';');
-
-    const _tOpen = Date.now();
-    let _iframeLoadMs = null;
-
-    const expire = () => {
-      if (window._embedWaiting !== waiting) return;
-      if (waiting.candidate) {
-        console.log('[Embed] Timeout ignorado #' + waiting.id + ': ya hay candidato en proceso');
-        return;
-      }
-      console.warn('[Embed] Timeout sin m3u8 #' + waiting.id + ' (' + (Date.now() - _tOpen) + ' ms) |',
-                   _iframeLoadMs === null ? 'el iframe NO terminó de cargar' : 'iframe cargó a los ' + _iframeLoadMs + ' ms pero no pidió ningún m3u8',
-                   '|', useSandbox ? 'con sandbox' : 'sin sandbox', '|', url);
-      const wasBlocked = waiting.blocked;
-      _cancelCapture();
-      if (wasBlocked) {
-        if (blockedSwitches < 1) {
-          blockedSwitches++;
-          useSandbox = !useSandbox;
-          console.log('[Embed] Bloqueado: probando ' + (useSandbox ? 'CON' : 'SIN') + ' sandbox');
-          attempt(true);
-          return;
-        }
-        console.warn('[Embed] Bloqueado por la propia página con y sin sandbox: se descarta');
-        cb(null);
-        return;
-      }
-      if (retry < EMBED_MAX_RETRY) { retry++; useSandbox = !useSandbox; attempt(false); return; }
-      cb(null);
-    };
-    waiting.expire = expire;
-
-    const armTimer = (ms) => {
-      clearTimeout(window._embedTimer);
-      window._embedTimer = setTimeout(expire, ms);
-    };
-
-    iframe.addEventListener('load', () => {
-      if (window._embedWaiting !== waiting) return;
-      _iframeLoadMs = Date.now() - _tOpen;
-      console.log('[Embed] iframe cargó #' + waiting.id + ' en ' + _iframeLoadMs + ' ms');
-      const wanted = Math.min(EMBED_MAX_TOTAL_MS, _iframeLoadMs + EMBED_LOAD_GRACE_MS);
-      const remaining = Math.max(0, wanted - _iframeLoadMs);
-      if (_iframeLoadMs + remaining > EMBED_TIMEOUT_MS) armTimer(wanted - _iframeLoadMs);
-    });
-
-    wrapper.appendChild(iframe);
-    container.appendChild(wrapper);
-    console.log('[Embed] Abierto #' + waiting.id + ':', url, retry ? '(reintento ' + retry + ')' : '', useSandbox ? '(con sandbox)' : '(sin sandbox)');
-
-    armTimer(EMBED_TIMEOUT_MS);
-  };
-
-  attempt(false);
-}
-
 let pm      = null;
 let _pmSeq  = 0;
 let _pmMutedPrevVideo = false;
@@ -3522,7 +3344,6 @@ function cancelPmWork() {
   console.log('[PM] cancelPmWork', pm ? 'seq=' + pm.seq : '(sin pm)');
   _pmSeq++;
   if (pm && typeof pm.cancel === 'function') { try { pm.cancel(); } catch(_) {} pm.cancel = null; }
-  _cancelCapture();
 
   if (_pmMutedPrevVideo) {
     const v = getActiveVideoEl();
@@ -3573,25 +3394,15 @@ function openPlayModal(src) {
     _pmRender(online, levels);
   };
 
-  /* Consola ON: el embed se resuelve con extractores (sin WebView) y se abre la consola de diagnóstico */
-  if (type === 'embed' && EXT_CONSOLE_MODE) {
-    _tvConsoleRun(src, seq);
+  /* Canales embed: SIEMPRE por extractores (sin WebView).
+     Consola ON → abre la consola de diagnóstico · Consola OFF → resuelve y reproduce directo */
+  if (type === 'embed') {
+    if (EXT_CONSOLE_MODE) _tvConsoleRun(src, seq);
+    else _tvResolveDirect(src, seq, finish);
     return;
   }
 
-  if (type === 'embed') {
-    pm.cancel = _cancelCapture;
-    _captureEmbed(src.url, seq, (m3u8, referer) => {
-      if (!pm || pm.seq !== seq) return;
-      if (!m3u8) { console.warn('[PM] embed sin m3u8 (seq=' + seq + ') → OFFLINE'); finish(false); return; }
-      pm.playUrl = m3u8;
-      pm.referer = referer || null;
-      pm.cancel  = prepareHls(m3u8, pm.referer, (levels, take) => {
-        if (pm && pm.seq === seq) pm.takeHls = take || null;
-        finish(levels !== null, levels);
-      });
-    });
-  } else if (type === 'hls') {
+  if (type === 'hls') {
     pm.cancel = prepareHls(src.url, null, (levels, take) => {
       if (pm && pm.seq === seq) pm.takeHls = take || null;
       finish(levels !== null, levels);
@@ -4908,11 +4719,6 @@ function handleBackAction() {
     return;
   }
 
-  if (document.getElementById('embedWrapper')) {
-    closeEmbedPlayer();
-    return;
-  }
-
   showExitModal();
 }
 
@@ -4971,31 +4777,6 @@ function forceExitApp() {
   }, 150);
 }
 
-function closeEmbedPlayer() {
-  clearTimeout(window._embedTimer);
-  window._embedWaiting = null;
-  _currentStreamId++;
-  if (window._activeUrl) { _markClosed(window._activeUrl); window._activeUrl = null; }
-
-  document.getElementById('embedWrapper')?.remove();
-  const v = document.getElementById('iptv-player');
-  if (v) v.style.display = '';
-
-  setPlayerLoader('idle', MSG_START);
-  hideReconnectOverlay();
-  hideReconnectOkOverlay();
-
-  if (currentMode === 'event') {
-    currentMode  = null; _updateNowPlayingInfo();
-    currentEvent = null;
-    document.querySelectorAll('.event-item').forEach(el => el.classList.remove('now-playing'));
-    document.querySelectorAll('.channel-btn').forEach(el => el.classList.remove('now-playing'));
-  } else if (currentMode === 'channel') {
-    currentMode = null; _updateNowPlayingInfo();
-    document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
-    currentChannel = null;
-  }
-}
 </script>
 <script>
 
@@ -5028,74 +4809,14 @@ function handleLogout() {
   document.getElementById('loginOverlay').classList.remove('hidden');
 }
 
-window.onM3u8Intercepted = function(m3u8Url, referer) {
-  if (!m3u8Url || !m3u8Url.includes('.m3u8')) return;
-  console.log('[Intercept] recibido:', m3u8Url, '| Referer:', referer || '-', '| esperando=' + (window._embedWaiting ? '#' + window._embedWaiting.id : 'no'));
-  if (window._ignoreM3u8Intercept) return;
-
-  const waiting = window._embedWaiting;
-  if (!waiting) {
-    console.debug('[Intercept] Ignorado (ningún embed esperando):', m3u8Url);
-    return;
-  }
-  if (!pm || waiting.sid !== pm.seq) {
-    console.log('[Intercept] Ignorado (embed #' + waiting.id + ' ya no es el actual):', m3u8Url);
-    return;
-  }
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(referer || '')) {
-    console.debug('[Intercept] Ignorado (petición del propio reproductor):', m3u8Url);
-    return;
-  }
-  if (window._lastInterceptedM3u8 === m3u8Url) {
-    console.log('[Intercept] Duplicado ignorado:', m3u8Url);
-    return;
-  }
-  if (_isFromPrevEmbed(referer, waiting.url)) {
-    console.log('[Intercept] Ignorado (viene del embed anterior):', m3u8Url, '| Referer:', referer);
-    return;
-  }
-  if (waiting.candidate) {
-    console.debug('[Intercept] Ignorado (embed #' + waiting.id + ' ya tiene candidato):', m3u8Url);
-    return;
-  }
-  waiting.candidate = m3u8Url;
-
-  console.log('[Intercept] Candidato (primero) para embed #' + waiting.id + ':', m3u8Url, '| Referer:', referer);
-  clearTimeout(window._m3u8InterceptDebounce);
-  window._m3u8InterceptDebounce = setTimeout(() => {
-    if (window._embedWaiting !== waiting || !pm || waiting.sid !== pm.seq) {
-      console.log('[Intercept] Descartado al vencer el debounce (el embed cambió):', m3u8Url);
-      return;
-    }
-    _processInterceptedM3u8(m3u8Url, referer);
-  }, M3U8_INTERCEPT_DEBOUNCE_MS);
-};
-
-function _processInterceptedM3u8(m3u8Url, referer) {
-  const waiting = window._embedWaiting;
-  if (!waiting) return;
-  window._embedWaiting = null;
-  window._lastInterceptedM3u8 = m3u8Url;
-  clearTimeout(window._embedTimer);
-  _captureGuard(false);
-  if (waiting.host) _embedSbSave(waiting.host, !!waiting.sandbox);
-  console.log('[Intercept] Capturado m3u8:', m3u8Url, '| Referer:', referer);
-
-  document.getElementById('embedWrapper')?.remove();
-  _markClosed(waiting.url);
-  window._activeUrl = null;
-
-  if (typeof waiting.onCaptured === 'function') waiting.onCaptured(m3u8Url, referer);
-}
-
 
 /* ═══════════════════════════════════════════════════════════════════
    CONSOLA DE DIAGNÓSTICO DE EMBEDS (extractores)  — copiada de la de películas
-   Con EXT_CONSOLE_MODE = true, al elegir un canal embed NO se usa el WebView:
-   se resuelve con extractores.js (repo Etelio79/extractores) y se abre una consola
-   que muestra qué devolvió cada petición. Si el extractor falla, muestra lo que
-   devuelve la página (HTML, m3u8, iframes, scripts). Con EXT_CONSOLE_MODE = false
-   todo funciona exactamente como antes (WebView).
+   Los canales embed se resuelven SIEMPRE con extractores.js (repo Etelio79/extractores);
+   ya no existe captura por WebView.
+   EXT_CONSOLE_MODE = true  → abre la consola: muestra qué devolvió cada petición y, si el
+                              extractor falla, lo que devuelve la página. Botones: Cerrar, Copiar, Reproducir.
+   EXT_CONSOLE_MODE = false → resuelve y reproduce directo, sin consola.
    ═══════════════════════════════════════════════════════════════════ */
 const JSD_BASE    = 'https://cdn.jsdelivr.net/gh/Etelio79/extractores@main/';
 const VERSION_URL = JSD_BASE + 'version.json';
@@ -5335,10 +5056,10 @@ function _tvConsoleEl() {
     b.addEventListener('blur', () => { b.style.borderColor = '#3b4d75'; b.style.background = '#18243f'; });
     return b;
   };
-  const bClose = mk('tvDbgClose', 'Cerrar'), bCopy = mk('tvDbgCopy', 'Copiar'), bPlay = mk('tvDbgPlay', 'Reproducir'), bWv = mk('tvDbgWv', 'WebView'), bDump = mk('tvDbgDump', 'Volcar');
+  const bClose = mk('tvDbgClose', 'Cerrar'), bCopy = mk('tvDbgCopy', 'Copiar'), bPlay = mk('tvDbgPlay', 'Reproducir');
   const st = document.createElement('span'); st.id = 'tvDbgState'; st.style.cssText = 'font:18px sans-serif;color:#7fe3a0;';
   const title = document.createElement('span'); title.id = 'tvDbgTitle'; title.style.cssText = 'font:700 18px sans-serif;color:#f5a623;margin-left:auto;';
-  bar.append(bClose, bCopy, bPlay, bWv, bDump, st, title);
+  bar.append(bClose, bCopy, bPlay, st, title);
   const pre = document.createElement('pre'); pre.id = 'tvDbgTxt';
   pre.style.cssText = 'margin:0;padding:16px 22px;flex:1 1 auto;overflow:auto;font:18px/1.35 monospace;white-space:pre-wrap;word-break:break-all;';
   el.append(bar, pre);
@@ -5348,8 +5069,6 @@ function _tvConsoleEl() {
   bClose.addEventListener('click', () => _tvConsoleClose());
   bCopy.addEventListener('click', () => { _copyText(pre.textContent).then(ok => flash(ok ? '✓ Copiado' : '✗ No se pudo copiar', ok)); });
   bPlay.addEventListener('click', () => _tvConsolePlay());
-  bWv.addEventListener('click', () => _tvConsoleWebView());
-  bDump.addEventListener('click', () => _tvConsoleDump());
   return el;
 }
 
@@ -5370,18 +5089,16 @@ function _tvConsoleShow(arriba) {
   const pre = document.getElementById('tvDbgTxt');
   pre.textContent = st.lines.join('\n');
   pre.scrollTop = arriba ? 0 : pre.scrollHeight;
-  const bPlay = document.getElementById('tvDbgPlay'), bWv = document.getElementById('tvDbgWv');
+  const bPlay = document.getElementById('tvDbgPlay');
   const puedeReproducir = !!st.play && !st.busy;
   bPlay.disabled = !puedeReproducir; bPlay.textContent = puedeReproducir ? 'Reproducir' : 'Reproducir ✗'; bPlay.style.opacity = puedeReproducir ? '1' : '0.4';
-  bWv.disabled = st.busy; bWv.style.opacity = st.busy ? '0.4' : '1';
-  const bDump = document.getElementById('tvDbgDump'); bDump.disabled = st.busy; bDump.style.opacity = st.busy ? '0.4' : '1';
   if (!st.focused) { st.focused = true; try { document.getElementById('tvDbgClose').focus(); } catch (_) {} }
   if (!st.busy && !st.focusedDone) { st.focusedDone = true; try { (puedeReproducir ? bPlay : document.getElementById('tvDbgClose')).focus(); } catch (_) {} }
 }
 
 /* Resuelve el canal con extractores y abre la consola (reemplaza la captura por WebView) */
 function _tvConsoleRun(src, seq) {
-  const st = { src, seq, host: _tvHost(src.url), lines: [], play: null, via: '', busy: true, cancelled: false, focused: false, focusedDone: false, wv: false };
+  const st = { src, seq, host: _tvHost(src.url), lines: [], play: null, via: '', busy: true, cancelled: false, focused: false, focusedDone: false };
   _tvDiag = st;
   pm.cancel = () => { st.cancelled = true; _tvConsoleHide(); if (_tvDiag === st) _tvDiag = null; };
   const dlog = m => { st.lines.push(String(m)); console.log('[Diag]', m); if (!st.cancelled && _tvDiag === st) _tvConsoleShow(false); };
@@ -5404,75 +5121,9 @@ function _tvConsoleRun(src, seq) {
   })();
 }
 
-/* Botón Volcar: baja la página del embed y la siguiente (stream.php o iframe), con tiempos y fragmentos clave */
-function _tvConsoleDump() {
-  const st = _tvDiag;
-  if (!st || st.busy || !pm || pm.seq !== st.seq) return;
-  st.busy = true;
-  const dlog = m => { st.lines.push(String(m)); if (!st.cancelled && _tvDiag === st) _tvConsoleShow(false); };
-  dlog('\n══════ Volcado de páginas (2 niveles) ══════');
-  (async () => {
-    const get = async (url, ref) => {
-      const t0 = Date.now();
-      let r = null;
-      try { r = await Promise.race([nativeFetch(url, { headers: { 'User-Agent': _TV_UA, Accept: 'text/html,*/*;q=0.8', 'Accept-Language': 'es-MX,es;q=0.9', Referer: ref } }), _tvTimeout(30000)]); }
-      catch (e) { dlog('Error: ' + ((e && e.message) || e)); return ''; }
-      if (!r) { dlog('Sin respuesta en 30 s: ' + url); return ''; }
-      let tx = ''; try { tx = (await r.text()) || ''; } catch (_) {}
-      dlog('GET ' + url + '\n  HTTP ' + r.status + ' · ' + tx.length + ' B · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
-      return tx;
-    };
-    const url1 = st.src.url;
-    const h1 = await get(url1, _tvOrigin(url1) + '/');
-    if (st.cancelled) return;
-    if (h1) dlog(_tvHints(h1, url1));
-    const limpio = h1.replace(/\\\//g, '/');
-    let next = (limpio.match(/https?:\/\/[^"'\s<>\\)]+stream\.php[^"'\s<>\\)]*/i) || [])[0] || (h1.match(/<iframe[^>]+src=["']([^"']+)["']/i) || [])[1] || '';
-    try { next = next ? new URL(next, url1).href : ''; } catch (_) { next = ''; }
-    if (next && next !== url1) {
-      dlog('\n── Siguiente nivel ──');
-      const h2 = await get(next, url1);
-      if (!st.cancelled && h2) dlog(_tvHints(h2, next));
-    } else dlog('\n(no encontré una segunda URL literal: stream.php o iframe; mira los fragmentos de arriba para ver cómo se arma)');
-    if (st.cancelled) return;
-    st.busy = false;
-    _tvConsoleShow(true);
-  })();
-}
-
-/* Botón WebView: prueba el método anterior sobre el mismo embed, para comparar con el extractor */
-function _tvConsoleWebView() {
-  const st = _tvDiag;
-  if (!st || st.busy || !pm || pm.seq !== st.seq) return;
-  st.busy = true; st.wv = true;
-  st.lines.push('\n══════ WebView (método anterior) ══════\nAbriendo el embed oculto y esperando el m3u8…');
-  _tvConsoleShow(false);
-  _captureEmbed(st.src.url, st.seq, (m3u8, referer) => {
-    if (st.cancelled || _tvDiag !== st) return;
-    (async () => {
-      if (!m3u8) {
-        st.lines.push('WebView: no capturó ningún m3u8.');
-      } else {
-        const o = referer ? _tvOrigin(referer) : '';
-        const hd = referer ? Object.assign({ Referer: referer }, o ? { Origin: o } : {}) : {};
-        st.play = { url: m3u8, kind: 'm3u8', headers: hd }; st.via = 'webview';
-        st.lines.push('WebView capturó:\n' + m3u8 + '\nReferer: ' + (referer || '(ninguno)'));
-        await _tvVerifyM3u8(st.play, m => st.lines.push(String(m)), st);
-      }
-      if (st.cancelled || _tvDiag !== st) return;
-      st.busy = false; st.focusedDone = false;
-      _tvConsoleShow(true);
-    })();
-  });
-}
-
-/* Botón Reproducir: sigue el flujo normal (verifica con hls.js, muestra calidades y reproduce) */
-function _tvConsolePlay() {
-  const st = _tvDiag;
-  if (!st || !st.play || st.busy || !pm || pm.seq !== st.seq) return;
-  const pl = st.play, seq = st.seq;
-  _tvConsoleHide();
-  _tvDiag = null;
+/* Enlace ya resuelto por el extractor → mismo flujo de cualquier canal: verificar, calidades y reproducir */
+function _pmPlayResolved(pl, seq) {
+  if (!pm || pm.seq !== seq) return;
   if (window.SSNative && window.SSNative.setHeaders) {
     try { window.SSNative.setHeaders(pl.url, JSON.stringify(pl.headers || {})); } catch (e) { console.warn('[Proxy] setHeaders falló:', e); }
   }
@@ -5492,12 +5143,36 @@ function _tvConsolePlay() {
   }
 }
 
+/* Consola OFF: resuelve con el extractor y sigue directo (sin consola, sin WebView) */
+function _tvResolveDirect(src, seq, finish) {
+  let cancelado = false;
+  pm.cancel = () => { cancelado = true; };
+  (async () => {
+    let r = null;
+    try { r = await _resolveLink({ url: src.url, referer: '' }, m => console.log('[Extractor]', m)); }
+    catch (e) { console.warn('[Extractor] error:', e); }
+    if (cancelado || !pm || pm.seq !== seq) return;
+    if (!r || !r.play) { console.warn('[PM] el extractor no devolvió enlace (seq=' + seq + ') → OFFLINE'); finish(false); return; }
+    _pmPlayResolved(r.play, seq);
+  })();
+}
+
+/* Botón Reproducir de la consola */
+function _tvConsolePlay() {
+  const st = _tvDiag;
+  if (!st || !st.play || st.busy || !pm || pm.seq !== st.seq) return;
+  const pl = st.play, seq = st.seq;
+  _tvConsoleHide();
+  _tvDiag = null;
+  _pmPlayResolved(pl, seq);
+}
+
 /* Teclas del panel (capturan todo mientras está abierto, para que no actúe el modal de abajo) */
 document.addEventListener('keydown', e => {
   if (!_tvConsoleOpen()) return;
   const stop = () => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
   const pre = document.getElementById('tvDbgTxt');
-  const btns = ['tvDbgClose', 'tvDbgCopy', 'tvDbgPlay', 'tvDbgWv', 'tvDbgDump'].map(id => document.getElementById(id)).filter(b => b && !b.disabled);
+  const btns = ['tvDbgClose', 'tvDbgCopy', 'tvDbgPlay'].map(id => document.getElementById(id)).filter(b => b && !b.disabled);
   if (['Escape', 'Backspace'].includes(e.key) || e.keyCode === 4) { stop(); _tvConsoleClose(); }
   else if (e.key === 'Enter' || e.key === ' ') { stop(); (btns.includes(document.activeElement) ? document.activeElement : btns[0]).click(); }
   else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -5524,7 +5199,7 @@ function _setConsoleMode(on) {
   EXT_CONSOLE_MODE = !!on;
   try { localStorage.setItem('ss_ext_console', EXT_CONSOLE_MODE ? '1' : '0'); } catch (_) {}
   _paintConsoleToggle();
-  try { showToast(EXT_CONSOLE_MODE ? 'Consola activada: los embeds se resuelven con extractores' : 'Consola desactivada: los embeds usan WebView', 'info', 2400); } catch (_) {}
+  try { showToast(EXT_CONSOLE_MODE ? 'Consola ON: los embeds abren la consola de diagnóstico' : 'Consola OFF: los embeds se reproducen directo con extractores', 'info', 2400); } catch (_) {}
 }
 function _consoleToggleBtn() {
   let b = document.getElementById('extConsoleToggle');
