@@ -38,7 +38,6 @@
 }
 html, body {
   width:100%; height:100%; overflow:hidden;
-  /* IMAGEN DE FONDO EN TODA LA PANTALLA (DETRÁS DE TODO) */
   background: linear-gradient(rgba(8,13,20,0.4), rgba(8,13,20,0.8)), url('fondo_canales.webp?v=4') center/cover no-repeat fixed #06090e;
   color:var(--text);
   font-family:'Rajdhani',sans-serif;
@@ -73,7 +72,6 @@ html, body {
 
 @keyframes rotating { to { transform:rotate(360deg); } }
 
-/* ══════════ Categorías ══════════ */
 .category-btn {
   flex-shrink:0; padding:7px 16px;
   background:var(--surface); color:var(--text);
@@ -97,7 +95,6 @@ html, body {
 
 .channels-list-header { display:none; }
 
-/* ══════════ Canal ══════════ */
 .channel-item {
   display:flex; align-items:center; gap:12px;
   padding:12px 14px; margin-bottom:6px;
@@ -190,7 +187,6 @@ html, body {
   letter-spacing:1px; padding:24px; text-align:center;
 }
 
-/* ══════════ Evento ══════════ */
 .event-item {
   display:flex;
   flex-direction:column;
@@ -962,7 +958,6 @@ video::-internal-media-controls-overlay-cast-button { display:none !important; o
   border-bottom: 1px solid rgba(255,255,255,0.05);
   border-right: none;
   gap: 4px;
-  /* BARRA SUPERIOR SEMI-TRANSPARENTE */
   background: rgba(15,19,25,0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -1024,7 +1019,6 @@ video::-internal-media-controls-overlay-cast-button { display:none !important; o
 .nav-btn.active svg,
 .nav-btn:focus-visible svg { stroke: #fff; }
 
-/* PANELES IZQUIERDOS TRANSPARENTES */
 .app-section {
   position: fixed;
   top: var(--tv-topbar-h);
@@ -1035,7 +1029,6 @@ video::-internal-media-controls-overlay-cast-button { display:none !important; o
   background: transparent;
 }
 
-/* COLUMNA DEL REPRODUCTOR TRANSPARENTE */
 #tvPlayerCol {
   display: flex !important;
   position: fixed;
@@ -1049,7 +1042,6 @@ video::-internal-media-controls-overlay-cast-button { display:none !important; o
   padding: clamp(10px, 2vh, 20px) clamp(4px, 0.8vw, 10px);
 }
 
-/* REPRODUCTOR MANTIENE SU PROPIO FONDO */
 #playerContainerInline {
   position: relative;
   flex: 0 0 auto;
@@ -1637,15 +1629,6 @@ body.fullscreen-active #ssToastBox {
   box-shadow: 0 4px 15px rgba(255, 23, 68, 0.4);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   AJUSTES: FOCO (borde celeste) · PÍLDORAS 65% · REPRODUCTOR CENTRADO
-   Foco  = solo borde celeste con brillo (el fondo no cambia).
-   Activo = verde como antes (categoría, canal reproduciendo, pestaña).
-   Activo + foco = verde con borde celeste encima.
-   Los modales (calidad / salida) no se tocan.
-═══════════════════════════════════════════════════════════════ */
-
-/* — Pestañas superiores — */
 .nav-btn:focus-visible:not(.active) {
   background: transparent;
   color: var(--text-sub);
@@ -1657,7 +1640,6 @@ body.fullscreen-active #ssToastBox {
   box-shadow: inset 0 0 0 3px var(--accent2), 0 0 14px rgba(0,176,255,.6);
 }
 
-/* — Categorías — */
 .category-btn:focus-visible:not(.active) {
   background: transparent;
   color: var(--text) !important;
@@ -1667,7 +1649,6 @@ body.fullscreen-active #ssToastBox {
   box-shadow: inset 0 0 0 3px var(--accent2), 0 0 14px rgba(0,176,255,.55);
 }
 
-/* — Canales — */
 .channel-item:focus-visible:not(.active) {
   background: transparent;
 }
@@ -1675,7 +1656,6 @@ body.fullscreen-active #ssToastBox {
   box-shadow: inset 0 0 0 3px var(--accent2), 0 0 14px rgba(0,176,255,.55);
 }
 
-/* — Eventos: fila del evento — */
 .event-item:focus,
 .event-item.now-playing:focus { border-left-color: var(--accent2); }
 .event-item:focus-visible {
@@ -1684,7 +1664,6 @@ body.fullscreen-active #ssToastBox {
   box-shadow: 0 0 0 4px rgba(0,176,255,.25), 0 0 14px rgba(0,176,255,.45) !important;
 }
 
-/* — Eventos: botones de canal dentro del acordeón — */
 .channel-btn:focus:not(.now-playing),
 .channel-btn:focus-visible:not(.now-playing) {
   background: transparent;
@@ -1695,12 +1674,10 @@ body.fullscreen-active #ssToastBox {
   box-shadow: inset 0 0 0 3px var(--accent2), 0 0 14px rgba(0,176,255,.55);
 }
 
-/* — Reproductor enfocado (antes anillo verde) — */
 #playerContainerInline:focus-visible {
   box-shadow: inset 0 0 0 3px var(--accent2), 0 0 14px rgba(0,176,255,.55);
 }
 
-/* — Píldoras de Eventos al 65% — */
 .ev-top-bar { height: 26px; }
 .ev-top-bar .spill {
   gap: 4px;
@@ -1710,7 +1687,6 @@ body.fullscreen-active #ssToastBox {
 }
 .ev-top-bar .spill .dot { width: 5px; height: 5px; }
 
-/* — Reproductor: bloque centrado verticalmente (un poco más arriba del centro) — */
 #tvPlayerCol {
   justify-content: center;
   padding-bottom: clamp(24px, 6vh, 64px);
@@ -1719,12 +1695,9 @@ body.fullscreen-active #ssToastBox {
 #nowPlayingInfo.show { visibility: visible; }
 body.fullscreen-active #tvPlayerCol { justify-content: flex-start; padding-bottom: 0; }
 
-/* — Arranque: Canales visible y Usuario oculto desde el primer pintado.
-     (showSection sigue alternándolos con estilo inline.) — */
 #section-usuario { display: none; }
 #section-canales { display: flex; }
 
-/* — Arranque con sesión guardada: logo + círculo en vez del teclado — */
 .login-boot {
   display: none;
   flex-direction: column;
@@ -1739,7 +1712,6 @@ html.ss-boot .login-boot   { display: flex; }
 html.ss-boot .login-header,
 html.ss-boot .login-body   { display: none; }
 
-/* — Pantalla completa: diseño negro inmediato antes de pedirla al sistema — */
 body.fs-pending .app-section,
 body.fs-pending .logo-footer,
 body.fs-pending .loader-overlay { display: none !important; }
@@ -1755,8 +1727,6 @@ body.fs-pending #playerContainerInline {
 }
 body.fs-pending #nowPlayingInfo { display: none !important; }
 
-/* — Reproductor: sin el aro de foco por defecto de Android (amarillo + blanco).
-     El foco en modo normal sigue siendo el anillo celeste; en pantalla completa no se dibuja ninguno. — */
 #playerContainerInline:focus,
 #playerContainerInline:focus-visible { outline: none !important; }
 body.fullscreen-active #playerContainerInline,
@@ -1764,16 +1734,39 @@ body.fs-pending #playerContainerInline { box-shadow: none !important; outline: n
 #playerContainerInline:fullscreen { box-shadow: none !important; outline: none !important; }
 #playerContainerInline:-webkit-full-screen { box-shadow: none !important; outline: none !important; }
 
-/* — Arranque suave: desvanecido del logo y sin loader doble durante el arranque — */
 .login-overlay { transition: opacity .25s ease; }
 .login-overlay.fading { opacity: 0; pointer-events: none; }
 html.ss-boot .loader-overlay { display: none !important; }
+
+/* Botón flotante para extraer eventos */
+.btn-extraer-eventos {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: 900;
+  cursor: pointer;
+  z-index: 20;
+  box-shadow: 0 4px 15px rgba(0,204,68,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition: transform .15s;
+}
+.btn-extraer-eventos:focus-visible,
+.btn-extraer-eventos:hover { transform: scale(1.08); }
+.btn-extraer-eventos:disabled { opacity: .55; cursor: progress; }
 </style>
 </head>
 <body>
 <script>
-/* Si hay sesión guardada válida (mismas reglas que readSession), el login
-   arranca en modo "cargando" (logo + círculo) en vez de mostrar el teclado. */
 (function () {
   try {
     var raw = localStorage.getItem('ss_session_v2');
@@ -1897,6 +1890,8 @@ html.ss-boot .loader-overlay { display: none !important; }
       </div>
     </div>
 
+    <button id="btnExtraerEventos" class="btn-extraer-eventos" onclick="extraerEventosBoton()" title="Extraer eventos">⟳</button>
+
   </div>
 </div>
 
@@ -2013,8 +2008,8 @@ html.ss-boot .loader-overlay { display: none !important; }
 <script src="crypto-js.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="eventos.js"></script>
 <script>
-/* ── Arranque suave: splash nativo + desvanecido del overlay de login ── */
 var _splashHidden = false;
 function _nativeSplash() {
   try { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen; } catch (_) { return null; }
@@ -2082,7 +2077,7 @@ function hideLoginOverlay(waitChannels) {
         _hidingOverlay = false;
       };
       if (!_splashHidden && _nativeSplash()) {
-        finish();            /* el overlay se quita debajo del splash; el splash se desvanece */
+        finish();
         _hideNativeSplash();
       } else {
         o.classList.add('fading');
@@ -2095,11 +2090,6 @@ function hideLoginOverlay(waitChannels) {
 </script>
 
 <script>
-/* ════════════════════════════════════════════════════════════════
-   SPORTSTREAM — APP UNIFICADA
-   Motor: hls.js (HLS y embeds) · mpegts.js (FLV) · video nativo
-════════════════════════════════════════════════════════════════ */
-
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyCjphbkwpNazG3vCxoxiNm4NV-0r-8R8i4",
   authDomain:        "sportstream-cc47a.firebaseapp.com",
@@ -2120,7 +2110,6 @@ const SESSION_TTL_MS           = 24 * 60 * 60 * 1000;
 
 const CFG_VER_KEY = 'ss_cfg_ver_v1';
 const CFG_CH_KEY  = 'ss_cfg_canales_v1';
-const CFG_EV_KEY  = 'ss_cfg_eventos_v1';
 
 const ORDEN_BASE = ['Cinemania 24/7','Cine Exclusivo','Cine Premium','Deportes',
                     'Deportes-arg','Deportes-mex','Deportes-esp','Deportes usa',
@@ -2169,7 +2158,6 @@ let currentCategory  = '';
 let currentSession   = null;
 let lastChannelByCat = {};
 
-/* ══════════ Favoritos ══════════ */
 const FAV_CAT = 'Favoritos';
 const FAV_KEY = 'ss_favs';
 function _favUrls() { const a = _lsGet(FAV_KEY); return Array.isArray(a) ? a : []; }
@@ -2859,10 +2847,6 @@ function _applyAutoLevelCapping() {
               '(pantalla:', targetH + 'px)');
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   REPRODUCCIÓN
-   ═══════════════════════════════════════════════════════════════════ */
-
 function isSafeUrl(u) {
   if (typeof u !== 'string' || !u) return false;
   try {
@@ -2889,8 +2873,6 @@ function showToast(msg, type = 'info', duration = 3500) {
     setTimeout(() => el.remove(), 240);
   }, duration);
 }
-
-/* ── Overlays del reproductor ─────────────────────────────────── */
 
 function showOfflineOverlay() {
   document.getElementById('bufferSpinner')?.classList.remove('visible');
@@ -3092,7 +3074,6 @@ function _playHls(ctx, streamId) {
       }
     });
     if (pre) {
-      // Instancia ya verificada: el manifiesto está parseado, solo falta adjuntar y empezar a cargar.
       hls.attachMedia(video);
       fsHookHls(true);
       onReady();
@@ -3192,10 +3173,6 @@ window.addEventListener('online', () => {
     }, 800);
   }
 });
-
-/* ═══════════════════════════════════════════════════════════════════
-   ANTES DE REPRODUCIR: verificación + modal "Seleccionar calidad"
-   ═══════════════════════════════════════════════════════════════════ */
 
 function qualityLabelFromHeight(height) {
   if (!height) return 'HD';
@@ -3394,8 +3371,6 @@ function openPlayModal(src) {
     _pmRender(online, levels);
   };
 
-  /* Canales embed: SIEMPRE por extractores (sin WebView).
-     Consola ON → abre la consola de diagnóstico · Consola OFF → resuelve y reproduce directo */
   if (type === 'embed') {
     if (EXT_CONSOLE_MODE) _tvConsoleRun(src, seq);
     else _tvResolveDirect(src, seq, finish);
@@ -3414,7 +3389,6 @@ function openPlayModal(src) {
   }
 }
 
-/* ══════════ Ícono cámara de video ══════════ */
 const PM_VIDEO_SVG =
   '<svg viewBox="0 0 576 512" width="18" height="18" fill="currentColor" aria-hidden="true">' +
     '<path d="M0 128C0 92.7 28.7 64 64 64H320c35.3 0 64 28.7 64 64V384c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V128zM559.1 99.8c10.4 5.6 16.9 16.4 16.9 28.2V384c0 11.8-6.5 22.6-16.9 28.2s-22.9 5.7-32.6-1.1l-96-64c-8.4-5.6-13.5-15.1-13.5-25.3V190.2c0-10.2 5.1-19.7 13.5-25.3l96-64c9.8-6.8 22.3-6.7 32.6-1.1z"/>' +
@@ -4073,13 +4047,10 @@ function showLoginMessage(msg, isError) {
   kbShowMsg(msg, isError);
 }
 
-/* ════════════════════════════════════════════════════════════════
-   CANALES Y EVENTOS
-   ════════════════════════════════════════════════════════════════ */
 let _configUnsub     = null;
 let _syncIsInit      = false;
 let _lastRemoteVer   = {};
-const _syncBusy      = { canales:false, eventos:false };
+const _syncBusy      = { canales:false };
 
 function _lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch(_) { return null; } }
 function _lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(_) {} }
@@ -4101,9 +4072,9 @@ function startConfigSync(opts = {}) {
   if (!opts.force) {
     const cc = _lsGet(CFG_CH_KEY);
     if (cc && cc.lista) applyChannelsList(cc.lista, cc.orden);
-    const ce = _lsGet(CFG_EV_KEY);
-    if (ce) loadEvents(ce);
   }
+
+  loadEvents();
 
   _configUnsub = db.collection('config').doc('version').onSnapshot(
     snap => _onVersion(snap.exists ? (snap.data() || {}) : {}),
@@ -4119,9 +4090,7 @@ function _onVersion(v) {
   _lastRemoteVer = v || {};
   const local = _lsGet(CFG_VER_KEY) || {};
   const rc = Number(_lastRemoteVer.canales) || 0;
-  const re = Number(_lastRemoteVer.eventos) || 0;
   if (local.canales === undefined || local.canales !== rc || !_lsGet(CFG_CH_KEY)) _fetchCanales(rc);
-  if (local.eventos === undefined || local.eventos !== re || !_lsGet(CFG_EV_KEY)) _fetchEventos(re);
 }
 
 async function _fetchCanales(rc) {
@@ -4148,29 +4117,6 @@ async function _fetchCanales(rc) {
     _syncBusy.canales = false;
   }
   if (ok && (Number(_lastRemoteVer.canales) || 0) !== rc) _onVersion(_lastRemoteVer);
-}
-
-async function _fetchEventos(re) {
-  if (_syncBusy.eventos) return;
-  _syncBusy.eventos = true;
-  let ok = false;
-  try {
-    const snap = await db.collection('config').doc('eventos').get();
-    const d    = snap.exists ? (snap.data() || {}) : {};
-    const doc  = { eventos: Array.isArray(d.eventos) ? d.eventos : [], date: d.date || d.fecha || '' };
-    _lsSet(CFG_EV_KEY, doc);
-    const ver = _lsGet(CFG_VER_KEY) || {};
-    ver.eventos = re;
-    _lsSet(CFG_VER_KEY, ver);
-    loadEvents(doc);
-    ok = true;
-  } catch (err) {
-    console.warn('[Config] eventos:', err && err.message);
-    if (!eventsLoaded) loadEvents();
-  } finally {
-    _syncBusy.eventos = false;
-  }
-  if (ok && (Number(_lastRemoteVer.eventos) || 0) !== re) _onVersion(_lastRemoteVer);
 }
 
 function applyChannelsList(lista, orden) {
@@ -4411,6 +4357,18 @@ function applyEventsData(fromCache=false) {
   };
   events.sort((a, b) => toLocalMin(a.time) - toLocalMin(b.time));
 
+  if (events[0] && events[0].time_utc) {
+    try {
+      const d = new Date(events[0].time_utc);
+      if (!isNaN(d.getTime())) {
+        const txt = d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+        const formatted = txt.replace(',','').replace(/\s+/g,' ').trim();
+        const hd2 = document.getElementById('headerDate2');
+        if (hd2) hd2.textContent = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+      }
+    } catch(_) {}
+  }
+
   let ch=0; events.forEach(e=>{ ch+=(e.channels||[]).length; });
   const se = document.getElementById('statEvents');
   const sc = document.getElementById('statChannels');
@@ -4437,88 +4395,81 @@ async function loadEvents(prefetched) {
   if (!hadList) {
     document.getElementById('eventsList').innerHTML =
       '<div class="ev-status-msg"><div class="spin-anim"></div><span>Cargando eventos...</span></div>';
-    setEvStatus(false,'Conectando...');
+    setEvStatus(false, 'Conectando...');
   }
 
-  try {
-    let data = prefetched;
-    if (!data) {
-      const snap = await db.collection('config').doc('eventos').get();
-      if (!snap.exists) { const er = new Error('Vuelva mas tarde'); er.vacio = true; throw er; }
-      data = snap.data() || {};
-    }
+  let evs = null;
+  if (prefetched && Array.isArray(prefetched.eventos)) evs = prefetched.eventos;
+  if (!evs) evs = loadEventsCache();
 
-    const rawList = Array.isArray(data.eventos) ? data.eventos : [];
-    if (!rawList.length) { const er = new Error('vuelva mas tarde'); er.vacio = true; throw er; }
-
-    events = rawList.map(ev => ({
-      time    : ev.time    || ev.tiempo  || '00:00',
-      match   : ev.match   || ev['fósforo'] || ev.partido || ev.titulo || ev.name || '',
-      league  : ev.league  || ev.liga    || ev.torneo || '',
-      flag    : ev.flag    || ev.bandera || '⚽',
-      channels: (ev.channels || ev.canales || []).map(ch => {
-        if (typeof ch === 'string') return { name:'Canal', href:ch };
-        return { name: ch.name||ch.nombre||'Canal', href: ch.href||ch.url||ch.link||ch.embed||'' };
-      }).filter(ch => ch.href && ch.href.startsWith('http'))
-    })).filter(ev => ev.match && ev.match.length > 2);
-
-    const fecha = data.date || data.fecha || '';
-    if (fecha) {
-      const clean = fecha.replace(',','').trim();
-      const formatted = clean.charAt(0).toUpperCase() + clean.slice(1);
-      const hd2 = document.getElementById('headerDate2');
-      if (hd2) hd2.textContent = formatted;
-    }
-
-    applyEventsData(false);
-
-    if (currentMode === 'event' && currentEvent) {
-      const i = events.findIndex(e => e.match === currentEvent.match && e.time === currentEvent.time);
-      if (i >= 0) {
-        currentEvent = events[i];
-        const evItem = document.querySelector(`.event-item[data-idx="${i}"]`);
-        evItem?.classList.add('now-playing');
-        if (evItem && _ctx?.evCh?.href) {
-          evItem.querySelectorAll('.channel-btn').forEach(b => {
-            b.classList.toggle('now-playing', b.dataset.chHref === _ctx.evCh.href);
-          });
-        }
-      }
-    }
-    if (refocusIdx != null) {
-      document.querySelector(`#section-eventos .event-item[data-idx="${refocusIdx}"]`)
-        ?.focus({ preventScroll: true });
-    }
+  if (!evs || !evs.length) {
+    events = [];
+    eventsLoaded = false;
+    setEvStatus(false, 'Sin cargar');
+    const se2 = document.getElementById('statEvents2');
+    const sc2 = document.getElementById('statChannels2');
+    if (se2) se2.textContent = '0';
+    if (sc2) sc2.textContent = '0';
+    document.getElementById('eventsList').innerHTML =
+      '<div class="ev-status-msg"><span style="font-size:2rem">📭</span><span>Pulsa ⟳ para extraer eventos</span></div>';
     return;
+  }
 
-  } catch(e) {
-    console.warn('Eventos:', e.message);
+  events = evs;
+  applyEventsData(false);
 
-    if (!e.vacio) {
-      const cached = loadEventsCache();
-      if (cached && cached.length > 0) {
-        events = cached;
-        applyEventsData(true);
-        return;
-      }
-    } else {
-      events = [];
-      eventsLoaded = false;
-    }
-
-    setEvStatus(false,'Sin eventos');
-    document.getElementById('eventsList').innerHTML = `
-      <div class="ev-status-msg">
-        <span style="font-size:2rem">⚠️</span>
-        <span>No hay eventos disponibles</span>
-        <span style="font-size:.7rem;color:var(--text-sub)">${e.message}</span>
-      </div>`;
+  if (refocusIdx != null) {
+    document.querySelector(`#section-eventos .event-item[data-idx="${refocusIdx}"]`)
+      ?.focus({ preventScroll: true });
   }
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ACORDEÓN DE EVENTOS
-   ════════════════════════════════════════════════════════════════ */
+async function extraerEventosBoton() {
+  const btn = document.getElementById('btnExtraerEventos');
+  if (!btn || btn.disabled) return;
+  if (typeof window.getEventos !== 'function') {
+    showToast('eventos.js no cargado', 'error');
+    return;
+  }
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = '⏳';
+  try {
+    const raw = await window.getEventos();
+    if (!Array.isArray(raw) || !raw.length) {
+      showToast('No se encontraron eventos', 'warn');
+      return;
+    }
+    const mapped = raw.map(ev => ({
+      time:     ev.time || '00:00',
+      time_utc: ev.time_utc || '',
+      match:    ev.match || '',
+      league:   ev.league || '',
+      flag:     ev.flag || '⚽',
+      channels: (ev.channels || []).map(ch => ({
+        name:    ch.name || 'Canal',
+        href:    ch.url || ch.href || '',
+        quality: ch.quality || ''
+      })).filter(c => c.href && c.href.startsWith('http'))
+    })).filter(ev => ev.match && ev.match.length > 2);
+
+    if (!mapped.length) {
+      showToast('Eventos sin canales válidos', 'warn');
+      return;
+    }
+    events = mapped;
+    _expandedEventKey = '';
+    applyEventsData(false);
+    showToast(mapped.length + ' eventos cargados', 'success');
+  } catch (e) {
+    console.error('[Extraer]', e);
+    showToast('Error al extraer eventos', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
 function _eventKey(ev) {
   return (ev?.match || '') + '|' + (ev?.time || '');
 }
@@ -4603,7 +4554,7 @@ function renderEvents(evs) {
       btn.className = 'channel-btn';
       btn.tabIndex = 0;
       btn.dataset.chHref = ch.href;
-      const q = ch.name.match(/(\d{3,4}p)/i)?.[1]||'WEB';
+      const q = (ch.quality || '').replace(/^\s*calidad\s*:?\s*/i, '').trim() || ch.name.match(/(\d{3,4}p)/i)?.[1] || 'WEB';
       const n = ch.name.replace(/\(?(Ads|HD|720p|1080p)\)?/gi,'').trim()||ch.name;
       btn.innerHTML = `
         <div class="ch-icon">${chIcon(ch.name)}</div>
@@ -4810,14 +4761,6 @@ function handleLogout() {
 }
 
 
-/* ═══════════════════════════════════════════════════════════════════
-   CONSOLA DE DIAGNÓSTICO DE EMBEDS (extractores)  — copiada de la de películas
-   Los canales embed se resuelven SIEMPRE con extractores.js (repo Etelio79/extractores);
-   ya no existe captura por WebView.
-   EXT_CONSOLE_MODE = true  → abre la consola: muestra qué devolvió cada petición y, si el
-                              extractor falla, lo que devuelve la página. Botones: Cerrar, Copiar, Reproducir.
-   EXT_CONSOLE_MODE = false → resuelve y reproduce directo, sin consola.
-   ═══════════════════════════════════════════════════════════════════ */
 const JSD_BASE    = 'https://cdn.jsdelivr.net/gh/Etelio79/extractores@main/';
 const VERSION_URL = JSD_BASE + 'version.json';
 const SSEXT_BASE  = JSD_BASE;
@@ -4855,7 +4798,8 @@ async function nativeFetch(url, opts) {
   return new Response(noBody ? null : text, { status: r.status, headers: r.headers || {} });
 }
 
-/* ── version.json remoto: un solo número gobierna la actualización de extractores.js ── */
+window.nativeFetch = nativeFetch;
+
 let _remoteVerP = null, _remoteVerT = 0;
 function getRemoteVersion(force) {
   if (_remoteVerP && !force && Date.now() - _remoteVerT < 10 * 60 * 1000) return _remoteVerP;
@@ -4870,7 +4814,6 @@ function getRemoteVersion(force) {
   return _remoteVerP;
 }
 
-/* ── Carga de extractores.js (caché local + actualización por version.json) ── */
 let _ssExtReady = null, _ssExtLast = 0;
 window._ssExtSrc = 'ninguno';
 
@@ -4924,7 +4867,6 @@ async function _resolveLink(link, log) {
   return { ok: false, ms: 0, status: 0 };
 }
 
-/* ── Utilidades de diagnóstico ── */
 function _tvTimeout(ms) { return new Promise(r => setTimeout(() => r(null), ms)); }
 function _tvOrigin(u) { try { return new URL(u).origin; } catch (_) { return ''; } }
 function _tvHost(u) { try { return new URL(u).hostname; } catch (_) { return '?'; } }
@@ -4976,7 +4918,6 @@ function _tvHints(html, base) {
   return out.join('\n');
 }
 
-/* Qué devuelve la página del embed (se usa cuando el extractor no encuentra nada) */
 async function _tvProbePage(url, dlog, st) {
   const origen = _tvOrigin(url);
   const variantes = [['UA del extractor', _TV_UA], ['UA del WebView', navigator.userAgent]];
@@ -5000,7 +4941,6 @@ async function _tvProbePage(url, dlog, st) {
   else dlog('\nLa página no devolvió cuerpo con ninguno de los dos User-Agent.');
 }
 
-/* Comprueba que el m3u8 resuelto realmente abre, con y sin los headers que devolvió el extractor */
 async function _tvVerifyM3u8(play, dlog, st) {
   dlog('\nURL resuelta:\n' + play.url + '\nHeaders: ' + JSON.stringify(play.headers || {}));
   const pruebas = [['con headers', play.headers || {}], ['sin headers', {}]];
@@ -5024,7 +4964,6 @@ async function _tvVerifyM3u8(play, dlog, st) {
   }
 }
 
-/* ── Panel de consola (táctil y control remoto) ── */
 function _copyText(t) {
   const fallback = () => {
     try {
@@ -5096,7 +5035,6 @@ function _tvConsoleShow(arriba) {
   if (!st.busy && !st.focusedDone) { st.focusedDone = true; try { (puedeReproducir ? bPlay : document.getElementById('tvDbgClose')).focus(); } catch (_) {} }
 }
 
-/* Resuelve el canal con extractores y abre la consola (reemplaza la captura por WebView) */
 function _tvConsoleRun(src, seq) {
   const st = { src, seq, host: _tvHost(src.url), lines: [], play: null, via: '', busy: true, cancelled: false, focused: false, focusedDone: false };
   _tvDiag = st;
@@ -5121,7 +5059,6 @@ function _tvConsoleRun(src, seq) {
   })();
 }
 
-/* Enlace ya resuelto por el extractor → mismo flujo de cualquier canal: verificar, calidades y reproducir */
 function _pmPlayResolved(pl, seq) {
   if (!pm || pm.seq !== seq) return;
   if (window.SSNative && window.SSNative.setHeaders) {
@@ -5143,7 +5080,6 @@ function _pmPlayResolved(pl, seq) {
   }
 }
 
-/* Consola OFF: resuelve con el extractor y sigue directo (sin consola, sin WebView) */
 function _tvResolveDirect(src, seq, finish) {
   let cancelado = false;
   pm.cancel = () => { cancelado = true; };
@@ -5157,7 +5093,6 @@ function _tvResolveDirect(src, seq, finish) {
   })();
 }
 
-/* Botón Reproducir de la consola */
 function _tvConsolePlay() {
   const st = _tvDiag;
   if (!st || !st.play || st.busy || !pm || pm.seq !== st.seq) return;
@@ -5167,7 +5102,6 @@ function _tvConsolePlay() {
   _pmPlayResolved(pl, seq);
 }
 
-/* Teclas del panel (capturan todo mientras está abierto, para que no actúe el modal de abajo) */
 document.addEventListener('keydown', e => {
   if (!_tvConsoleOpen()) return;
   const stop = () => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
@@ -5185,7 +5119,6 @@ document.addEventListener('keydown', e => {
   else stop();
 }, true);
 
-/* ── Interruptor: Consola ON = extractor + consola · Consola OFF = WebView como antes ── */
 let EXT_CONSOLE_MODE = true;
 try { const _m = localStorage.getItem('ss_ext_console'); if (_m !== null) EXT_CONSOLE_MODE = (_m === '1'); } catch (_) {}
 
@@ -5213,7 +5146,6 @@ function _consoleToggleBtn() {
 }
 if (document.body) _consoleToggleBtn(); else document.addEventListener('DOMContentLoaded', _consoleToggleBtn);
 
-/* Tecla T o botones verde/rojo del control remoto */
 document.addEventListener('keydown', e => {
   if (e.key === 't' || e.key === 'T' || e.keyCode === 404 || e.keyCode === 403) {
     if (_tvConsoleOpen()) return;
