@@ -2416,7 +2416,7 @@ function updateTvUserTab() {
   const evEl = document.getElementById('tvProfileEventos');
   if (evEl) {
     evEl.textContent = evActivo ? '✅ Activado' : '❌ Desactivado';
-    el.style.color = evActivo ? 'var(--accent)' : 'var(--red)';
+    evEl.style.color = evActivo ? 'var(--accent)' : 'var(--red)';
   }
 }
 
@@ -3675,6 +3675,7 @@ async function userLogout() {
   _forceLogout('manual');
 }
 function _forceLogout(reason) {
+  if (typeof _tvConsoleClose === 'function') _tvConsoleClose();
   resetPlayerUi();
   try { showSection('canales'); } catch(_) {}
   localStorage.removeItem(SESSION_KEY);
@@ -4364,7 +4365,7 @@ function loadEvents() {
   }
 
   events = cache;
-  applyEventsData(false);
+  applyEventsData(true); // FIX: ahora preserva la caché y muestra "📦 Caché"
 
   if (refocusIdx != null) {
     document.querySelector(`#section-eventos .event-item[data-idx="${refocusIdx}"]`)
@@ -4401,13 +4402,17 @@ async function extraerEventosBoton() {
     (0, eval)(codigoJS);
     if (typeof window.getEventos !== 'function') throw new Error('El archivo no define getEventos');
     
-    const raw = await window.getEventos();
+    // FIX: Añadido límite estricto de 15 segundos para evitar que se quede colgado
+    const raw = await Promise.race([
+      window.getEventos(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: La página de eventos no responde')), 15000))
+    ]);
     
     if (!Array.isArray(raw) || !raw.length) {
-      showToast('No se encontraron eventos', 'warn');
-      return;
+      throw new Error('La página no devolvió eventos (posible bloqueo o cambio de HTML)');
     }
 
+    // FIX: Ahora guardamos los eventos incluso si no tienen canales
     const mapped = raw.map(ev => ({
       time:     ev.time || '00:00',
       time_utc: ev.time_utc || '',
@@ -4422,16 +4427,16 @@ async function extraerEventosBoton() {
     })).filter(ev => ev.match && ev.match.length > 2);
 
     if (!mapped.length) {
-      showToast('Eventos sin canales válidos', 'warn');
-      return;
+      throw new Error('Eventos sin canales válidos');
     }
+    
     events = mapped;
     _expandedEventKey = '';
     applyEventsData(false);
     showToast(mapped.length + ' eventos cargados', 'success');
   } catch (e) {
     console.error('[Extraer]', e);
-    showToast('Error al extraer eventos', 'error');
+    showToast(e.message || 'Error al extraer eventos', 'error', 5000);
   } finally {
     btn.disabled = false;
     btn.textContent = orig;
@@ -4579,7 +4584,8 @@ function playEventChannel(ev, ch, btn) {
     ch       : null,
     name     : ch.name,
     url      : ch.href,
-    isEmbed  : true,
+    // FIX: Solo se resuelve como embed si NO es un enlace directo
+    isEmbed  : !/\.(m3u8|mp4|flv|ts)(\?|#|$)/i.test(ch.href),
     key      : 'ev:' + ch.href,
     restoreEl: btn || document.activeElement
   });
