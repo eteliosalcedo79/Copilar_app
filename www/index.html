@@ -1737,15 +1737,18 @@ html.ss-boot .loader-overlay { display: none !important; }
 
     <div class="ev-top-bar" id="evTopBar">
       <span class="ev-date-txt">Eventos del <span id="headerDate2">--</span></span>
-      <div class="spill red" id="statusPill2"><div class="dot"></div><span id="statusTxt2">Cargando...</span></div>
-      <div class="spill"><span id="statEvents2">—</span>&nbsp;eventos</div>
-      <div class="spill"><span id="statChannels2">—</span>&nbsp;canales</div>
+      <div class="spill" id="evPillEvents" style="display:none"><span id="statEvents2">—</span>&nbsp;eventos</div>
+      <div class="spill" id="evPillChannels" style="display:none"><span id="statChannels2">—</span>&nbsp;canales</div>
+    </div>
+
+    <div class="ev-actions" id="evActions">
+      <button type="button" class="ev-upd-btn" id="btnActualizarEventos" tabindex="0" onclick="actualizarEventos()">Actualizar eventos</button>
+      <span class="ev-upd-spin" id="evUpdSpin"></span>
+      <span class="ev-upd-msg" id="evUpdMsg"></span>
     </div>
 
     <div class="ev-events-wrap" id="eventsWrap">
-      <div id="eventsList">
-        <div class="ev-status-msg"><div class="spin-anim"></div><span>Cargando eventos...</span></div>
-      </div>
+      <div id="eventsList"></div>
     </div>
 
   </div>
@@ -1980,7 +1983,8 @@ const SESSION_TTL_MS           = 24 * 60 * 60 * 1000;
 
 const CFG_VER_KEY = 'ss_cfg_ver_v1';
 const CFG_CH_KEY  = 'ss_cfg_canales_v1';
-const CFG_EV_KEY  = 'ss_cfg_eventos_v1';
+/* Los eventos ya no se guardan en el teléfono: se limpian los restos de versiones anteriores */
+try { localStorage.removeItem(FL_CACHE_KEY); localStorage.removeItem('ss_cfg_eventos_v1'); } catch (_) {}
 
 const ORDEN_BASE = ['Cinemania 24/7','Cine Exclusivo','Cine Premium','Deportes',
                     'Deportes-arg','Deportes-mex','Deportes-esp','Deportes usa',
@@ -2074,7 +2078,6 @@ function _refreshFavUi() {
 
 let events           = [];
 let currentEvent     = null;
-let eventsLoaded     = false;
 
 
 let activeSection = 'canales';
@@ -3662,7 +3665,7 @@ function showLoginMessage(msg, isError) {
 let _configUnsub     = null;
 let _syncIsInit      = false;
 let _lastRemoteVer   = {};
-const _syncBusy      = { canales:false, eventos:false };
+const _syncBusy      = { canales:false };
 
 function _lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch(_) { return null; } }
 function _lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(_) {} }
@@ -3684,8 +3687,6 @@ function startConfigSync(opts = {}) {
   if (!opts.force) {
     const cc = _lsGet(CFG_CH_KEY);
     if (cc && cc.lista) applyChannelsList(cc.lista, cc.orden);
-    const ce = _lsGet(CFG_EV_KEY);
-    if (ce) loadEvents(ce);
   }
 
   _configUnsub = db.collection('config').doc('version').onSnapshot(
@@ -3702,9 +3703,7 @@ function _onVersion(v) {
   _lastRemoteVer = v || {};
   const local = _lsGet(CFG_VER_KEY) || {};
   const rc = Number(_lastRemoteVer.canales) || 0;
-  const re = Number(_lastRemoteVer.eventos) || 0;
   if (local.canales === undefined || local.canales !== rc || !_lsGet(CFG_CH_KEY)) _fetchCanales(rc);
-  if (local.eventos === undefined || local.eventos !== re || !_lsGet(CFG_EV_KEY)) _fetchEventos(re);
 }
 
 async function _fetchCanales(rc) {
@@ -3731,29 +3730,6 @@ async function _fetchCanales(rc) {
     _syncBusy.canales = false;
   }
   if (ok && (Number(_lastRemoteVer.canales) || 0) !== rc) _onVersion(_lastRemoteVer);
-}
-
-async function _fetchEventos(re) {
-  if (_syncBusy.eventos) return;
-  _syncBusy.eventos = true;
-  let ok = false;
-  try {
-    const snap = await db.collection('config').doc('eventos').get();
-    const d    = snap.exists ? (snap.data() || {}) : {};
-    const doc  = { eventos: Array.isArray(d.eventos) ? d.eventos : [], date: d.date || d.fecha || '' };
-    _lsSet(CFG_EV_KEY, doc);
-    const ver = _lsGet(CFG_VER_KEY) || {};
-    ver.eventos = re;
-    _lsSet(CFG_VER_KEY, ver);
-    loadEvents(doc);
-    ok = true;
-  } catch (err) {
-    console.warn('[Config] eventos:', err && err.message);
-    if (!eventsLoaded) loadEvents();
-  } finally {
-    _syncBusy.eventos = false;
-  }
-  if (ok && (Number(_lastRemoteVer.eventos) || 0) !== re) _onVersion(_lastRemoteVer);
 }
 
 function applyChannelsList(lista, orden) {
@@ -3886,45 +3862,32 @@ function convertEventTime(timeStr) {
   } catch(e) { return timeStr; }
 }
 
-function setEvStatus(ok, txt) {
-  const p = document.getElementById('statusPill');
-  if (p) {
-    p.className = 'spill'+(ok?'':' red');
-    const dot = p.querySelector('.dot');
-    if (dot) dot.style.background = ok ? 'var(--accent)' : 'var(--red)';
-    const sp = document.getElementById('statusTxt');
-    if (sp) sp.textContent = txt;
-  }
-  const p2 = document.getElementById('statusPill2');
-  if (p2) {
-    p2.className = 'spill'+(ok?'':' red');
-    const dot2 = p2.querySelector('.dot');
-    if (dot2) dot2.style.background = ok ? 'var(--accent)' : 'var(--red)';
-    const sp2 = document.getElementById('statusTxt2');
-    if (sp2) sp2.textContent = txt;
-  }
+/* ════════════════════════════════════════════════════════════════
+   EVENTOS — botón "Actualizar eventos"
+   Ya no vienen de Firestore: se piden con eventos.js (repo Etelio79/extractores) solo cuando
+   el usuario pulsa el botón. Quedan únicamente en memoria: sobreviven al cambiar de pestaña,
+   pero no a cerrar la app.
+   ════════════════════════════════════════════════════════════════ */
+const EV_JS_KEY  = 'ss_eventos_code';
+const EV_VER_KEY = 'ss_eventos_ver';
+let _evUpdating = false;
+let _evMsgTimer = null;
+
+function _evSetMsg(txt, isErr, ms) {
+  const el = document.getElementById('evUpdMsg');
+  if (!el) return;
+  clearTimeout(_evMsgTimer);
+  el.textContent = txt || '';
+  el.classList.toggle('err', !!isErr);
+  if (txt && ms) _evMsgTimer = setTimeout(() => { el.textContent = ''; }, ms);
 }
 
-function saveEventsCache(evs) {
-  try {
-    localStorage.setItem(FL_CACHE_KEY, JSON.stringify({
-      date: new Date().toDateString(),
-      events: evs
-    }));
-  } catch(e) {}
+function _evSetBusy(on) {
+  document.getElementById('evActions')?.classList.toggle('working', !!on);
+  document.getElementById('btnActualizarEventos')?.setAttribute('aria-busy', on ? 'true' : 'false');
 }
 
-function loadEventsCache() {
-  try {
-    const raw = localStorage.getItem(FL_CACHE_KEY);
-    if (!raw) return null;
-    const { date, events: evs } = JSON.parse(raw);
-    if (date !== new Date().toDateString()) return null;
-    return (Array.isArray(evs) && evs.length) ? evs : null;
-  } catch(e) { return null; }
-}
-
-function applyEventsData(fromCache=false) {
+function applyEventsData() {
   const toLocalMin = t => {
     if (!t) return 9999;
     const [h, m] = t.trim().split(':').map(Number);
@@ -3934,101 +3897,93 @@ function applyEventsData(fromCache=false) {
   };
   events.sort((a, b) => toLocalMin(a.time) - toLocalMin(b.time));
 
-  let ch=0; events.forEach(e=>{ ch+=(e.channels||[]).length; });
-  const se = document.getElementById('statEvents');
-  const sc = document.getElementById('statChannels');
-  if (se) se.textContent = events.length;
-  if (sc) sc.textContent = ch;
+  if (events[0] && events[0].time_utc) {
+    const d = new Date(events[0].time_utc);
+    if (!isNaN(d.getTime())) {
+      const txt = d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+      const clean = txt.replace(',','').replace(/\s+/g,' ').trim();
+      const hd2 = document.getElementById('headerDate2');
+      if (hd2) hd2.textContent = clean.charAt(0).toUpperCase() + clean.slice(1);
+    }
+  }
+
+  let ch = 0; events.forEach(e => { ch += (e.channels || []).length; });
   const se2 = document.getElementById('statEvents2');
   const sc2 = document.getElementById('statChannels2');
   if (se2) se2.textContent = events.length;
   if (sc2) sc2.textContent = ch;
-  setEvStatus(true, fromCache ? '📦 Caché' : 'en linea');
-  eventsLoaded = true;
-  if (!fromCache) saveEventsCache(events);
-  events.length ? renderEvents(events)
-    : (document.getElementById('eventsList').innerHTML =
-        '<div class="ev-status-msg"><span style="font-size:2rem">📭</span><span>Sin eventos hoy</span></div>');
+  const pe = document.getElementById('evPillEvents');
+  const pc = document.getElementById('evPillChannels');
+  if (pe) pe.style.display = '';
+  if (pc) pc.style.display = '';
+  renderEvents(events);
 }
 
-async function loadEvents(prefetched) {
-  const hadList = eventsLoaded;
-  const ae = document.activeElement;
-  const refocusIdx = (hadList && ae && ae.classList && ae.classList.contains('event-item'))
-    ? ae.dataset.idx : null;
-
-  if (!hadList) {
-    document.getElementById('eventsList').innerHTML =
-      '<div class="ev-status-msg"><div class="spin-anim"></div><span>Cargando eventos...</span></div>';
-    setEvStatus(false,'Conectando...');
-  }
-
+async function actualizarEventos() {
+  if (_evUpdating) return;
+  _evUpdating = true;
+  _evSetBusy(true);
+  _evSetMsg('Buscando eventos…', false);
   try {
-    let data = prefetched;
-    if (!data) {
-      const snap = await db.collection('config').doc('eventos').get();
-      if (!snap.exists) { const er = new Error('Vuelva mas tarde'); er.vacio = true; throw er; }
-      data = snap.data() || {};
+    if (!navigator.onLine) throw new Error('Sin conexión a internet');
+
+    /* 1) version.json (con ?t= para saltar la caché de jsDelivr) */
+    const vers = await getRemoteVersions(true);
+    const remoteV = vers ? String(vers.eventos_version || '1.0.0') : '';
+    let code = '', localV = '';
+    try { code = localStorage.getItem(EV_JS_KEY) || ''; localV =localStorage.getItem(EV_VER_KEY) || ''; } catch (_) {}
+    if (!remoteV && !code) throw new Error('No se pudo consultar la versión de eventos');
+
+    /* 2) eventos.js: solo se descarga si la versión cambió o no hay copia (con ?v= para saltar la caché) */
+    let fresh = false;
+    if (remoteV && (remoteV !== localV || !code)) {
+      const r = await nativeFetch(JSD_BASE + 'eventos.js?v=' + encodeURIComponent(remoteV), { cache: 'no-store' });
+      if (!r.ok) throw new Error('No se pudo descargar eventos.js (HTTP ' + r.status + ')');
+      code = await r.text();
+      fresh = true;
     }
 
-    const rawList = Array.isArray(data.eventos) ? data.eventos : [];
-    if (!rawList.length) { const er = new Error('vuelva mas tarde'); er.vacio = true; throw er; }
+    /* 3) ejecutar y llamar a getEventos() */
+    window.getEventos = null;
+    (0, eval)(code);
+    if (typeof window.getEventos !== 'function') throw new Error('eventos.js no define getEventos');
+    if (fresh) { try { localStorage.setItem(EV_JS_KEY, code); localStorage.setItem(EV_VER_KEY, remoteV); } catch (_) {} }
 
-    events = rawList.map(ev => ({
-      time    : ev.time    || ev.tiempo  || '00:00',
-      match   : ev.match   || ev['fósforo'] || ev.partido || ev.titulo || ev.name || '',
-      league  : ev.league  || ev.liga    || ev.torneo || '',
-      flag    : ev.flag    || ev.bandera || '⚽',
-      channels: (ev.channels || ev.canales || []).map(ch => {
-        if (typeof ch === 'string') return { name:'Canal', href:ch };
-        return { name: ch.name||ch.nombre||'Canal', href: ch.href||ch.url||ch.link||ch.embed||'' };
-      }).filter(ch => ch.href && ch.href.startsWith('http'))
+    const raw = await Promise.race([
+      window.getEventos(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('La página de eventos no responde')), 15000))
+    ]);
+    if (!Array.isArray(raw) || !raw.length) throw new Error('No se encontraron eventos');
+
+    /* 4) mapear url -> href (todos los canales de un evento son embeds) */
+    const mapped = raw.map(ev => ({
+      time    : ev.time || '00:00',
+      time_utc: ev.time_utc || '',
+      match   : ev.match || '',
+      league  : ev.league || '',
+      flag    : ev.flag || '⚽',
+      channels: (ev.channels || []).map(ch => ({
+        name   : ch.name || 'Canal',
+        href   : ch.url || ch.href || '',
+        quality: ch.quality || ''
+      })).filter(c => c.href && c.href.startsWith('http'))
     })).filter(ev => ev.match && ev.match.length > 2);
+    if (!mapped.length) throw new Error('No se encontraron eventos');
 
-    const fecha = data.date || data.fecha || '';
-    if (fecha) {
-      const clean = fecha.replace(',','').trim();
-      const formatted = clean.charAt(0).toUpperCase() + clean.slice(1);
-      const hd2 = document.getElementById('headerDate2');
-      if (hd2) hd2.textContent = formatted;
-    }
-
-    applyEventsData(false);
+    events = mapped;
+    applyEventsData();
 
     if (currentMode === 'event' && currentEvent) {
       const i = events.findIndex(e => e.match === currentEvent.match && e.time === currentEvent.time);
-      if (i >= 0) {
-        currentEvent = events[i];
-      }
+      if (i >= 0) currentEvent = events[i];
     }
-    if (refocusIdx != null) {
-      document.querySelector(`#section-eventos .event-item[data-idx="${refocusIdx}"]`)
-        ?.focus({ preventScroll: true });
-    }
-    return;
-
-  } catch(e) {
-    console.warn('Eventos:', e.message);
-
-    if (!e.vacio) {
-      const cached = loadEventsCache();
-      if (cached && cached.length > 0) {
-        events = cached;
-        applyEventsData(true);
-        return;
-      }
-    } else {
-      events = [];
-      eventsLoaded = false;
-    }
-
-    setEvStatus(false,'Sin eventos');
-    document.getElementById('eventsList').innerHTML = `
-      <div class="ev-status-msg">
-        <span style="font-size:2rem">⚠️</span>
-        <span>No hay eventos disponibles</span>
-        <span style="font-size:.7rem;color:var(--text-sub)">${e.message}</span>
-      </div>`;
+    _evSetMsg(mapped.length + ' eventos cargados', false, 3500);
+  } catch (e) {
+    console.warn('[Eventos]', e);
+    _evSetMsg((e && e.message) || 'Error al actualizar eventos', true, 7000);
+  } finally {
+    _evUpdating = false;
+    _evSetBusy(false);
   }
 }
 
@@ -4159,7 +4114,7 @@ function handleLogout() {
 
 /* ═══════════════════════════════════════════════════════════════════
    CONSOLA DE DIAGNÓSTICO DE EMBEDS (extractores)  — copiada de la de películas
-   Los canales embed se resuelven SIEMPRE con extractores.js (repo Etelio79/extractores);
+   Los canales embed se resuelven SIEMPRE con deportes.js (repo Etelio79/extractores);
    ya no existe captura por WebView.
    EXT_CONSOLE_MODE = true  → abre la consola: muestra qué devolvió cada petición y, si el
                               extractor falla, lo que devuelve la página. Botones: Cerrar, Copiar, Reproducir.
@@ -4202,22 +4157,29 @@ async function nativeFetch(url, opts) {
   return new Response(noBody ? null : text, { status: r.status, headers: r.headers || {} });
 }
 
-/* ── version.json remoto: un solo número gobierna la actualización de extractores.js ── */
+/* ── version.json remoto (siempre con ?t= para saltar la caché de jsDelivr) ──
+   eventos_version → eventos.js · deportes_version → deportes.js (extractor del reproductor) ── */
 let _remoteVerP = null, _remoteVerT = 0;
-function getRemoteVersion(force) {
+function getRemoteVersions(force) {
   if (_remoteVerP && !force && Date.now() - _remoteVerT < 10 * 60 * 1000) return _remoteVerP;
   _remoteVerT = Date.now();
   _remoteVerP = (async () => {
     try {
-      const r = await fetch(VERSION_URL, { cache: 'no-store' });
+      const r = await fetch(VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      return String((await r.json()).version || '');
-    } catch (e) { console.warn('[Version] sin conexión:', e); _remoteVerT = 0; return ''; }
+      return (await r.json()) || null;
+    } catch (e) { console.warn('[Version] sin conexión:', e); _remoteVerT = 0; return null; }
   })();
   return _remoteVerP;
 }
+async function getRemoteVersion(force) {
+  const v = await getRemoteVersions(force);
+  return v ? String(v.deportes_version || '1.0.0') : '';
+}
 
-/* ── Carga de extractores.js (caché local + actualización por version.json) ── */
+/* ── Carga de deportes.js (caché local + actualización por deportes_version) ── */
+const EXT_JS_KEY  = 'ss_ext_dep_code';
+const EXT_VER_KEY = 'ss_ext_dep_ver';
 let _ssExtReady = null, _ssExtLast = 0;
 window._ssExtSrc = 'ninguno';
 
@@ -4236,19 +4198,21 @@ function ssExtInit(force) {
   _ssExtLast = Date.now();
   _ssExtReady = (async () => {
     let cachedV = '', cachedC = '';
-    try { cachedV = localStorage.getItem('ss_ext_ver') || ''; cachedC = localStorage.getItem('ss_ext_code') || ''; } catch (_) {}
+    try {
+      localStorage.removeItem('ss_ext_code'); localStorage.removeItem('ss_ext_ver');   /* restos de extractores.js */
+      cachedV = localStorage.getItem(EXT_VER_KEY) || ''; cachedC = localStorage.getItem(EXT_JS_KEY) || '';
+    } catch (_) {}
     let loaded = !!(window.SSExtractors && window.SSExtractors.resolve);
     if (!loaded && cachedC && _ssExtRun(cachedC)) { loaded = true; window._ssExtSrc = 'caché'; }
     try {
-      const remoteV = await getRemoteVersion();
-      const curV = (window.SSExtractors && window.SSExtractors.version) || cachedV;
-      if (remoteV && (remoteV !== curV || !loaded)) {
-        const rc = await nativeFetch(SSEXT_BASE + 'extractores.js', { cache: 'no-store' });
+      const remoteV = await getRemoteVersion(force);
+      if (remoteV && (remoteV !== cachedV || !loaded)) {
+        const rc = await nativeFetch(SSEXT_BASE + 'deportes.js?v=' + encodeURIComponent(remoteV), { cache: 'no-store' });
         if (rc.ok) {
           const code = await rc.text();
           if (_ssExtRun(code)) {
             loaded = true; window._ssExtSrc = 'jsDelivr';
-            try { localStorage.setItem('ss_ext_code', code); localStorage.setItem('ss_ext_ver', window.SSExtractors.version || remoteV); } catch (_) {}
+            try { localStorage.setItem(EXT_JS_KEY, code); localStorage.setItem(EXT_VER_KEY, remoteV); } catch (_) {}
           }
         }
       }
@@ -4260,7 +4224,7 @@ function ssExtInit(force) {
 setTimeout(() => { try { ssExtInit(true); } catch (_) {} }, 2500);
 
 async function _resolveLink(link, log) {
-  try { await Promise.race([ssExtInit(), new Promise(r => setTimeout(r, 10000))]); } catch (_) {}
+  try { await Promise.race([ssExtInit(true), new Promise(r => setTimeout(r, 10000))]); } catch (_) {}
   const X = window.SSExtractors;
   if (X && typeof X.resolve === 'function') {
     log('Extractores v' + X.version + ' (' + window._ssExtSrc + ')');
@@ -4846,8 +4810,19 @@ document.addEventListener('keydown', (e) => {
   if (f.classList.contains('nav-btn') && e.key === 'ArrowDown') {
     let t = null;
     if (activeSection === 'canales') t = document.querySelector('#categoriesWrapper .category-btn.active') || document.querySelector('#categoriesWrapper .category-btn');
-    else if (activeSection === 'eventos') t = _ssFindEventCard(currentEvent) || document.querySelector('#eventsList .event-item');
+    else if (activeSection === 'eventos') t = document.getElementById('btnActualizarEventos');
     if (t) { stop(); t.focus({ preventScroll: true }); t.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+    return;
+  }
+
+  if (f.id === 'btnActualizarEventos') {
+    if (e.key === 'ArrowUp') { stop(); (document.querySelector('.nav-btn.active') || document.querySelector('.nav-btn'))?.focus(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      stop();
+      const t = _ssFindEventCard(currentEvent) || document.querySelector('#eventsList .event-item');
+      if (t) { t.focus({ preventScroll: true }); t.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+    }
+    else if (e.key === 'ArrowLeft') stop();
     return;
   }
 
@@ -4865,7 +4840,8 @@ document.addEventListener('keydown', (e) => {
     ir(esCat ? vecino('#categoriesWrapper .category-btn', d) : esCh ? vecino('#channelsList .channel-item', d) : vecino('#eventsList .event-item', d));
   } else if (e.key === 'ArrowUp') {
     stop();
-    const t = esCh ? (document.querySelector('#categoriesWrapper .category-btn.active') || document.querySelector('#categoriesWrapper .category-btn')) : null;
+    const t = esCh ? (document.querySelector('#categoriesWrapper .category-btn.active') || document.querySelector('#categoriesWrapper .category-btn'))
+            : esEv ? document.getElementById('btnActualizarEventos') : null;
     (t || document.querySelector('.nav-btn.active') || document.querySelector('.nav-btn'))?.focus();
   } else if (e.key === 'ArrowDown') {
     stop();
@@ -4950,6 +4926,7 @@ document.addEventListener('keydown', (e) => {
 
   if (!focused || focused === document.body) {
     const first = document.querySelector(
+      '#section-eventos:not([style*="none"]) #btnActualizarEventos, ' +
       '#section-eventos:not([style*="none"]) .event-item, ' +
       '#section-canales:not([style*="none"]) .category-btn'
     );
@@ -4966,6 +4943,7 @@ document.addEventListener('keydown', (e) => {
   if (focused?.classList.contains('nav-btn') && e.key === 'ArrowDown') {
     e.preventDefault();
     const first = document.querySelector(
+      '#section-eventos:not([style*="none"]) #btnActualizarEventos, ' +
       '#section-eventos:not([style*="none"]) .event-item, ' +
       '#section-canales:not([style*="none"]) .category-btn'
     );
@@ -5816,12 +5794,31 @@ body:not(.fullscreen-active) #tvPlayerCol {
 #section-eventos .ev-top-bar .ev-date-txt { flex: 0 0 100%; font-size: clamp(.95rem, 2.2vh, 1.25rem); font-weight: 700; }
 #section-eventos .ev-top-bar .spill { margin: 0 !important; padding: 0; height: auto; border: 0; border-radius: 0; background: none; box-shadow: none;
   font-family: inherit; color: #b4c0d0; font-size: clamp(.78rem, 2vh, 1rem); font-weight: 700; letter-spacing: .3px; text-transform: capitalize; }
-#section-eventos .ev-top-bar .spill:nth-child(4)::before { content: '·'; margin-right: 14px; color: var(--text-sub); }
-#statusPill2 { display: none !important; }
-#section-eventos .ev-events-wrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: flex-end;
+#section-eventos .ev-top-bar .spill:nth-child(3)::before { content: '·'; margin-right: 14px; color: var(--text-sub); }
+
+/* Botón "Actualizar eventos": píldora igual que una categoría activa (azul; con foco, borde blanco + brillo) */
+.ev-actions { flex: 0 0 auto; margin-top: auto; display: flex; align-items: center; gap: 14px;
+  padding: 0 var(--v2-side) 2px; }
+.ev-upd-btn { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  padding: 8px 20px; border-radius: 999px; cursor: pointer;
+  background: var(--accent2); color: #04121c; border: 2px solid var(--accent2);
+  font-family: 'Rajdhani', sans-serif; font-size: clamp(12px, 1.3vw, 15px); font-weight: 700;
+  letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease; }
+.ev-upd-btn:focus, .ev-upd-btn:focus-visible { outline: none !important; border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(0,176,255,.55), 0 0 16px rgba(0,176,255,.5) !important; }
+.ev-upd-spin { display: none; flex: 0 0 auto; width: 22px; height: 22px; border: 3px solid rgba(0,176,255,.25);
+  border-top-color: var(--accent2); border-radius: 50%; animation: ssRot .8s linear infinite; }
+.ev-actions.working .ev-upd-spin { display: inline-block; }
+.ev-upd-msg { min-width: 0; color: #b4c0d0; font-size: clamp(.75rem, 1.9vh, .95rem); font-weight: 700; letter-spacing: .3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-upd-msg.err { color: #ff6b88; }
+
+#section-eventos .ev-events-wrap { position: relative; flex: 0 0 auto; display: flex; align-items: flex-end;
   overflow: hidden; padding: 0 0 calc(var(--v2-bottom) - 10px); }
 #eventsList {
   width: 100%; display: flex; flex-direction: row; align-items: center; gap: var(--v2-gap);
+  min-height: calc(var(--v2-card-h) + 36px);
   padding: 22px var(--v2-side) 14px;
   overflow-x: auto; overflow-y: hidden; scroll-behavior: smooth; scrollbar-width: none;
 }
