@@ -259,32 +259,6 @@ html, body {
   line-height: 1.3;
 }
 
-.ev-ch { 
-  font-size:.63rem; 
-  color:var(--text-sub); 
-  white-space:nowrap; 
-  display:flex; 
-  align-items:stretch;
-  gap:3px; 
-  flex-shrink:0; 
-  margin: 0;
-  align-self:center;
-}
-
-.ch-count { 
-  background:var(--surface); 
-  border:2px solid #2f7fd1;
-  color:#2f7fd1;
-  padding:0 clamp(5px, .6vw, 8px);
-  border-radius:6px;
-  height:calc((clamp(48px, 6vh, 62px) - 12px) * .6);
-  font-size:clamp(.48rem, .66vw, .66rem);
-  font-weight:900; 
-  display:flex; 
-  align-items:center; 
-  justify-content:center;
-  min-width: clamp(21px, 2.4vw, 30px); 
-}
 
 .arr { 
   color:var(--text-sub); 
@@ -3991,7 +3965,6 @@ async function actualizarEventos() {
    ACORDEÓN DE EVENTOS
    ════════════════════════════════════════════════════════════════ */
 function handleBackAction() {
-  if (typeof _tvConsoleOpen === 'function' && _tvConsoleOpen()) { _tvConsoleClose(); return; }
   const loginEl = document.getElementById('loginOverlay');
   if (loginEl && !loginEl.classList.contains('hidden')) {
     forceExitApp();
@@ -4113,17 +4086,13 @@ function handleLogout() {
 
 
 /* ═══════════════════════════════════════════════════════════════════
-   CONSOLA DE DIAGNÓSTICO DE EMBEDS (extractores)  — copiada de la de películas
+   EXTRACTORES DE EMBEDS
    Los canales embed se resuelven SIEMPRE con deportes.js (repo Etelio79/extractores);
-   ya no existe captura por WebView.
-   EXT_CONSOLE_MODE = true  → abre la consola: muestra qué devolvió cada petición y, si el
-                              extractor falla, lo que devuelve la página. Botones: Cerrar, Copiar, Reproducir.
-   EXT_CONSOLE_MODE = false → resuelve y reproduce directo, sin consola.
+   no existe captura por WebView.
    ═══════════════════════════════════════════════════════════════════ */
 const JSD_BASE    = 'https://cdn.jsdelivr.net/gh/Etelio79/extractores@main/';
 const VERSION_URL = JSD_BASE + 'version.json';
 const SSEXT_BASE  = JSD_BASE;
-const _TV_UA      = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36';
 
 async function nativeFetch(url, opts) {
   const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp;
@@ -4235,271 +4204,6 @@ async function _resolveLink(link, log) {
   return { ok: false, ms: 0, status: 0 };
 }
 
-/* ── Utilidades de diagnóstico ── */
-function _tvTimeout(ms) { return new Promise(r => setTimeout(() => r(null), ms)); }
-function _tvOrigin(u) { try { return new URL(u).origin; } catch (_) { return ''; } }
-function _tvHost(u) { try { return new URL(u).hostname; } catch (_) { return '?'; } }
-function _tvOneLine(t, n) { return String(t || '').replace(/\s+/g, ' ').trim().slice(0, n); }
-
-function _tvAround(html) {
-  const out = [];
-  const re = /m3u8|playlist|token=|\.php\?|"source"|sources?\s*[:=]/gi;
-  let m, last = -1000;
-  while ((m = re.exec(html)) && out.length < 8) {
-    if (m.index - last < 400) continue;
-    last = m.index;
-    out.push('  @' + m.index + ': ' + _tvOneLine(html.slice(Math.max(0, m.index - 150), m.index + 250), 400));
-  }
-  return out.length ? '\nfragmentos alrededor de m3u8/playlist/token/source (posición en el texto):\n' + out.join('\n') : '';
-}
-
-function _tvHints(html, base) {
-  const out = [];
-  const uniq = a => [...new Set(a)];
-  const titulo = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1];
-  if (titulo) out.push('Título: ' + _tvOneLine(titulo, 100));
-  const m3 = uniq(html.replace(/\\\//g, '/').match(/https?:\/\/[^"'\s<>\\)]+\.m3u8[^"'\s<>\\)]*/gi) || []).slice(0, 6);
-  out.push('m3u8 en el texto: ' + (m3.length ? '\n  ' + m3.join('\n  ') : 'ninguno'));
-  const mp4 = uniq(html.replace(/\\\//g, '/').match(/https?:\/\/[^"'\s<>\\)]+\.mp4[^"'\s<>\\)]*/gi) || []).slice(0, 3);
-  if (mp4.length) out.push('mp4 en el texto:\n  ' + mp4.join('\n  '));
-  const marcos = uniq([...html.matchAll(/<iframe[^>]+src=["']([^"']+)["']/gi)].map(m => m[1])).slice(0, 6);
-  out.push('iframes: ' + (marcos.length ? '\n  ' + marcos.join('\n  ') : 'ninguno'));
-  const ext = uniq([...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m => m[1])).slice(0, 8);
-  out.push('scripts externos: ' + (ext.length ? '\n  ' + ext.join('\n  ') : 'ninguno'));
-  const llamadas = uniq([...html.matchAll(/(?:fetch|\.ajax|\.get|\.post|\.open|\.load)\s*\(\s*([^)]{0,160})/g)].map(m => _tvOneLine(m[1], 140))).slice(0, 8);
-  if (llamadas.length) out.push('llamadas de red en el JS (fetch/ajax/open):\n  ' + llamadas.join('\n  '));
-  const claves = uniq([...html.matchAll(/["']?(playbackURL|playbackUrl|streamUrl|stream_url|hlsUrl|hls_url|source|src|file|token|ip)["']?\s*[:=]\s*["']([^"']{4,200})["']/g)].map(m => m[1] + ' = ' + _tvOneLine(m[2], 160))).slice(0, 8);
-  if (claves.length) out.push('posibles valores (source/file/token…):\n  ' + claves.join('\n  '));
-  const flags = [];
-  if (/eval\(function\(p,a,c,k/.test(html)) flags.push('JS empaquetado (p,a,c,k)');
-  if (/atob\(/.test(html)) flags.push('usa atob()');
-  const b64 = (html.match(/[A-Za-z0-9+\/]{80,}={0,2}/g) || []).length;
-  if (b64) flags.push(b64 + ' cadena(s) larga(s) tipo base64');
-  if (/just a moment|cf-chl|challenge-platform|attention required/i.test(html.slice(0, 6000))) flags.push('PANTALLA DE CLOUDFLARE');
-  if (/location\.(?:href|replace)\s*=|window\.location/.test(html)) flags.push('redirección por JS');
-  if (/<meta[^>]+http-equiv=["']refresh/i.test(html)) flags.push('redirección por meta refresh');
-  out.push('pistas: ' + (flags.length ? flags.join(' · ') : 'ninguna'));
-  const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(s => s.trim().length > 30);
-  out.push('scripts en línea: ' + inline.length);
-  inline.slice(0, 5).forEach((s, i) => out.push('  [script ' + (i + 1) + ', ' + s.length + ' car.] ' + _tvOneLine(s, 1200)));
-  out.push(_tvAround(html));
-  out.push('\n--- Inicio del HTML (1500 car.) ---\n' + _tvOneLine(html, 1500));
-  return out.join('\n');
-}
-
-/* Qué devuelve la página del embed (se usa cuando el extractor no encuentra nada) */
-async function _tvProbePage(url, dlog, st) {
-  const origen = _tvOrigin(url);
-  const variantes = [['UA del extractor', _TV_UA], ['UA del WebView', navigator.userAgent]];
-  let guardado = null;
-  for (const [nombre, ua] of variantes) {
-    if (st && st.cancelled) return;
-    const t0 = Date.now();
-    let r = null;
-    try {
-      r = await Promise.race([nativeFetch(url, { headers: { 'User-Agent': ua, Accept: 'text/html,application/xhtml+xml,*/*;q=0.8', 'Accept-Language': 'es-MX,es;q=0.9', Referer: origen + '/' } }), _tvTimeout(12000)]);
-    } catch (e) { dlog('Página (' + nombre + '): error de red · ' + ((e && e.message) || e)); continue; }
-    if (!r) { dlog('Página (' + nombre + '): sin respuesta en 12 s'); continue; }
-    let html = '';
-    try { html = (await r.text()) || ''; } catch (_) {}
-    let tipo = '';
-    try { tipo = (r.headers && r.headers.get && r.headers.get('content-type')) || ''; } catch (_) {}
-    dlog('Página (' + nombre + '): HTTP ' + r.status + ' · ' + html.length + ' B · ' + (tipo || 'sin content-type') + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
-    if (!guardado && html) guardado = html;
-  }
-  if (guardado) dlog('\n' + _tvHints(guardado, url));
-  else dlog('\nLa página no devolvió cuerpo con ninguno de los dos User-Agent.');
-}
-
-/* Comprueba que el m3u8 resuelto realmente abre, con y sin los headers que devolvió el extractor */
-async function _tvVerifyM3u8(play, dlog, st) {
-  dlog('\nURL resuelta:\n' + play.url + '\nHeaders: ' + JSON.stringify(play.headers || {}));
-  const pruebas = [['con headers', play.headers || {}], ['sin headers', {}]];
-  for (const [nombre, headers] of pruebas) {
-    if (st && st.cancelled) return;
-    const t0 = Date.now();
-    let r = null;
-    try { r = await Promise.race([nativeFetch(play.url, { headers }), _tvTimeout(10000)]); } catch (e) { dlog('Lista (' + nombre + '): error · ' + ((e && e.message) || e)); continue; }
-    if (!r) { dlog('Lista (' + nombre + '): sin respuesta en 10 s'); continue; }
-    let t = '';
-    try { t = (await r.text()) || ''; } catch (_) {}
-    const esM3u8 = /#EXTM3U/.test(t);
-    let extra = '';
-    if (esM3u8) {
-      const vars = (t.match(/#EXT-X-STREAM-INF/g) || []).length;
-      const segs = (t.match(/#EXTINF/g) || []).length;
-      let alto = 0; (t.match(/RESOLUTION=\d+x(\d+)/g) || []).forEach(x => { alto = Math.max(alto, parseInt(x.split('x')[1], 10) || 0); });
-      extra = ' · #EXTM3U ok' + (vars ? ' · ' + vars + ' calidades' + (alto ? ' (hasta ' + alto + 'p)' : '') : '') + (segs ? ' · ' + segs + ' fragmentos' : '');
-    } else if (t) extra = ' · NO es m3u8: ' + _tvOneLine(t, 120);
-    dlog('Lista (' + nombre + '): HTTP ' + r.status + ' · ' + t.length + ' B' + extra + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
-  }
-}
-
-/* ── Panel de consola (táctil y control remoto) ── */
-function _copyText(t) {
-  const fallback = () => {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = t; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
-      document.body.appendChild(ta); ta.focus(); ta.select();
-      const ok = document.execCommand('copy'); ta.remove(); return ok;
-    } catch (_) { return false; }
-  };
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(() => true).catch(() => fallback());
-  } catch (_) {}
-  return Promise.resolve(fallback());
-}
-
-let _tvDiag = null;
-
-function _tvConsoleEl() {
-  let el = document.getElementById('tvDbg');
-  if (el) return el;
-  el = document.createElement('div'); el.id = 'tvDbg';
-  el.style.cssText = 'position:fixed;inset:3% 6%;z-index:99999;background:#0b1220;color:#e6edf7;border:2px solid #f5a623;border-radius:14px;display:none;flex-direction:column;overflow:hidden;';
-  const bar = document.createElement('div');
-  bar.style.cssText = 'display:flex;gap:14px;align-items:center;padding:12px 16px;background:#111b30;border-bottom:1px solid #2a3a5c;flex:0 0 auto;flex-wrap:wrap;';
-  const mk = (id, txt) => {
-    const b = document.createElement('button'); b.id = id; b.type = 'button'; b.textContent = txt;
-    b.style.cssText = 'font:700 20px/1 sans-serif;padding:12px 26px;border-radius:10px;border:2px solid #3b4d75;background:#18243f;color:#e6edf7;outline:none;';
-    b.addEventListener('focus', () => { b.style.borderColor = '#00e676'; b.style.background = '#14502d'; });
-    b.addEventListener('blur', () => { b.style.borderColor = '#3b4d75'; b.style.background = '#18243f'; });
-    return b;
-  };
-  const bClose = mk('tvDbgClose', 'Cerrar'), bCopy = mk('tvDbgCopy', 'Copiar'), bPlay = mk('tvDbgPlay', 'Reproducir');
-  const st = document.createElement('span'); st.id = 'tvDbgState'; st.style.cssText = 'font:18px sans-serif;color:#7fe3a0;';
-  const title = document.createElement('span'); title.id = 'tvDbgTitle'; title.style.cssText = 'font:700 18px sans-serif;color:#f5a623;margin-left:auto;';
-  bar.append(bClose, bCopy, bPlay, st, title);
-  const pre = document.createElement('pre'); pre.id = 'tvDbgTxt';
-  pre.style.cssText = 'margin:0;padding:16px 22px;flex:1 1 auto;overflow:auto;font:18px/1.35 monospace;white-space:pre-wrap;word-break:break-all;';
-  el.append(bar, pre);
-  document.body.appendChild(el);
-  const flash = (msg, ok) => { st.textContent = msg; st.style.color = ok ? '#7fe3a0' : '#ff8a8a'; clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500); };
-  el._flash = flash;
-  bClose.addEventListener('click', () => _tvConsoleClose());
-  bCopy.addEventListener('click', () => { _copyText(pre.textContent).then(ok => flash(ok ? '✓ Copiado' : '✗ No se pudo copiar', ok)); });
-  bPlay.addEventListener('click', () => _tvConsolePlay());
-  return el;
-}
-
-function _tvConsoleOpen() { const el = document.getElementById('tvDbg'); return !!el && el.style.display !== 'none'; }
-function _tvConsoleHide() { const el = document.getElementById('tvDbg'); if (el) el.style.display = 'none'; }
-function _tvConsoleClose() {
-  _tvConsoleHide();
-  if (_tvDiag) { _tvDiag.cancelled = true; _tvDiag = null; }
-  ssCancelJob();
-}
-
-function _tvConsoleShow(arriba) {
-  const st = _tvDiag; if (!st) return;
-  const el = _tvConsoleEl();
-  el.style.display = 'flex';
-  const estado = st.busy ? 'EN CURSO…' : (st.play ? 'OK' : 'FALLA');
-  document.getElementById('tvDbgTitle').textContent = 'DIAGNÓSTICO · ' + st.host + ' · ' + estado + (st.via ? ' · ' + st.via : '');
-  const pre = document.getElementById('tvDbgTxt');
-  pre.textContent = st.lines.join('\n');
-  pre.scrollTop = arriba ? 0 : pre.scrollHeight;
-  const bPlay = document.getElementById('tvDbgPlay');
-  const puedeReproducir = !!st.play && !st.busy;
-  bPlay.disabled = !puedeReproducir; bPlay.textContent = puedeReproducir ? 'Reproducir' : 'Reproducir ✗'; bPlay.style.opacity = puedeReproducir ? '1' : '0.4';
-  if (!st.focused) { st.focused = true; try { document.getElementById('tvDbgClose').focus(); } catch (_) {} }
-  if (!st.busy && !st.focusedDone) { st.focusedDone = true; try { (puedeReproducir ? bPlay : document.getElementById('tvDbgClose')).focus(); } catch (_) {} }
-}
-
-/* Resuelve el canal con extractores y abre la consola (Cerrar · Copiar · Reproducir) */
-function _tvConsoleRun(job) {
-  const src = job.src;
-  const st = { job, src, host: _tvHost(src.url), lines: [], play: null, via: '', busy: true, cancelled: false, focused: false, focusedDone: false };
-  _tvDiag = st;
-  job.cancel = () => { st.cancelled = true; };
-  const dlog = m => { st.lines.push(String(m)); console.log('[Diag]', m); if (!st.cancelled && _tvDiag === st) _tvConsoleShow(false); };
-  dlog('Canal: ' + src.name + '\nEmbed: ' + src.url + '\nMétodo: extractor (sin WebView)\n');
-  (async () => {
-    let r = null;
-    try { r = await _resolveLink({ url: src.url, referer: '' }, dlog); } catch (e) { dlog('ERROR: ' + ((e && e.message) || e)); }
-    if (st.cancelled || _ssJob !== job) return;
-    if (r && r.play) {
-      st.play = r.play; st.via = 'extractor';
-      dlog('\nEXTRACTOR: OK en ' + (r.ms || 0) + ' ms');
-      await _tvVerifyM3u8(r.play, dlog, st);
-    } else {
-      dlog('\nEXTRACTOR: no devolvió ningún enlace. Esto es lo que devuelve la página:\n');
-      await _tvProbePage(src.url, dlog, st);
-    }
-    if (st.cancelled || _ssJob !== job) return;
-    st.busy = false;
-    _tvConsoleShow(true);
-  })();
-}
-
-/* Botón Reproducir de la consola: verifica el enlace y abre el reproductor a pantalla completa */
-function _tvConsolePlay() {
-  const st = _tvDiag;
-  if (!st || !st.play || st.busy || _ssJob !== st.job) return;
-  const job = st.job, pl = st.play;
-  _tvConsoleHide();
-  _tvDiag = null;
-  ssVerifyAndPlay(job, _ssFromExtractor(pl));
-}
-
-/* Teclas del panel (capturan todo mientras está abierto, para que no actúe el modal de abajo) */
-document.addEventListener('keydown', e => {
-  if (!_tvConsoleOpen()) return;
-  const stop = () => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
-  const pre = document.getElementById('tvDbgTxt');
-  const btns = ['tvDbgClose', 'tvDbgCopy', 'tvDbgPlay'].map(id => document.getElementById(id)).filter(b => b && !b.disabled);
-  if (['Escape', 'Backspace'].includes(e.key) || e.keyCode === 4) { stop(); _tvConsoleClose(); }
-  else if (e.key === 'Enter' || e.key === ' ') { stop(); (btns.includes(document.activeElement) ? document.activeElement : btns[0]).click(); }
-  else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-    stop();
-    const i = Math.max(0, btns.indexOf(document.activeElement));
-    btns[(i + (e.key === 'ArrowRight' ? 1 : btns.length - 1)) % btns.length].focus();
-  }
-  else if (e.key === 'ArrowDown') { stop(); pre.scrollTop += 140; }
-  else if (e.key === 'ArrowUp') { stop(); pre.scrollTop -= 140; }
-  else stop();
-}, true);
-
-/* ── Interruptor: Consola ON = extractor + consola · Consola OFF = WebView como antes ── */
-let EXT_CONSOLE_MODE = true;
-try { const _m = localStorage.getItem('ss_ext_console'); if (_m !== null) EXT_CONSOLE_MODE = (_m === '1'); } catch (_) {}
-
-function _paintConsoleToggle() {
-  const b = document.getElementById('extConsoleToggle'); if (!b) return;
-  b.textContent = EXT_CONSOLE_MODE ? 'Consola ON' : 'Consola OFF';
-  b.style.background = EXT_CONSOLE_MODE ? '#14502d' : '#5a1f1f';
-  b.style.borderColor = EXT_CONSOLE_MODE ? '#00e676' : '#ff6b6b';
-}
-function _setConsoleMode(on) {
-  EXT_CONSOLE_MODE = !!on;
-  try { localStorage.setItem('ss_ext_console', EXT_CONSOLE_MODE ? '1' : '0'); } catch (_) {}
-  _paintConsoleToggle();
-  try { showToast(EXT_CONSOLE_MODE ? 'Consola ON: los embeds abren la consola de diagnóstico' : 'Consola OFF: los embeds se reproducen directo con extractores', 'info', 2400); } catch (_) {}
-}
-function _consoleToggleBtn() {
-  let b = document.getElementById('extConsoleToggle');
-  if (b) return b;
-  b = document.createElement('button'); b.id = 'extConsoleToggle'; b.type = 'button'; b.tabIndex = -1;
-  b.style.cssText = 'position:fixed;top:4px;left:4px;z-index:100001;font:700 13px/1 sans-serif;padding:7px 9px;border-radius:8px;border:2px solid #3b4d75;color:#fff;outline:none;opacity:.8;';
-  b.addEventListener('click', e => { e.stopPropagation(); _setConsoleMode(!EXT_CONSOLE_MODE); });
-  document.body.appendChild(b);
-  _paintConsoleToggle();
-  return b;
-}
-if (document.body) _consoleToggleBtn(); else document.addEventListener('DOMContentLoaded', _consoleToggleBtn);
-
-/* Tecla T o botones verde/rojo del control remoto */
-document.addEventListener('keydown', e => {
-  if (e.key === 't' || e.key === 'T' || e.keyCode === 404 || e.keyCode === 403) {
-    if (_tvConsoleOpen()) return;
-    const lo = document.getElementById('loginOverlay');
-    if (lo && !lo.classList.contains('hidden')) return;
-    if (/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
-    e.preventDefault(); e.stopPropagation(); _setConsoleMode(!EXT_CONSOLE_MODE);
-  }
-}, true);
-
 
 /* ═══════════════════════════════════════════════════════════════════
    REDISEÑO V2 — tarjetas, servidores, reproducción directa a pantalla completa
@@ -4527,8 +4231,6 @@ function ssCancelJob() {
   j.cancelled = true;
   try { if (typeof j.cancel === 'function') j.cancel(); } catch (_) {}
   if (j.ui) j.ui.classList.remove('loading');
-  if (typeof _tvDiag !== 'undefined' && _tvDiag && _tvDiag.job === j) { _tvDiag.cancelled = true; _tvDiag = null; }
-  _tvConsoleHide();
 }
 
 function ssPlaySource(src, ui) {
@@ -4548,7 +4250,7 @@ function ssPlaySource(src, ui) {
   const type = src.isEmbed ? 'embed' : _detectDirectType(src.url);
   console.log('[Play] abrir job=' + job.id, '| tipo=' + type, '| canal=' + src.name);
   if (type === 'embed') {
-    if (EXT_CONSOLE_MODE) _tvConsoleRun(job); else _tvResolveDirect(job);
+    _tvResolveDirect(job);
   } else {
     ssVerifyAndPlay(job, { url: src.url, type: type === 'flv' ? 'flv' : (type === 'hls' ? 'hls' : 'native'), headers: {} });
   }
@@ -4558,7 +4260,7 @@ function _ssFromExtractor(p) {
   return { url: p.url, type: p.kind === 'mp4' ? 'native' : 'hls', headers: p.headers || {} };
 }
 
-/* Consola OFF: resuelve con el extractor y reproduce directo (sin consola, sin WebView) */
+/* Resuelve con el extractor y reproduce directo */
 function _tvResolveDirect(job) {
   job.cancel = () => {};
   (async () => {
@@ -4690,7 +4392,6 @@ function renderEvents(evs) {
   evs.forEach((ev, i) => {
     const card = document.createElement('div');
     card.className = 'event-item ev-card'; card.tabIndex = 0; card.dataset.idx = i;
-    const c = (ev.channels || []).length;
     let leagueName = (ev.league||'').trim();
     let matchName  = (ev.match||'').trim();
     if (!leagueName && matchName.includes(':')) {
@@ -4710,7 +4411,7 @@ function renderEvents(evs) {
     card.innerHTML =
       `<div class="ev-c-top"><span class="ev-c-time">${_ssEsc(convertEventTime(ev.time))}</span>${leagueName ? `<span class="ev-c-league">${_ssEsc(leagueName)}</span>` : ''}</div>` +
       `<div class="ev-c-mid">${centro}</div>` +
-      `<div class="ev-c-bot"><span class="ev-c-flag">${_ssEsc(ev.flag || '⚽')}</span>${c > 0 ? `<span class="ev-c-count">${c}</span>` : ''}</div>`;
+      `<div class="ev-c-bot"><span class="ev-c-flag">${_ssEsc(ev.flag || '⚽')}</span></div>`;
     card.addEventListener('click', () => ssOpenServers(ev, card));
     list.appendChild(card);
   });
@@ -4785,7 +4486,6 @@ function ssBackHandled() {
 document.addEventListener('keydown', (e) => {
   const lo = document.getElementById('loginOverlay');
   if (lo && !lo.classList.contains('hidden')) return;
-  if (_tvConsoleOpen()) return;
   if (document.getElementById('exitModal')?.classList.contains('open')) return;
   const stop = () => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
 
@@ -4807,12 +4507,25 @@ document.addEventListener('keydown', (e) => {
   const f = document.activeElement;
   if (!f) return;
 
-  if (f.classList.contains('nav-btn') && e.key === 'ArrowDown') {
-    let t = null;
-    if (activeSection === 'canales') t = document.querySelector('#categoriesWrapper .category-btn.active') || document.querySelector('#categoriesWrapper .category-btn');
-    else if (activeSection === 'eventos') t = document.getElementById('btnActualizarEventos');
-    if (t) { stop(); t.focus({ preventScroll: true }); t.scrollIntoView({ block: 'nearest', inline: 'center' }); }
-    return;
+  if (f.classList.contains('nav-btn')) {
+    if (e.key === 'ArrowUp') { stop(); return; }                      /* arriba de las pestañas no hay nada: el foco se queda */
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {            /* solo mueve el foco; la sección cambia con Enter/clic */
+      stop();
+      const tabs = Array.from(document.querySelectorAll('.nav-btn')).filter(b => b.offsetParent !== null);
+      const i = tabs.indexOf(f);
+      const n = tabs[Math.max(0, Math.min(tabs.length - 1, i + (e.key === 'ArrowRight' ? 1 : -1)))];
+      if (n && n !== f) n.focus({ preventScroll: true });
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      let t = null;
+      if (activeSection === 'canales') t = document.querySelector('#categoriesWrapper .category-btn.active') || document.querySelector('#categoriesWrapper .category-btn');
+      else if (activeSection === 'eventos') t = document.getElementById('btnActualizarEventos');
+      else if (activeSection === 'usuario') { const lb = document.getElementById('btnLogout'); if (lb && lb.offsetParent !== null) t = lb; }
+      stop();
+      if (t) { t.focus({ preventScroll: true }); t.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+      return;
+    }
   }
 
   if (f.id === 'btnActualizarEventos') {
@@ -4853,6 +4566,23 @@ document.addEventListener('keydown', (e) => {
     }
   }
 }, true);
+
+/* ── Guardián de foco: tras una flecha, si el foco se pierde (body), vuelve al último elemento válido o a la pestaña activa ── */
+let _lastFocusEl = null;
+document.addEventListener('focusin', e => { const t = e.target; if (t && t !== document.body && t.nodeType === 1) _lastFocusEl = t; }, true);
+document.addEventListener('keydown', e => {
+  if (!/^Arrow(Up|Down|Left|Right)$/.test(e.key)) return;
+  setTimeout(() => {
+    const a = document.activeElement;
+    if (a && a !== document.body && a !== document.documentElement) return;
+    const lo = document.getElementById('loginOverlay');
+    if (lo && !lo.classList.contains('hidden')) return;
+    if (document.body.classList.contains('fullscreen-active') || document.body.classList.contains('fs-pending')) return;
+    const ok = _lastFocusEl && document.contains(_lastFocusEl) && _lastFocusEl.offsetParent !== null;
+    const t = ok ? _lastFocusEl : (document.querySelector('.nav-btn.active') || document.querySelector('.nav-btn'));
+    if (t) { try { t.focus({ preventScroll: true }); } catch (_) {} }
+  }, 0);
+}, false);
 </script>
 <script>
 
@@ -4961,12 +4691,7 @@ document.addEventListener('keydown', (e) => {
     const nextNav = e.key === 'ArrowRight'
       ? navBtns[Math.min(ni + 1, navBtns.length - 1)]
       : navBtns[Math.max(ni - 1, 0)];
-    if (nextNav && nextNav !== focused) {
-      nextNav.focus();
-      if      (nextNav.id === 'navCanales') showSection('canales');
-      else if (nextNav.id === 'navEventos') showSection('eventos');
-      else if (nextNav.id === 'navUsuario') showSection('usuario');
-    }
+    if (nextNav && nextNav !== focused) nextNav.focus();
     return;
   }
 
@@ -5097,7 +4822,7 @@ document.addEventListener('keydown', (e) => {
       }
       if (focused?.id === 'btnLogout') {
         _disarmLogout();
-        const nu = document.getElementById('navUsuario');
+        const nu = document.querySelector('.nav-btn.active') || document.getElementById('navUsuario');
         if (nu) nu.focus({preventScroll: true});
         break;
       }
@@ -5837,8 +5562,6 @@ body:not(.fullscreen-active) #tvPlayerCol {
 .ev-c-mid .vs { color: var(--text-sub); font-size: 11px; font-weight: 700; }
 .ev-c-bot { display: flex; align-items: center; justify-content: space-between; }
 .ev-c-flag { font-size: 16px; line-height: 1; }
-.ev-c-count { color: var(--gold); font-size: 14px; font-weight: 900; padding: 1px 9px; border-radius: 6px;
-  background: rgba(255,214,0,.12); border: 1px solid rgba(255,214,0,.35); }
 
 /* Modal "Servidores disponibles" (mismo estilo que Películas) */
 .srv-modal { position: fixed; top: 0; left: 0; right: var(--modal-right); bottom: 0; z-index: 9000; display: none;
