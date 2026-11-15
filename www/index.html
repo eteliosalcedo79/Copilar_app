@@ -1893,6 +1893,22 @@ html.ss-boot .loader-overlay { display: none !important; }
   <div style="width:60px;height:2px;background:linear-gradient(90deg,transparent,#ff1744,transparent);"></div>
 </div>
 
+<div id="prepOverlay" aria-live="polite">
+  <div class="prep-box">
+    <div class="prep-logo"><img src="1000439999.webp" alt=""></div>
+    <div class="prep-title">Preparando SportStream</div>
+    <div class="prep-sub">Solo ocurre la primera vez o cuando hay actualizaciones</div>
+    <ul class="prep-list">
+      <li id="prepStep_canales" data-st="wait"><i></i><span>Cargando canales y recursos</span></li>
+      <li id="prepStep_extcan" data-st="wait"><i></i><span>Extractores de canales</span></li>
+      <li id="prepStep_extpel" data-st="wait"><i></i><span>Extractores de películas</span></li>
+      <li id="prepStep_prov" data-st="wait"><i></i><span>Proveedores de películas</span></li>
+      <li id="prepStep_cat" data-st="wait"><i></i><span>Catálogo de películas</span></li>
+    </ul>
+    <div class="prep-note" id="prepNote"></div>
+  </div>
+</div>
+
 <script src="hls.min.js"></script>
 <script src="mpegts.min.js"></script>
 <script src="crypto-js.min.js"></script>
@@ -1942,9 +1958,98 @@ function _waitChannels(ms) {
   });
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   PANTALLA DE CARGA (Fase 7) — después del login / auto-login, antes de mostrar la app.
+   Solo aparece la primera vez o si cambió version, extractores_version o deportes_version del version.json.
+   (eventos_version no cuenta: eventos.js se baja al pulsar "Actualizar eventos".)
+   Cada paso tiene máximo 15 s; si falla o se pasa del tiempo se marca ⚠ y se sigue. Si algún paso falla,
+   no se guarda la firma y se vuelve a intentar en el próximo inicio.
+   ═══════════════════════════════════════════════════════════════════ */
+var ssPrep = (function () {
+  var SIG_KEY = 'ss_prep_sig';
+  var api = { stepMs: 15000 };
+  var shown = false, tok = 0, startP = null;
+  function el(id) { return document.getElementById(id); }
+  function setState(id, st) { var r = el('prepStep_' + id); if (r) r.setAttribute('data-st', st); }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function withTimeout(p, ms) {
+    return new Promise(function (res) {
+      var t = setTimeout(function () { res(false); }, ms);
+      Promise.resolve(p).then(function (v) { clearTimeout(t); res(v !== false && v !== null && v !== undefined); },
+                              function () { clearTimeout(t); res(false); });
+    });
+  }
+  function sigOf(v) {
+    return [v.version, v.extractores_version, v.deportes_version].map(function (x) { return String(x || ''); }).join('|');
+  }
+  async function needed() {
+    var vers = null;
+    try { vers = await Promise.race([getRemoteVersions(true), sleep(2500).then(function () { return null; })]); } catch (_) {}
+    if (!vers) return { need: false };                 // sin version.json: se arranca normal, sin pantalla
+    var sig = sigOf(vers), stored = '';
+    try { stored = localStorage.getItem(SIG_KEY) || ''; } catch (_) {}
+    return { need: stored !== sig, sig: sig };
+  }
+  function show() {
+    ['canales', 'extcan', 'extpel', 'prov', 'cat'].forEach(function (id) { setState(id, 'wait'); });
+    var n = el('prepNote'); if (n) n.textContent = '';
+    var o = el('prepOverlay'); if (o) { o.classList.remove('out'); o.classList.add('show'); }
+    shown = true;
+    try { _hideNativeSplash(); } catch (_) {}          // el splash nativo se quita ya, para que se vea esta pantalla
+  }
+  var RUN = {
+    canales: function () { return _waitChannels(api.stepMs).then(function () { return channelsData.length > 0; }); },
+    extcan : function () { return ssExtInit(true); },
+    extpel : function () { return window.PEL ? PEL.extInit(true) : false; },
+    prov   : function () { return window.PEL ? PEL.prepare() : false; },
+    cat    : function () { return window.PEL ? PEL.warmCatalog() : false; }
+  };
+  api.start = function () {
+    if (startP) return startP;
+    var my = ++tok;
+    startP = (async function () {
+      var info;
+      try { info = await needed(); } catch (_) { info = { need: false }; }
+      if (!info.need || my !== tok) return;
+      show();
+      var ids = Object.keys(RUN), allOk = true;
+      await Promise.all(ids.map(async function (id) {
+        setState(id, 'run');
+        var ok = false;
+        try { ok = await withTimeout(RUN[id](), api.stepMs); } catch (_) { ok = false; }
+        if (my !== tok) return;
+        setState(id, ok ? 'ok' : 'warn');
+        if (!ok) allOk = false;
+      }));
+      if (my !== tok) return;
+      if (allOk) { try { localStorage.setItem(SIG_KEY, info.sig); } catch (_) {} }
+      else { var n = el('prepNote'); if (n) n.textContent = 'Algunos recursos no cargaron; se reintentará en el próximo inicio.'; }
+      await sleep(allOk ? 450 : 1600);
+    })();
+    return startP;
+  };
+  api.end = function () {
+    startP = null;
+    if (!shown) return;
+    shown = false;
+    var o = el('prepOverlay'); if (!o) return;
+    o.classList.add('out');
+    setTimeout(function () { if (!shown) o.classList.remove('show', 'out'); }, 320);
+  };
+  api.abort = function () {
+    tok++; startP = null;
+    if (shown) { shown = false; var o = el('prepOverlay'); if (o) o.classList.remove('show', 'out'); }
+  };
+  api.visible = function () { return shown; };
+  /* Mientras está la pantalla de carga no se atienden teclas (ni el teclado del login que sigue debajo) */
+  window.addEventListener('keydown', function (e) { if (shown) { e.preventDefault(); e.stopPropagation(); } }, true);
+  return api;
+})();
+
 var _hideTok = 0, _hidingOverlay = false;
 function _cancelHideOverlay() {
   _hideTok++; _hidingOverlay = false;
+  ssPrep.abort();
   var o = document.getElementById('loginOverlay');
   if (o) o.classList.remove('fading');
 }
@@ -1955,6 +2060,7 @@ function hideLoginOverlay(waitChannels) {
   var tok = ++_hideTok;
   var jobs = [_appAssetsReady()];
   if (waitChannels) jobs.push(_waitChannels(6000));
+  jobs.push(ssPrep.start());                  /* Fase 7: pantalla de carga si es la primera vez o hubo cambios de versión */
   Promise.all(jobs).then(function () {
     if (tok !== _hideTok) return;
     requestAnimationFrame(function () { requestAnimationFrame(function () {
@@ -1965,6 +2071,7 @@ function hideLoginOverlay(waitChannels) {
         o.classList.remove('fading');
         document.documentElement.classList.remove('ss-boot');
         _hidingOverlay = false;
+        ssPrep.end();
       };
       if (!_splashHidden && _nativeSplash()) {
         finish();            /* el overlay se quita debajo del splash; el splash se desvanece */
@@ -3356,6 +3463,7 @@ async function userLogout() {
 }
 function _forceLogout(reason) {
   resetPlayerUi();
+  if (window.PEL) PEL.reset();
   try { showSection('canales'); } catch(_) {}
   localStorage.removeItem(SESSION_KEY);
   currentSession  = null;
@@ -4039,6 +4147,7 @@ async function actualizarEventos() {
    ACORDEÓN DE EVENTOS
    ════════════════════════════════════════════════════════════════ */
 function handleBackAction() {
+  if (typeof ssPrep !== 'undefined' && ssPrep.visible()) return;      /* pantalla de carga: Atrás no hace nada */
   const loginEl = document.getElementById('loginOverlay');
   if (loginEl && !loginEl.classList.contains('hidden')) {
     forceExitApp();
@@ -4139,6 +4248,7 @@ function closeProfileModal() {
 
 function handleLogout() {
   resetPlayerUi();
+  if (window.PEL) PEL.reset();
   const video = document.getElementById('iptv-player');
   if (video) video.style.display = '';
   setPlayerLoader('idle', '');
@@ -7157,7 +7267,53 @@ function onHide() {
   if (_$('pel_sourcesModal')?.classList.contains('open')) closeSources(false);
 }
 
-window.PEL = { onShow, onHide, back, openSources, toggleFav, closeDetails, closeSources, restoreFocus, playingFav, togglePlayingFav, extInit, loadPluginsFromManifest, syncProviders };
+/* ══════════ FASE 6 · cierre de sesión: deja la sección como recién instalada (los proveedores y extractores descargados se conservan) ══════════ */
+function reset() {
+  try { _stopServerCapture(); } catch (_) {}
+  try { _cancelEmbedSearch(); } catch (_) {}
+  try { _$('pel_sourcesModal')?.classList.remove('open'); } catch (_) {}
+  try {
+    if (searchMode) {
+      searchMode = false; searchSeq++; clearTimeout(searchTimer); searchWantFocus = false;
+      const inp = _$('pel_searchInput'); if (inp) { inp.value = ''; inp.blur(); }
+      _$('pel_categoriesBar')?.classList.remove('searching');
+      _$('pel_searchBtn')?.classList.remove('active');
+    }
+    searchCache.clear();
+  } catch (_) {}
+  const dv = _$('pel_detailView');
+  if (dv) { dv.classList.remove('open'); dv.style.backgroundImage = ''; }
+  window._pelPlaying = null;
+  currentMovie = null; currentSeason = null; currentEpisode = null; seriesEpisodesData = [];
+  categories = []; currentCategory = ''; currentCatObj = null; moviesByCategory = {}; moviesById = {}; catState = {};
+  _$('pel_categoriesBar')?.querySelectorAll('.pel-cat[data-cat]').forEach(b => b.remove());
+  const grid = _$('pel_posterGrid'); if (grid) grid.innerHTML = '<div class="grid-msg">Cargando catálogo…</div>';
+  _inited = false;
+}
+
+/* ══════════ FASE 7 · pasos de la pantalla de carga ══════════ */
+/* Proveedores al día: revisa el manifest y baja solo los que cambiaron. true = todos listos */
+async function prepare() {
+  const vers = await getVersions(true);
+  const rv = vers ? String(vers.version || '') : '';
+  if (!allPlugins.length) await loadPluginsFromManifest();
+  let cachedVer = '';
+  try { cachedVer = localStorage.getItem(MANIFEST_VER_KEY) || ''; } catch (_) {}
+  if (rv && rv !== cachedVer) _applyManifest(await _downloadManifest(rv));
+  await syncProviders();
+  const v = _provVers();
+  return allPlugins.length > 0 && allPlugins.every(p => v[p.id] === p.ver);
+}
+/* Catálogo listo: deja guardadas las categorías y la primera lista, así al entrar a Películas ya está */
+async function warmCatalog() {
+  if (!_inited) { _inited = true; loadPluginsFromManifest().catch(() => {}); extInit().catch(() => {}); }
+  await loadCatalog();
+  const ok = categories.length > 0;
+  if (!ok) _inited = false;                      // que onShow lo reintente
+  return ok;
+}
+
+window.PEL = { onShow, onHide, back, reset, openSources, toggleFav, closeDetails, closeSources, restoreFocus, playingFav, togglePlayingFav, extInit, loadPluginsFromManifest, syncProviders, prepare, warmCatalog };
 
 })();
 </script>
@@ -8128,6 +8284,35 @@ body.fullscreen-active #pel_sourcesModal { visibility: hidden; }
   box-shadow: 0 0 8px rgba(0,176,255,.7);
   animation: none;
 }
+
+/* ══════ Fase 7 · pantalla de carga tras el login ══════ */
+#prepOverlay {
+  position: fixed; inset: 0; z-index: 350; display: none;
+  background: #06090e; align-items: center; justify-content: center;
+  padding: clamp(10px, 2vmin, 20px); box-sizing: border-box; opacity: 1; transition: opacity .28s ease;
+}
+#prepOverlay.show { display: flex; }
+#prepOverlay.out { opacity: 0; pointer-events: none; }
+#prepOverlay .prep-box { width: min(92vw, 460px); display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(6px, 1.4vmin, 12px); }
+#prepOverlay .prep-logo { width: clamp(44px, 9vmin, 72px); height: clamp(44px, 9vmin, 72px); }
+#prepOverlay .prep-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+#prepOverlay .prep-title { font-family: 'Orbitron', monospace; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-size: clamp(.8rem, 2.2vmin, 1.05rem); }
+#prepOverlay .prep-sub { font-family: 'Rajdhani', sans-serif; font-weight: 600; color: #5a6478; font-size: clamp(.7rem, 1.8vmin, .9rem); margin-bottom: clamp(2px, 1vmin, 8px); }
+#prepOverlay .prep-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: clamp(4px, 1vmin, 8px); }
+#prepOverlay .prep-list li { display: flex; align-items: center; gap: 12px; padding: clamp(6px, 1.2vmin, 10px) clamp(10px, 2vmin, 16px); border-radius: 10px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: .4px;
+  color: #6b7488; font-size: clamp(.8rem, 2vmin, 1rem); text-align: left; transition: color .2s, border-color .2s, background .2s; }
+#prepOverlay .prep-list li i { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; border: 2px solid rgba(255,255,255,.18); position: relative; }
+#prepOverlay .prep-list li[data-st="run"] { color: #fff; border-color: rgba(0,176,255,.35); background: rgba(0,176,255,.07); }
+#prepOverlay .prep-list li[data-st="run"] i { border-color: rgba(0,176,255,.25); border-top-color: var(--accent2, #00b0ff); animation: prepSpin .8s linear infinite; }
+#prepOverlay .prep-list li[data-st="ok"] { color: #d7ffe4; }
+#prepOverlay .prep-list li[data-st="ok"] i { background: var(--accent, #00cc44); border-color: var(--accent, #00cc44); }
+#prepOverlay .prep-list li[data-st="ok"] i::after { content: ''; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid #04120a; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+#prepOverlay .prep-list li[data-st="warn"] { color: #ffd9a1; border-color: rgba(245,124,0,.4); }
+#prepOverlay .prep-list li[data-st="warn"] i { background: #f57c00; border-color: #f57c00; }
+#prepOverlay .prep-list li[data-st="warn"] i::after { content: '!'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 900 11px 'Rajdhani', sans-serif; color: #1a0e00; }
+#prepOverlay .prep-note { min-height: 1.2em; font-family: 'Rajdhani', sans-serif; font-weight: 600; color: #f5a623; font-size: clamp(.7rem, 1.8vmin, .85rem); }
+@keyframes prepSpin { to { transform: rotate(360deg); } }
 </style>
 </body>
 </html>
