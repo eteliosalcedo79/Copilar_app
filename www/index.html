@@ -4495,6 +4495,11 @@ function _ssEnterPlayer() {
 /* ── Aviso "Video no disponible" ── */
 let _ssNoticeTimer = null;
 function ssNotice(title, sub) {
+  /* Mismo aviso (toast rojo abajo) que usa Películas */
+  if (window.PEL && PEL.toast) {
+    PEL.toast(title === 'Video no disponible' ? 'No se pudo conectar, intenta con otro.' : title, 'error', 4000);
+    return;
+  }
   const el = document.getElementById('ssNotice');
   if (!el) { try { showToast(title, 'error'); } catch (_) {} return; }
   el.querySelector('.n-title').textContent = title;
@@ -7313,7 +7318,7 @@ async function warmCatalog() {
   return ok;
 }
 
-window.PEL = { onShow, onHide, back, reset, openSources, toggleFav, closeDetails, closeSources, restoreFocus, playingFav, togglePlayingFav, extInit, loadPluginsFromManifest, syncProviders, prepare, warmCatalog };
+window.PEL = { toast: showToast, onShow, onHide, back, reset, openSources, toggleFav, closeDetails, closeSources, restoreFocus, playingFav, togglePlayingFav, extInit, loadPluginsFromManifest, syncProviders, prepare, warmCatalog };
 
 })();
 </script>
@@ -7423,7 +7428,7 @@ body:not(.fullscreen-active) #tvPlayerCol {
 
 /* ── Fase 4: Eventos — encabezado + carrusel + modal de servidores ── */
 #section-eventos { flex-direction: column; padding: 0; overflow: hidden; }
-#section-eventos .ev-content-col { flex: 1 1 auto; min-height: 0; padding: 0; }
+#section-eventos .ev-content-col { flex: 1 1 auto; min-height: 0; padding: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 #section-eventos .ev-top-bar { height: auto; padding: 14px var(--v2-side) 6px; background: transparent; border: none;
   display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 4px; }
 #section-eventos .ev-top-bar .ev-date-txt { flex: 0 0 100%; font-size: clamp(.95rem, 2.2vh, 1.25rem); font-weight: 700; }
@@ -8183,7 +8188,7 @@ body:not(.fullscreen-active) #tvPlayerCol {
 body.fullscreen-active #pel_sourcesModal { visibility: hidden; }
 #pel_embedCaptureHost { display: none; }
 /* Toast propio (no choca con el de index) */
-#pelToastBox { position: fixed; left: 50%; transform: translateX(-50%); bottom: clamp(20px, 4vh, 40px); z-index: 900;
+#pelToastBox { position: fixed; left: 50%; transform: translateX(-50%); bottom: clamp(20px, 4vh, 40px); z-index: 9500;
   display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; max-width: calc(100% - 24px); }
 .pel-toast { padding: 8px 16px; border-radius: 20px; font-family: 'Rajdhani', sans-serif; font-size: clamp(.75rem, 1.3vmin, .95rem);
   font-weight: 700; color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.5); white-space: nowrap; max-width: 100%; overflow: hidden;
