@@ -7,9 +7,7 @@
 <style>
   :root{
     --bg:#0d1117; --sidebar:#161b22; --card:#1b2230; --text:#e6edf3;
-    --muted:#8b949e; --accent:#e50914; --border:#30363d; --bar-h:12vh;
-    --modal-right: clamp(320px, 48vw, 720px);   /* franja libre a la derecha del modal de servidores (igual que la prueba) */
-    --poster-w: 87px;                            /* ancho del póster en filas (igual que la prueba) */
+    --muted:#8b949e; --accent:#e50914; --border:#30363d;
   }
   *{box-sizing:border-box; outline:none;}
   html,body{
@@ -17,21 +15,6 @@
     font-family:system-ui,Segoe UI,Roboto,sans-serif;
     width:100vw; height:100vh; overflow:hidden; display:flex; flex-direction:column;
   }
-
-  /* --- BARRA SUPERIOR --- */
-  #topbar { height: var(--bar-h); flex: none; display: flex; align-items: center; padding: 0 1vw;
-    background: linear-gradient(180deg, #0b1a3a 0%, #0a1224 100%); border-bottom: 1px solid #1c2a4a; z-index: 60; }
-  #main-nav { display: flex; width: 100%; gap: 1vw; }
-  #main-nav button { flex: 1; display: flex; align-items: center; justify-content: center; gap: .7vw;
-    background: transparent; color: #8da0c4; border: 3px solid transparent; border-radius: 14px; height: calc(var(--bar-h) * .72);
-    font-size: 1.4vw; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: all .2s; }
-  #main-nav button svg { width: 1.8vw; height: 1.8vw; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  /* seleccionado: rojo */
-  #main-nav button.active { background: var(--accent); color: #fff; }
-  /* foco: borde rojo con brillo */
-  #main-nav button:focus { background: var(--card); color: #fff; border-color: var(--accent); box-shadow: 0 0 15px rgba(229,9,20,.45); }
-  /* seleccionado + foco: borde blanco para diferenciar */
-  #main-nav button.active:focus { background: var(--accent); border-color: #fff; box-shadow: 0 0 18px rgba(255,255,255,.55); }
 
   /* --- CONTENIDO PRINCIPAL --- */
   main {
@@ -42,7 +25,7 @@
   main::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
 
   .section { margin-bottom: 4vh; }
-  .section h2 { font-size: 1.8vw; margin: 0 0 1.5vh 0; font-weight: 600; }
+  .section h2 { font-size: 1.8vw; margin: 0 0 1.5vh 0; font-weight: 600; text-transform: uppercase; }
 
   /* Filas Horizontales */
   .carousel {
@@ -52,30 +35,27 @@
   }
   .carousel::-webkit-scrollbar { display: none; }
 
-  /* Cuadrículas */
-  .carousel.posters { gap: 8px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; padding: 8px; align-content: start; }
-  .grid.genres { grid-template-columns: repeat(auto-fill, minmax(12vw, 1fr)); gap: 2vw; padding: 1vw; }
-
   /* TARJETAS */
   .card {
     flex: 0 0 12vw; background: var(--card); border-radius: 10px; overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s, border 0.2s;
     border: 3px solid transparent; display: flex; flex-direction: column; cursor: pointer;
   }
-  /* Póster: tamaño de la prueba (87px en filas, minmax 85px en cuadrícula) */
-  .card.poster { flex: 0 0 var(--poster-w); min-width: 0; border-width: 2px; border-radius: 8px; }
-  .card.poster .meta { padding: 4px 2px; justify-content: center; }
-  .card.poster .title { font-size: clamp(.6rem, .9vw, .72rem); font-weight: 600; text-align: center; line-height: 1.2; }
-  .grid .card { flex: none; width: 100%; }
 
   .card:focus {
     transform: scale(1.05); border-color: var(--accent);
     box-shadow: 0 10px 20px rgba(229,9,20,0.4); z-index: 10; position: relative;
   }
   .card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #222; }
-  .card.chan { flex: 0 0 11vw; }
-  .card.chan img { aspect-ratio: 1/1; object-fit: contain; background: #fff; padding: 6px; }
+  .card.chan { flex: 0 0 22vw; width: 22vw; height: 12.4vw; position: relative; background: var(--card); }
+  .card.chan img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; padding: 0; object-fit: cover; object-position: center center; background: transparent; display: block; }
+  .card.chan .meta { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.2vh 1vw; z-index: 2; }
+  .card.chan .title { font-size: 1.35vw; text-transform: uppercase; color: #fff; letter-spacing: .5px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px rgba(0,0,0,.9); }
+  .tag { position: absolute; top: 1.2vh; left: .9vw; z-index: 3; padding: .5vh .9vw; border-radius: 8px; color: #fff;
+    font-size: 1vw; font-weight: 800; letter-spacing: 1px; line-height: 1.2; text-transform: uppercase; }
+  .tag.flv { background: #f57c00; }
+  .tag.directo { background: #0a9e3c; }
   .card .meta { padding: 1.5vh 1vw; display: flex; align-items: center; }
 
   .card .title {
@@ -83,145 +63,146 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  .genre-card {
-    display: flex; justify-content: center; align-items: center;
-    padding: 3vh; font-size: 1.5vw; font-weight: bold; text-align: center;
-  }
-
-  /* BUSCADOR */
-  .search-view { display: flex; flex-direction: column; gap: 2vh; margin-bottom: 3vh; margin-top: 2vh; }
-  .search-box { display: flex; gap: 1vw; width: 100%; max-width: 800px; }
-  .search-box input {
-    flex: 1; background: var(--card); border: 2px solid var(--border);
-    color: var(--text); padding: 2vh 1.5vw; border-radius: 8px; font-size: 1.5vw;
-  }
-  .search-box input:focus { border-color: var(--accent); }
-  .search-box button {
-    background: var(--accent); color: #fff; border: none; padding: 0 3vw;
-    border-radius: 8px; font-size: 1.3vw; font-weight: bold; cursor: pointer;
-  }
-  .search-box button:focus { box-shadow: 0 0 15px var(--accent); transform: scale(1.05); }
-
-  /* MODAL Y ESTADOS */
+  /* MODAL (confirmar salida) */
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 100; }
   .modal.open { display: flex; }
-  .modal-inner { background: var(--sidebar); border-radius: 16px; padding: 4vh 4vw; max-width: 70vw; width: 100%; text-align: center; border: 2px solid var(--border); max-height: 92vh; overflow-y: auto; }
-  .modal-inner h3 { font-size: 2.5vw; margin: 0 0 2vh 0; color: var(--accent); }
-  .modal-inner p { font-size: 1.4vw; color: var(--text); margin: 0 0 2.5vh 0; line-height: 1.5; text-align: justify; max-height: 22vh; overflow-y: auto; }
-  .modal-inner button { background: var(--accent); color: #fff; border: none; padding: 1.5vh 3vw; font-size: 1.5vw; border-radius: 8px; font-weight: bold; }
-  .modal-inner button:focus { box-shadow: 0 0 15px var(--accent); transform: scale(1.05); }
-  .modal-row { display: flex; gap: 1vw; flex-wrap: wrap; justify-content: center; margin-bottom: 2vh; }
-  .modal-list { display: flex; flex-direction: column; gap: 1vh; align-items: stretch; max-height: 32vh; overflow-y: auto; margin-bottom: 2.5vh; padding: 0.5vh 0.5vw; }
-  .modal-row:empty, .modal-list:empty { display: none; }
-  .modal-inner button.opt { background: var(--card); border: 2px solid var(--border); padding: 1.2vh 1.5vw; font-size: 1.3vw; text-align: left; }
-  .modal-inner button.opt.sel { border-color: #fff; }
-  .modal-inner button.opt:focus { border-color: var(--accent); box-shadow: 0 0 12px rgba(229,9,20,0.5); transform: none; }
+  
+  .modal-inner { 
+    position: relative; background: var(--sidebar); border-radius: 16px; 
+    padding: 5vh 4vw; max-width: 70vw; width: 100%; text-align: center; 
+    border: 2px solid var(--accent); /* Borde rojo */
+    max-height: 92vh; overflow-y: auto; 
+  }
+  
+  .warning-icon {
+    font-size: 5vw; margin-bottom: 2vh; color: #f1c40f; /* Triángulo amarillo */
+  }
+  
+  .modal-inner h3 { 
+    font-size: 2.5vw; margin: 0 0 2vh 0; color: var(--accent); /* Título rojo */
+  }
+  
+  .modal-desc {
+    font-size: 1.5vw; color: var(--muted); margin: 0 0 4vh 0;
+  }
+  
+  .modal-actions {
+    display: flex; justify-content: center; gap: 2vw;
+  }
+  
+  .modal-actions button {
+    padding: 1.5vh 3vw; font-size: 1.3vw; border-radius: 8px; 
+    font-weight: bold; cursor: pointer; transition: all 0.2s; 
+    border: 2px solid transparent;
+  }
+  
+  .btn-cancel {
+    background: transparent; color: #fff; border: 2px solid var(--border);
+  }
+  .btn-cancel:focus {
+    border-color: var(--accent); box-shadow: 0 0 12px rgba(229,9,20,0.5); 
+    transform: scale(1.05); outline: none;
+  }
+  
+  .btn-exit {
+    background: var(--accent); color: #fff; border: 2px solid var(--accent);
+  }
+  .btn-exit:focus {
+    box-shadow: 0 0 15px var(--accent); transform: scale(1.05); outline: none;
+  }
 
-  /* MODAL DE SERVIDORES: tamaño y posición de la prueba (columna izquierda, deja libre --modal-right), rojo del index */
-  .modal.srv { top: var(--bar-h); right: var(--modal-right); background: transparent; padding: clamp(16px, 3vh, 40px) 20px; }
-  .modal.srv .modal-inner { width: 100%; max-width: 520px; height: 82%; max-height: 640px; padding: 0; display: flex; flex-direction: column; text-align: left; background: var(--sidebar); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
-  .modal.srv .modal-inner h3 { flex: 0 0 auto; margin: 0; padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--card); font-size: .82rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .modal.srv .modal-inner p { flex: 0 0 auto; margin: 0; padding: 12px 20px 0; font-size: .9rem; color: var(--muted); text-align: left; max-height: none; }
-  .modal.srv .modal-list { flex: 1 1 auto; min-height: 0; max-height: none; margin: 0; padding: 10px; gap: 6px; scrollbar-width: thin; scrollbar-color: rgba(229,9,20,.35) transparent; }
-  .modal.srv .modal-inner button.opt { flex: 0 0 auto; background: transparent; border: 2px solid transparent; border-radius: 10px; padding: 14px 16px; font-size: .95rem; font-weight: 700; }
-  .modal.srv .modal-inner button.opt.sel { border-color: #fff; }
-  .modal.srv .modal-inner button.opt:focus { border-color: var(--accent); box-shadow: none; color: #fff; }
-  .modal.srv #modal-close { flex: 0 0 auto; margin: 8px 10px 10px; padding: 10px 16px; font-size: .95rem; }
+  /* INICIO DE SESIÓN */
+  #login { position: fixed; inset: 0; z-index: 300; display: none; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 30%, var(--card) 0%, var(--bg) 70%); }
+  #login.open { display: flex; }
+  .login-card { width: min(520px, 80vw); display: flex; flex-direction: column; gap: 2vh; padding: 5vh 4vw;
+    background: var(--sidebar); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+  .login-card h2 { margin: 0 0 1vh; text-align: center; font-size: clamp(1.3rem, 2.2vw, 1.8rem); color: var(--accent); }
+  .login-card input { background: var(--card); color: var(--text); border: 2px solid var(--border); border-radius: 8px;
+    padding: 2vh 1.5vw; font-size: clamp(1rem, 1.6vw, 1.3rem); }
+  .login-card input:focus { border-color: var(--accent); box-shadow: 0 0 12px rgba(229,9,20,.45); }
+  .login-card button { background: var(--accent); color: #fff; border: 2px solid var(--accent); border-radius: 8px; padding: 2vh 1.5vw;
+    font-size: clamp(1rem, 1.5vw, 1.2rem); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+  .login-card button:focus { border-color: #fff; box-shadow: 0 0 18px rgba(229,9,20,.7); }
+  #lg-msg { min-height: 1.4em; text-align: center; color: #ffb3b8; font-size: clamp(.85rem, 1.2vw, 1.05rem); }
 
   /* REPRODUCTOR */
   #player { position: fixed; inset: 0; background: #000; z-index: 200; display: none; flex-direction: column; }
   #player.open { display: flex; }
-  #player-bar { padding: 1.2vh 2vw; font-size: 1.5vw; background: #111; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #player video { flex: 1; width: 100%; min-height: 0; background: #000; }
+  #player-bar { display: none; }
+  #player video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; background: #000; }
   #player-msg { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 1.8vw; color: #fff; padding: 2vh 3vw; pointer-events: none; }
 
-
-  /* DETALLE (pantalla propia, como la guía) */
-  #detail { position: fixed; top: var(--bar-h); right: 0; bottom: 0; left: 0; z-index: 50; display: none;
-    background: var(--bg) center/cover no-repeat; overflow-y: auto; }
-  #detail.open { display: block; }
-  #detail::before { content: ''; position: fixed; top: var(--bar-h); right: 0; bottom: 0; left: 0;
-    background: linear-gradient(90deg, rgba(13,17,23,.96) 0%, rgba(13,17,23,.8) 45%, rgba(13,17,23,.55) 100%), linear-gradient(0deg, var(--bg) 0%, transparent 55%);
-    pointer-events: none; }
-  .d-inner { position: relative; padding: 5vh 3vw 6vh; min-height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 1.4vh; }
-  .d-title { font-size: 3.6vw; font-weight: 900; margin: 6vh 0 0; line-height: 1.1; }
-  .d-meta { display: flex; flex-wrap: wrap; gap: .8vw; align-items: center; font-size: 1.3vw; color: #c9d1d9; }
-  .d-dot { opacity: .5; }
-  .d-imdb { background: #f5c518; color: #000; font-weight: 900; padding: .2vh .6vw; border-radius: 4px; }
-  .d-desc { font-size: 1.45vw; line-height: 1.55; max-width: 62vw; margin: .6vh 0 1vh; color: #e6edf3; }
-  .d-actions { display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; overflow-x: auto; padding: 8px; margin: 0 -8px; scrollbar-width: none; }
-  .d-actions::-webkit-scrollbar { display: none; }
-  /* Botones de temporada: tamaño de la prueba */
-  .d-btn { flex: 0 0 auto; white-space: nowrap; background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); border: 2px solid transparent; border-radius: 30px; padding: 8px 20px; font-size: clamp(.85rem, 1.2vw, 1rem); font-weight: 700; cursor: pointer; transition: all .2s ease; }
-  .d-btn:focus { border-color: #00a8ff; background: rgba(0,168,255,.2); color: #fff; transform: scale(1.05); }
-  .d-btn.active { background: #00a8ff; color: #001a2b; font-weight: 800; box-shadow: 0 4px 15px rgba(0,168,255,.4); }
-  .d-btn.active:focus { border-color: #fff; box-shadow: none; }
-  /* Botón Reproducir: tamaño de la prueba, rojo del index */
-  .d-btn.play { display: flex; align-items: center; gap: 10px; background: var(--accent); color: #fff; border: 2px solid var(--accent); padding: clamp(10px, 1.4vh, 14px) clamp(22px, 2.6vw, 34px); border-radius: 30px; font-size: clamp(.9rem, 1.3vw, 1.05rem); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
-  .d-btn.play:focus { border-color: #fff; background: var(--accent); transform: none; box-shadow: 0 0 18px rgba(229,9,20,.7); }
-  .d-eps { display: flex; gap: 16px; overflow-x: auto; overflow-y: hidden; padding: 12px 8px 14px; margin: 0 -8px; scroll-behavior: smooth; scrollbar-width: none; align-items: stretch; }
-  .d-eps::-webkit-scrollbar { display: none; }
-  /* Card de capítulo: 200 x 125 como la prueba */
-  .ep-card { flex: 0 0 200px; min-width: 200px; max-width: 200px; height: 125px; border-radius: 14px; overflow: hidden; position: relative; background: var(--card) center/cover no-repeat; border: 2px solid transparent; cursor: pointer; display: flex; align-items: flex-end; transition: all .2s ease; }
-  .ep-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.7) 45%, rgba(0,0,0,.15) 100%); }
-  .ep-card:focus { border-color: #00a8ff; box-shadow: none; transform: scale(1.04); }
-  .ep-info { position: relative; width: 100%; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
-  .ep-num { align-self: flex-start; font-size: .7rem; font-weight: 800; color: #fff; background: rgba(255,255,255,.18); padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; }
-  .ep-title { font-size: 1.05rem; font-weight: 700; color: #fff; line-height: 1.1; text-shadow: 0 2px 6px rgba(0,0,0,.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .ep-dur { font-size: .72rem; font-weight: 600; color: rgba(255,255,255,.7); margin-top: 2px; }
+  /* BARRA DEL REPRODUCTOR */
+  #pbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; flex-direction: column; gap: 6px;
+    padding: 14px 4vw 12px; background: linear-gradient(to top, rgba(0,0,0,.92) 0%, rgba(0,0,0,.55) 70%, transparent 100%);
+    opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .22s ease, transform .22s ease; }
+  #pbar.visible { opacity: 1; pointer-events: auto; transform: none; }
+  .pb-row { display: flex; align-items: center; gap: clamp(10px, 2vw, 22px); }
+  .pb-btn { position: relative; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 6px;
+    border: 2px solid transparent; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 900; font-size: .85rem; letter-spacing: .8px; }
+  .pb-btn svg { width: 22px; height: 22px; display: block; }
+  .pb-btn.focused { border-color: var(--accent); background: rgba(229,9,20,.22); box-shadow: 0 0 0 3px rgba(229,9,20,.3); }
+  .pb-live { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: .75rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; pointer-events: none; user-select: none; }
+  .pb-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff1744; box-shadow: 0 0 8px rgba(255,23,68,.7); animation: pbPulse 1.4s ease-in-out infinite; }
+  .pb-live.vod .pb-dot { background: #fff; box-shadow: none; animation: none; }
+  @keyframes pbPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .55; transform: scale(.85); } }
+  .pb-progress { display: none; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; padding: 0 clamp(10px, 2vw, 20px); margin-bottom: 4px; }
+  .pb-time { width: 52px; text-align: center; font-size: .95rem; font-weight: 700; color: rgba(255,255,255,.7); white-space: nowrap; }
+  .pb-track { flex: 1; height: 8px; position: relative; background: rgba(255,255,255,.15); border: 2px solid transparent; border-radius: 4px; cursor: pointer; transition: all .2s ease; }
+  .pb-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; background: var(--accent); border-radius: 4px; }
+  .pb-thumb { position: absolute; top: 50%; left: 0; width: 16px; height: 16px; border-radius: 50%; background: #fff; pointer-events: none; z-index: 2;
+    transform: translate(-50%, -50%) scale(0); transition: transform .15s ease; box-shadow: 0 2px 6px rgba(0,0,0,.8); }
+  .pb-track.focused { background: rgba(255,255,255,.25); border-color: var(--accent); box-shadow: 0 0 12px rgba(229,9,20,.5); transform: scaleY(1.2); margin: 0 8px; }
+  .pb-track.focused .pb-thumb { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 10px #fff, 0 2px 8px rgba(0,0,0,.8); }
+  .pb-progress.on-focus .pb-time { color: #fff; }
+  #pb-qmenu { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; display: none; flex-direction: column; gap: 2px;
+    min-width: 150px; padding: 6px; background: rgba(15,19,25,.97); border: 2px solid var(--accent); border-radius: 12px; z-index: 100; box-shadow: 0 6px 32px rgba(0,0,0,.8); }
+  #pb-qmenu.open { display: flex; }
+  .pb-qitem { padding: 9px 16px; border: 1px solid transparent; border-radius: 7px; text-align: center; white-space: nowrap; font-size: .9rem; font-weight: 700; color: #fff; cursor: pointer; }
+  .pb-qitem.act { color: var(--accent); font-weight: 900; }
+  .pb-qitem.act::before { content: '✓  '; }
+  .pb-qitem.only::before { content: none; }
+  .pb-qitem.focused { background: rgba(229,9,20,.25); border-color: var(--accent); transform: scale(1.05); }
+  #pb-toast { position: absolute; top: 9vh; right: 3vw; z-index: 16; padding: 8px 16px; border-radius: 8px; background: rgba(0,0,0,.75); color: #fff; font-size: 1rem; font-weight: 700; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #pb-toast.show { opacity: 1; }
 
   .error { background: #3d1114; border: 1px solid #7a1c20; color: #ffb3b8; padding: 2vh; border-radius: 8px; font-size: 1.5vw; margin: 2vh 0; }
   .loader { text-align: center; padding: 10vh; color: var(--muted); font-size: 2vw; }
-
-  /* ── Móvil (igual que la prueba) ── */
-  @media (max-width: 640px) {
-    :root { --poster-w: 75px; }
-    .modal.srv { right: 0; bottom: 42vh; }
-    .grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; padding: 6px; }
-    .ep-card { flex-basis: 170px; min-width: 170px; max-width: 170px; height: 105px; }
-    .ep-title { font-size: 1rem; }
-  }
 </style>
 </head>
 <body>
-
-<header id="topbar">
-  <nav id="main-nav">
-    <button data-view="canales" class="active" tabindex="0"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Canales</button>
-    <button data-view="movies" tabindex="0"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M3 8l3-4h4L7 8M10 8l3-4h4l-3 4"/></svg>Películas</button>
-    <button data-view="tv" tabindex="0"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M10 8.5v4l4-2z"/><path d="M8 21h8"/></svg>Series</button>
-    <button data-view="genres" tabindex="0"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>Géneros</button>
-    <button data-view="search" tabindex="0"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>Buscar</button>
-  </nav>
-</header>
 
 <main id="app">
   <div class="loader" id="boot-msg">Cargando...</div>
 </main>
 
-<div id="detail">
-  <div class="d-inner">
-    <h1 class="d-title" id="d-title"></h1>
-    <div class="d-meta" id="d-meta"></div>
-    <p class="d-desc" id="d-desc"></p>
-    <div class="d-actions" id="d-actions"></div>
-    <div class="d-eps" id="d-eps"></div>
+<!-- NUEVO MODAL ESTÁTICO -->
+<div class="modal" id="modal">
+  <div class="modal-inner" id="modal-inner" tabindex="-1">
+    <div class="warning-icon">⚠️</div>
+    <h3>¡Confirmar salida!</h3>
+    <p class="modal-desc">¿Realmente quieres salir de la aplicación?</p>
+    <div class="modal-actions">
+      <button id="modal-cancel" class="btn-cancel">CANCELAR</button>
+      <button id="modal-exit" class="btn-exit">SALIR</button>
+    </div>
   </div>
 </div>
 
-<div class="modal" id="modal">
-  <div class="modal-inner">
-    <h3 id="modal-title">Cargando...</h3>
-    <p id="modal-desc"></p>
-    <div class="modal-row" id="modal-row"></div>
-    <div class="modal-list" id="modal-list"></div>
-    <button id="modal-close" tabindex="0">Cerrar</button>
+<div id="login">
+  <div class="login-card">
+    <h2>Iniciar sesión</h2>
+    <input id="lg-user" type="text" placeholder="Usuario" autocomplete="off" autocapitalize="off" spellcheck="false" tabindex="0">
+    <input id="lg-pass" type="password" placeholder="Contraseña" autocomplete="off" tabindex="0">
+    <div id="lg-msg"></div>
+    <button id="lg-btn" type="button" tabindex="0">Entrar</button>
   </div>
 </div>
 
 <div id="player">
   <div id="player-bar"></div>
-  <video id="player-video" controls autoplay playsinline tabindex="0"></video>
+  <video id="player-video" autoplay playsinline tabindex="0"></video>
   <div id="player-msg"></div>
 </div>
 
@@ -230,264 +211,25 @@
 <script src="mpegts.min.js"></script>
 
 <script>
-/* ══════ CONSOLA DE DIAGNÓSTICO — la misma de index_pruebapeliculas, adaptada a este index ══════
-   Abrir: tecla C · botón amarillo (405) · INFO/MENÚ (457) · botón "Consola" arriba a la derecha (táctil)
-   Activar/desactivar el modo consola (se abre al elegir un servidor en vez de reproducir directo): tecla T · botón verde/rojo (404/403) */
 (() => {
-  const LOG = [], MAXL = 400;
-  const pad = n => ('0' + n).slice(-2);
-  const ts = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
-  const fmt = a => {
-    if (typeof a === 'string') return a;
-    if (a instanceof Error) return a.message || String(a);
-    try { return JSON.stringify(a); } catch (_) { return String(a); }
-  };
-  function push(tag, args) {
-    LOG.push((ts() + ' [' + tag + '] ' + Array.prototype.map.call(args, fmt).join(' ')).slice(0, 700));
-    if (LOG.length > MAXL) LOG.shift();
-  }
-  ['log', 'info', 'warn', 'error'].forEach(k => {
-    const orig = console[k] ? console[k].bind(console) : function () {};
-    console[k] = function () { try { push(k.toUpperCase(), arguments); } catch (_) {} orig.apply(null, arguments); };
-  });
-  window.addEventListener('error', e => {
-    try {
-      const t = e.target;
-      if (t && t !== window && (t.src || t.href)) push('RECURSO', ['No cargó: ' + (t.src || t.href)]);
-      else push('ERROR', [(e.message || 'error') + ' @ ' + String(e.filename || '').split('/').pop() + ':' + (e.lineno || 0)]);
-    } catch (_) {}
-  }, true);
-  window.addEventListener('unhandledrejection', e => { try { push('PROMESA', [(e.reason && (e.reason.message || e.reason)) || 'rechazada']); } catch (_) {} });
-
-  /* Historial por host: cada intento de extracción queda registrado */
-  let HIST = [];
-  try { HIST = JSON.parse(localStorage.getItem('ph_ext_hist') || '[]'); } catch (_) {}
-  function histPush(h) {
-    HIST.push(h); if (HIST.length > 40) HIST = HIST.slice(-40);
-    try { localStorage.setItem('ph_ext_hist', JSON.stringify(HIST)); } catch (_) {}
-  }
-  function histText() {
-    const by = {};
-    HIST.forEach(h => { const b = by[h.host] || (by[h.host] = { ok: 0, fail: 0 }); h.ok ? b.ok++ : b.fail++; });
-    const rows = Object.keys(by).map(k => (by[k].fail ? '✗ ' : '✓ ') + k + '  OK:' + by[k].ok + '  FALLÓ:' + by[k].fail);
-    const last = HIST.slice(-12).reverse().map(h => (h.ok ? '✓ ' : '✗ ') + h.host + ' · ' + h.ms + ' ms' + (h.err ? ' · ' + h.err : '') + '\n    ' + h.url);
-    return '--- RESUMEN POR HOST ---\n' + (rows.join('\n') || '(vacío)') + '\n\n--- ÚLTIMOS INTENTOS ---\n' + (last.join('\n') || '(vacío)');
-  }
-  function libs() {
-    try {
-      const cap = window.Capacitor, http = cap && cap.Plugins && cap.Plugins.CapacitorHttp;
-      return 'hls.js: ' + (window.Hls ? 'v' + (Hls.version || '?') + (Hls.isSupported() ? ' OK' : ' (no soportado)') : 'NO CARGÓ (falta hls.min.js)') +
-        '\nmpegts.js (FLV): ' + (window.mpegts ? (mpegts.isSupported() ? 'OK' : 'no soportado') : 'NO CARGÓ (falta mpegts.min.js)') +
-        '\nCapacitor: ' + (cap ? 'sí' : 'no') + ' · CapacitorHttp: ' + (http ? 'sí' : 'no');
-    } catch (e) { return 'libs: ' + e.message; }
-  }
-  const logText = () => libs() + '\n\n' + histText() + '\n\n--- REGISTRO (lo más reciente, abajo) ---\n' + (LOG.join('\n') || '(vacío)');
-
-  /* Modo consola: ON = al elegir un servidor se abre la consola con el diagnóstico y un botón Reproducir */
-  let MODE = true;
-  try { const m = localStorage.getItem('ph_console'); if (m !== null) MODE = (m === '1'); } catch (_) {}
-
-  function copyText(t) {
-    const fallback = () => {
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = t; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
-        document.body.appendChild(ta); ta.focus(); ta.select();
-        const ok = document.execCommand('copy'); ta.remove(); return ok;
-      } catch (_) { return false; }
-    };
-    try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(() => true).catch(() => fallback()); } catch (_) {}
-    return Promise.resolve(fallback());
-  }
-
-  const RED = '#e50914';
-  let el = null;
-  const isOpen = () => !!el && el.style.display !== 'none';
-
-  function panel() {
-    if (el) return el;
-    el = document.createElement('div'); el.id = 'phcPanel';
-    el.style.cssText = 'position:fixed;inset:3% 6%;z-index:99999;background:#0b1220;color:#e6edf7;border:2px solid ' + RED + ';border-radius:14px;display:none;flex-direction:column;overflow:hidden;';
-    const bar = document.createElement('div');
-    bar.style.cssText = 'display:flex;gap:14px;align-items:center;padding:12px 16px;background:#111b30;border-bottom:1px solid #2a3a5c;flex:0 0 auto;flex-wrap:wrap;';
-    const mk = (id, txt) => {
-      const b = document.createElement('button'); b.id = id; b.type = 'button'; b.textContent = txt;
-      b.style.cssText = 'font:700 20px/1 sans-serif;padding:12px 26px;border-radius:10px;border:2px solid #3b4d75;background:#18243f;color:#e6edf7;outline:none;';
-      b.addEventListener('focus', () => { b.style.borderColor = RED; b.style.background = '#4a0d12'; });
-      b.addEventListener('blur', () => { b.style.borderColor = '#3b4d75'; b.style.background = '#18243f'; });
-      return b;
-    };
-    const bClose = mk('phcClose', 'Cerrar'), bCopy = mk('phcCopy', 'Copiar'), bPlay = mk('phcPlay', 'Reproducir'), bReg = mk('phcReg', 'Registro');
-    const st = document.createElement('span'); st.id = 'phcState'; st.style.cssText = 'font:18px sans-serif;color:#7fe3a0;';
-    const title = document.createElement('span'); title.id = 'phcTitle'; title.style.cssText = 'font:700 18px sans-serif;color:#ff4d57;margin-left:auto;';
-    bar.append(bClose, bCopy, bPlay, bReg, st, title);
-    const pre = document.createElement('pre'); pre.id = 'phcTxt';
-    pre.style.cssText = 'margin:0;padding:16px 22px;flex:1 1 auto;overflow:auto;font:18px/1.35 monospace;white-space:pre-wrap;word-break:break-all;';
-    el.append(bar, pre);
-    document.body.appendChild(el);
-    const flash = (msg, ok) => { st.textContent = msg; st.style.color = ok ? '#7fe3a0' : '#ff8a8a'; clearTimeout(el._t); el._t = setTimeout(() => { st.textContent = ''; }, 2500); };
-    bClose.addEventListener('click', close);
-    bCopy.addEventListener('click', () => { copyText(pre.textContent).then(ok => flash(ok ? '✓ Copiado' : '✗ No se pudo copiar', ok)); });
-    bPlay.addEventListener('click', () => {
-      const pl = el._play;
-      if (!pl) { flash('No hay enlace reproducible', false); return; }
-      el._prev = null; close();
-      if (window.PHC && window.PHC.onPlay) window.PHC.onPlay(pl);
-    });
-    bReg.addEventListener('click', () => show('REGISTRO', logText(), el._play, true));
-    return el;
-  }
-
-  function show(title, text, play, toBottom) {
-    const p = panel();
-    if (!isOpen()) p._prev = document.activeElement;
-    p._play = play || null;
-    document.getElementById('phcTitle').textContent = title;
-    document.getElementById('phcState').textContent = '';
-    const bPlay = document.getElementById('phcPlay');
-    bPlay.disabled = !play; bPlay.textContent = play ? 'Reproducir' : 'Reproducir ✗'; bPlay.style.opacity = play ? '1' : '0.4';
-    const pre = document.getElementById('phcTxt'); pre.textContent = text;
-    p.style.display = 'flex';
-    pre.scrollTop = toBottom ? pre.scrollHeight : 0;
-    try { (play ? bPlay : document.getElementById('phcClose')).focus(); } catch (_) {}
-  }
-  function close() {
-    if (!el) return;
-    el.style.display = 'none'; el._play = null;
-    const p = el._prev; el._prev = null;
-    if (p && document.body.contains(p) && p.focus) setTimeout(() => { try { p.focus(); } catch (_) {} }, 50);
-  }
-  const openLog = () => show('REGISTRO', logText(), null, true);
-
-  /* Botón táctil arriba a la derecha (tabindex -1: el control remoto no cae en él; en TV usa C / T) */
-  let tbtn = null;
-  function paintToggle() {
-    if (!tbtn) return;
-    tbtn.textContent = MODE ? 'Consola ON' : 'Consola OFF';
-    tbtn.style.background = MODE ? RED : '#30363d';
-  }
-  function setMode(on) {
-    MODE = !!on;
-    try { localStorage.setItem('ph_console', MODE ? '1' : '0'); } catch (_) {}
-    push('CONSOLA', ['modo ' + (MODE ? 'ON: se abre al elegir un servidor' : 'OFF: reproduce directo')]);
-    paintToggle();
-  }
-  function mkToggle() {
-    tbtn = document.createElement('button'); tbtn.type = 'button'; tbtn.tabIndex = -1;
-    tbtn.style.cssText = 'position:fixed;top:2px;right:2px;z-index:100001;font:700 11px/1 sans-serif;padding:3px 7px;border-radius:6px;border:1px solid #3b4d75;color:#fff;outline:none;opacity:.85;';
-    let t = 0;
-    tbtn.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); if (isOpen()) return; if (Date.now() - t < 500) { setMode(!MODE); } else { openLog(); } t = Date.now(); });
-    document.body.appendChild(tbtn); paintToggle();
-  }
-  if (document.body) mkToggle(); else document.addEventListener('DOMContentLoaded', mkToggle);
-
-  /* Teclado / control remoto */
-  document.addEventListener('keydown', e => {
-    if (isOpen()) return;
-    const typing = /INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '');
-    if ((!typing && (e.key === 'c' || e.key === 'C')) || e.keyCode === 405 || e.keyCode === 457) { e.preventDefault(); e.stopPropagation(); openLog(); }
-    else if ((!typing && (e.key === 't' || e.key === 'T')) || e.keyCode === 404 || e.keyCode === 403) { e.preventDefault(); e.stopPropagation(); setMode(!MODE); }
-  }, true);
-  document.addEventListener('keydown', e => {
-    if (!isOpen()) return;
-    const pre = document.getElementById('phcTxt');
-    const btns = ['phcClose', 'phcCopy', 'phcPlay', 'phcReg'].map(id => document.getElementById(id)).filter(b => b && !b.disabled);
-    if (['Escape', 'Backspace'].includes(e.key) || e.keyCode === 4) { e.preventDefault(); e.stopPropagation(); close(); }
-    else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); (btns.includes(document.activeElement) ? document.activeElement : btns[0]).click(); }
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault(); e.stopPropagation();
-      const i = Math.max(0, btns.indexOf(document.activeElement));
-      btns[(i + (e.key === 'ArrowRight' ? 1 : btns.length - 1)) % btns.length].focus();
-    }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); pre.scrollTop += 140; }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); pre.scrollTop -= 140; }
-  }, true);
-
-  window.PHC = {
-    log(tag, msg) { push(tag, [msg]); },
-    tail(n) { return LOG.slice(-n).join('\n'); },
-    histPush, show, openLog, close, isOpen, onPlay: null,
-    get mode() { return MODE; }
-  };
-  push('INICIO', ['consola lista · ' + libs().replace(/\n/g, ' · ')]);
-})();
-</script>
-
-
-<script>
-(() => {
-  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
   const RAW_BASE = 'https://raw.githubusercontent.com/iptv-tec/Contenido/main/';
-  const PHC = window.PHC || { log() {}, tail() { return ''; }, histPush() {}, show() {}, isOpen() { return false; }, close() {}, openLog() {}, mode: false };
-  const plog = (tag, msg) => { try { PHC.log(tag, msg); } catch (e) {} };
-  const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return String(u || '').slice(0, 40); } };
-  const safeJson = o => { try { return JSON.stringify(o, null, 1).slice(0, 1500); } catch (e) { return String(o); } };
 
-  // Archivos que se descargan de GitHub y se guardan en caché según version.json
   const ARCHIVOS = [
-    { clave: 'version',           archivo: 'canales.json',             cache: 'ph_cache_canales',   nombre: 'canales' },
-    { clave: 'cinehax_version',   archivo: 'proveedor_cinehax.js',     cache: 'ph_cache_cinehax',   nombre: 'proveedor de películas y series' },
-    { clave: 'extractor_version', archivo: 'extractor_moviemaster.js', cache: 'ph_cache_extractor', nombre: 'extractor de video' }
+    { clave: 'version', archivo: 'canales.json', cache: 'ph_cache_canales', nombre: 'canales' }
   ];
 
   const app = document.getElementById('app');
-  const navButtons = document.querySelectorAll('#main-nav button');
   const modal = document.getElementById('modal');
-  const mTitle = document.getElementById('modal-title');
-  const mDesc = document.getElementById('modal-desc');
-  const mRow = document.getElementById('modal-row');
-  const mList = document.getElementById('modal-list');
-  const mClose = document.getElementById('modal-close');
+  const mInner = document.getElementById('modal-inner');
   const playerEl = document.getElementById('player');
   const playerBar = document.getElementById('player-bar');
   const playerMsg = document.getElementById('player-msg');
   const video = document.getElementById('player-video');
 
-  let provider = null, extractor = null, canales = null, vistaActual = 'canales';
+  let canales = null;
 
   // ---------- Utilidades ----------
-  const HTTP_MS = 15000;
-  async function httpGet(url, referer, extraHeaders) {
-    const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp;
-    if (!cap) throw new Error('CapacitorHttp no está disponible.');
-    const headers = Object.assign({ 'User-Agent': UA, 'Accept': 'text/html,application/json,*/*' }, extraHeaders || {});
-    if (referer) headers['Referer'] = referer;
-    const corto = url.replace(/^https?:\/\//, '').slice(0, 70);
-    const t0 = Date.now();
-    try {
-      const res = await Promise.race([
-        cap.get({ url, headers, connectTimeout: 10000, readTimeout: HTTP_MS }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('Tiempo agotado (' + (HTTP_MS / 1000) + ' s)')), HTTP_MS + 3000))
-      ]);
-      const body = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
-      window.PH.last = 'HTTP ' + res.status + ' · ' + body.length + ' bytes · ' + (Date.now() - t0) + ' ms · ' + corto;
-      plog('HTTP', window.PH.last);
-      if (res.status >= 400) throw new Error('HTTP ' + res.status);
-      if (/just a moment|cf-chl|attention required/i.test(body.slice(0, 4000)) && !/scroll-section/.test(body)) throw new Error('Bloqueado por Cloudflare');
-      return body;
-    } catch (e) {
-      window.PH.last = 'ERROR: ' + ((e && e.message) || e) + ' · ' + (Date.now() - t0) + ' ms · ' + corto;
-      plog('HTTP', window.PH.last);
-      throw e;
-    }
-  }
-
-  function diag() {
-    return window.PH && window.PH.last
-      ? '<div style="font-size:1.1vw;opacity:.8;margin-top:1vh;word-break:break-all">Último intento: ' + escapeHtml(window.PH.last) + '</div>' : '';
-  }
-
-  function fixUrl(u, base) {
-    if (!u) return '';
-    if (u.startsWith('http')) return u;
-    if (u.startsWith('//')) return 'https:' + u;
-    return base + (u.startsWith('/') ? '' : '/') + u;
-  }
-
   function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-
-  // El proveedor y el extractor descargados usan estas funciones
-  window.PH = { httpGet, fixUrl, escapeHtml, UA };
 
   // ---------- Caché local + descarga por versión ----------
   const MEM = {};
@@ -511,21 +253,12 @@
     } finally { clearTimeout(t); }
   }
 
-  // Carga SIEMPRE desde la copia guardada (instantáneo). Devuelve true si había todo.
   function cargarDesdeCache() {
-    const leer = a => MEM[a.cache] || LS.get(a.cache);
-    try { canales = JSON.parse(leer(ARCHIVOS[0]) || 'null'); } catch (e) { canales = null; }
-    for (const a of [ARCHIVOS[1], ARCHIVOS[2]]) {
-      const code = leer(a);
-      if (!code) continue;
-      try { new Function(code)(); } catch (e) { console.error('Error ejecutando ' + a.archivo, e); }
-    }
-    provider = window.PH_CINEHAX || null;
-    extractor = window.PH_EXTRACTOR || null;
-    return !!(canales && provider && extractor);
+    const a = ARCHIVOS[0];
+    try { canales = JSON.parse(MEM[a.cache] || LS.get(a.cache) || 'null'); } catch (e) { canales = null; }
+    return !!canales;
   }
 
-  // Revisa version.json y descarga SOLO lo que cambió. Devuelve las claves de caché actualizadas.
   async function revisarActualizaciones() {
     let remota = null;
     try { remota = JSON.parse(await fetchRaw('version.json', 6000)); } catch (e) { console.warn('version.json no disponible', e); }
@@ -550,143 +283,25 @@
     return actualizados;
   }
 
-  // ---------- Tarjetas y vistas ----------
-  function cardHTML(s) {
-    const img = s.poster ? `<img src="${escapeHtml(s.poster)}" onerror="this.style.opacity=.3" loading="lazy">` : `<img loading="lazy">`;
-    return `<div class="card poster" tabindex="0" data-id="${escapeHtml(s.id)}" data-type="${s.type}">
-      ${img}
-      <div class="meta"><div class="title">${escapeHtml(s.title)}</div></div>
-    </div>`;
-  }
-
+  // ---------- Canales ----------
   function autoFocus() {
     setTimeout(() => {
-      /* Si el foco ya está en algún lado (p. ej. la barra de secciones tras pulsar OK), no se roba */
+      if (loginOpen()) return;
       const ae = document.activeElement;
       if (ae && ae !== document.body && document.body.contains(ae)) return;
-      const first = app.querySelector('.card, .genre-card, input, button');
+      const first = app.querySelector('.card');
       if (first) first.focus();
     }, 100);
   }
 
-  function bindCards(container) {
-    container.querySelectorAll('.card[data-id]').forEach(c => {
-      c.addEventListener('click', () => {
-        const t = c.querySelector('.title'), im = c.querySelector('img');
-        openDetail(c.getAttribute('data-type'), c.getAttribute('data-id'), t ? t.textContent : '', im ? im.getAttribute('src') : '', c);
-      });
-      c.addEventListener('keydown', (e) => { if (e.key === 'Enter') c.click(); });
-    });
+  function tagCanal(c) {
+    const u = (c.url || '').toLowerCase();
+    if (u.includes('.flv')) return '<span class="tag flv">FLV</span>';
+    if (u.includes('.m3u')) return '<span class="tag directo">DIRECTO</span>';
+    return '';
   }
 
-  function needProvider() {
-    if (provider) return false;
-    app.innerHTML = '<div class="error">No se pudo cargar el proveedor de películas y series. Revisa tu conexión y reabre la app.</div>';
-    return true;
-  }
-
-  function renderHome(cats, noFocus) {
-    let html = '';
-    for (const cat of cats) {
-      html += `<div class="section"><h2>${escapeHtml(cat.name)}</h2><div class="carousel posters">${cat.list.map(cardHTML).join('')}</div></div>`;
-    }
-    app.innerHTML = html || '<div class="loader">Sin resultados</div>';
-    bindCards(app);
-    if (!noFocus) autoFocus();
-  }
-
-  function renderGrid(title, shows) {
-    app.innerHTML = `<div class="section"><h2>${escapeHtml(title)}</h2><div class="grid">${shows.map(cardHTML).join('')}</div></div>`;
-    bindCards(app);
-    autoFocus();
-  }
-
-  async function showHome(filterType) {
-    if (needProvider()) return;
-    const key = 'ph_home_' + filterType;
-    let cached = null;
-    try { cached = JSON.parse(LS.get(key) || 'null'); } catch (e) { cached = null; }
-    const hayCache = Array.isArray(cached) && cached.length > 0;
-    if (hayCache) renderHome(cached);
-    else app.innerHTML = `<div class="loader">Cargando ${filterType === 'movie' ? 'películas' : 'series'}...</div>`;
-    try {
-      const cats = await provider.home(filterType);
-      if (!cats.length) { if (!hayCache) app.innerHTML = '<div class="error">No se encontraron resultados.' + diag() + '</div>'; return; }
-      const ser = JSON.stringify(cats);
-      const nuevo = ser !== LS.get(key);
-      if (nuevo) LS.set(key, ser);
-      if (vistaActual !== (filterType === 'movie' ? 'movies' : 'tv')) return;
-      if (!hayCache) { renderHome(cats); return; }
-      // Ya se mostró la copia guardada: si hay cambios, se refresca en pantalla sin perder la posición
-      const ocupado = detail.classList.contains('open') || modal.classList.contains('open') || playerEl.classList.contains('open');
-      if (nuevo && !ocupado) {
-        const act = document.activeElement;
-        const id = act && app.contains(act) && act.getAttribute ? act.getAttribute('data-id') : null;
-        const top = app.scrollTop;
-        renderHome(cats, true);
-        app.scrollTop = top;
-        if (id) { const el = Array.from(app.querySelectorAll('.card[data-id]')).find(c => c.getAttribute('data-id') === id); if (el) el.focus(); }
-      }
-    } catch (e) { if (!hayCache) app.innerHTML = `<div class="error">Error: ${escapeHtml(e.message)}${diag()}</div>`; }
-  }
-
-  function renderGenres() {
-    if (needProvider()) return;
-    let html = `<div class="section"><h2>Categorías</h2><div class="grid genres">`;
-    provider.genres.forEach(([id, name]) => {
-      html += `<div class="card genre-card" tabindex="0" data-genre="${escapeHtml(id)}">${escapeHtml(name)}</div>`;
-    });
-    html += `</div></div>`;
-    app.innerHTML = html;
-    app.querySelectorAll('.genre-card').forEach(el => {
-      el.addEventListener('click', () => loadGenre(el.getAttribute('data-genre')));
-      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') el.click(); });
-    });
-    autoFocus();
-  }
-
-  async function loadGenre(id) {
-    const [type, slug] = id.split(':');
-    const found = provider.genres.find(g => g[0] === id);
-    app.innerHTML = '<div class="loader">Cargando...</div>';
-    const shows = await provider.explore(type, 1, slug || '');
-    renderGrid(found ? found[1] : (slug || '').toUpperCase(), shows);
-  }
-
-  function renderSearchView() {
-    if (needProvider()) return;
-    app.innerHTML = `
-      <div class="search-view">
-        <div class="search-box">
-          <input id="q-input" type="text" placeholder="Buscar películas o series..." tabindex="0" />
-          <button id="btn-search" tabindex="0">Buscar</button>
-        </div>
-      </div>
-      <div id="search-results"></div>
-    `;
-    const input = document.getElementById('q-input');
-    const btn = document.getElementById('btn-search');
-    const doSearch = async () => {
-      const q = input.value.trim();
-      if (!q) return;
-      const resContainer = document.getElementById('search-results');
-      resContainer.innerHTML = '<div class="loader">Buscando...</div>';
-      try {
-        const shows = await provider.search(q);
-        if (shows.length > 0) {
-          resContainer.innerHTML = `<div class="grid">${shows.map(cardHTML).join('')}</div>`;
-          bindCards(resContainer);
-          setTimeout(() => { const first = resContainer.querySelector('.card'); if (first) first.focus(); }, 100);
-        } else resContainer.innerHTML = '<div class="error">Sin resultados</div>';
-      } catch (e) { resContainer.innerHTML = `<div class="error">Error: ${escapeHtml(e.message)}</div>`; }
-    };
-    btn.addEventListener('click', doSearch);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
-    autoFocus();
-  }
-
-  // ---------- Canales ----------
-  function renderCanales() {
+  function renderCanales(noFocus) {
     if (!canales || !canales.lista) {
       app.innerHTML = '<div class="error">No hay canales cargados. Revisa tu conexión y reabre la app.</div>';
       return;
@@ -700,6 +315,7 @@
       html += `<div class="section"><h2>${escapeHtml(cat)}</h2><div class="carousel">` +
         lista.map((c, i) => `<div class="card chan" tabindex="0" data-cat="${escapeHtml(cat)}" data-idx="${i}">
           <img src="${escapeHtml(c.logo || '')}" onerror="this.style.opacity=.3" loading="lazy">
+          ${tagCanal(c)}
           <div class="meta"><div class="title">${escapeHtml(c.nombre)}</div></div></div>`).join('') +
         `</div></div>`;
     }
@@ -711,53 +327,11 @@
       });
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter') el.click(); });
     });
-    autoFocus();
+    if (!noFocus) autoFocus();
   }
 
   // ---------- Reproductor ----------
-  let hls = null, flv = null, resumeModal = false, lastFocus = null;
-
-  function b64ToBuf(b64) {
-    const bin = atob(b64); const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return bytes.buffer;
-  }
-
-  // Cargador de hls.js que pasa por CapacitorHttp (permite Referer / User-Agent y evita CORS)
-  function makeNativeLoader(baseHeaders) {
-    return class NativeLoader {
-      constructor() {
-        this.stats = { aborted: false, loaded: 0, retry: 0, total: 0, chunkCount: 0, bwEstimate: 0,
-          loading: { start: 0, first: 0, end: 0 }, parsing: { start: 0, end: 0 }, buffering: { start: 0, first: 0, end: 0 } };
-        this.context = null;
-      }
-      destroy() { this.stats.aborted = true; }
-      abort() { this.stats.aborted = true; }
-      getCacheAge() { return null; }
-      load(context, config, callbacks) {
-        this.context = context;
-        const stats = this.stats;
-        stats.loading.start = performance.now();
-        const bin = context.responseType === 'arraybuffer';
-        const headers = Object.assign({}, baseHeaders);
-        if (context.rangeStart !== undefined && context.rangeEnd !== undefined) {
-          headers['Range'] = `bytes=${context.rangeStart}-${context.rangeEnd - 1}`;
-        }
-        window.Capacitor.Plugins.CapacitorHttp.get({ url: context.url, headers, responseType: bin ? 'arraybuffer' : 'text' })
-          .then(res => {
-            if (stats.aborted) return;
-            if (res.status >= 400) { callbacks.onError({ code: res.status, text: 'HTTP ' + res.status }, context, null, stats); return; }
-            const data = bin ? b64ToBuf(res.data) : (typeof res.data === 'string' ? res.data : JSON.stringify(res.data));
-            stats.loading.first = stats.loading.end = performance.now();
-            stats.loaded = stats.total = bin ? data.byteLength : data.length;
-            callbacks.onSuccess({ url: context.url, data }, stats, context, null);
-          })
-          .catch(err => {
-            if (!stats.aborted) callbacks.onError({ code: 0, text: String((err && err.message) || err) }, context, null, stats);
-          });
-      }
-    };
-  }
+  let hls = null, flv = null, lastFocus = null, pbar = null, playedOnce = false;
 
   function destroyPlayers() {
     if (hls) { hls.destroy(); hls = null; }
@@ -765,348 +339,357 @@
     video.pause(); video.removeAttribute('src'); video.load();
   }
 
-  let srvBtn = null;   // servidor elegido (para devolverle el foco al volver del reproductor)
   function restoreFocus(el) {
     if (el && document.body.contains(el)) rcFocus(el);
-    else { const a = document.querySelector('#main-nav button.active'); if (a) a.focus(); }
+    else { const f = app.querySelector('.card'); if (f) rcFocus(f); }
   }
-  function openPlayer(title, resume) {
-    /* Canal: el origen es la tarjeta del canal. Película/serie (resume): el origen (Reproducir / capítulo)
-       ya se guardó al abrir el modal; aquí solo se recuerda qué servidor se eligió. */
-    if (resume) { if (mList.contains(document.activeElement)) srvBtn = document.activeElement; }
-    else lastFocus = document.activeElement;
-    resumeModal = !!resume;
-    playerBar.textContent = title;
+
+  function openPlayer(title) {
+    lastFocus = document.activeElement;
+    playedOnce = false;
     playerMsg.textContent = 'Cargando...';
     playerEl.classList.add('open');
+    pbar.open(true);
     setTimeout(() => video.focus(), 100);
   }
 
   function stopPlayer() {
+    pbar.close();
     destroyPlayers();
     playerEl.classList.remove('open');
-    if (resumeModal) {
-      modal.classList.add('open');
-      const f = (srvBtn && mList.contains(srvBtn)) ? srvBtn : (mList.querySelector('button') || mClose);
-      setTimeout(() => f.focus(), 100);
-    } else {
-      const t = lastFocus;
-      setTimeout(() => restoreFocus(t), 100);   // canal: vuelve al canal seleccionado
-    }
+    const t = lastFocus;
+    setTimeout(() => restoreFocus(t), 100);
   }
 
-  // Diagnóstico de un 403/error en el manifiesto: repite la petición con distintas combinaciones de headers
-  async function probeManifest(url, headers) {
-    const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp;
-    if (!cap) return;
-    let origin = ''; try { origin = new URL(headers.Referer || headers.referer).origin; } catch (e) {}
-    const variants = [
-      ['headers del extractor', headers],
-      ['+ Origin', Object.assign({}, headers, origin ? { Origin: origin } : {})],
-      ['+ Origin + Accept */*', Object.assign({ Accept: '*/*' }, headers, origin ? { Origin: origin } : {})],
-      ['solo User-Agent', { 'User-Agent': headers['User-Agent'] || '' }],
-      ['sin headers', {}]
-    ];
-    plog('PRUEBA', 'Probando el manifiesto con ' + variants.length + ' combinaciones de headers…');
-    for (const [name, h] of variants) {
-      try {
-        const r = await cap.get({ url, headers: h, responseType: 'text', connectTimeout: 10000, readTimeout: 10000 });
-        const body = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
-        const rh = r.headers || {};
-        const ct = rh['Content-Type'] || rh['content-type'] || '?';
-        const ck = (rh['Set-Cookie'] || rh['set-cookie']) ? 'sí' : 'no';
-        plog('PRUEBA', name + ' → HTTP ' + r.status + ' · ' + ct + ' · ' + body.length + ' bytes · set-cookie: ' + ck + ' · ' + body.slice(0, 200).replace(/\s+/g, ' '));
-        if (r.status < 400) { plog('PRUEBA', '✓ FUNCIONA con: ' + name); return; }
-      } catch (e) { plog('PRUEBA', name + ' → ERROR ' + ((e && e.message) || e)); }
-    }
-    plog('PRUEBA', 'Ninguna combinación funcionó.');
-  }
-
-  function playHls(url, headers) {
+  function playHls(url) {
     if (window.Hls && Hls.isSupported()) {
-      const cfg = {};
-      if (headers && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp) {
-        cfg.loader = makeNativeLoader(headers);
-      }
-      plog('HLS', 'v' + Hls.version + ' · ' + url + (cfg.loader ? ' · loader nativo (headers: ' + Object.keys(headers).join(', ') + ')' : ' · loader normal'));
-      hls = new Hls(cfg);
+      hls = new Hls();
       hls.loadSource(url);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, (e, d) => {
-        plog('HLS', 'manifest OK · niveles: ' + (d && d.levels ? d.levels.length : '?'));
-        video.play().catch(err => plog('VIDEO', 'play() rechazado: ' + ((err && err.message) || err)));
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        pbar.updateQuality();
+        video.play().catch(() => {});
       });
+      hls.on(Hls.Events.LEVEL_SWITCHED, () => pbar.updateQuality());
       hls.on(Hls.Events.ERROR, (e, d) => {
-        if (!d) return;
-        plog('HLS', (d.fatal ? 'FATAL ' : 'error ') + d.type + '/' + d.details + (d.response && d.response.code !== undefined ? ' · HTTP ' + d.response.code : '') + (d.url ? ' · ' + String(d.url).slice(0, 100) : ''));
-        if (d.fatal) {
-          playerMsg.textContent = 'No se pudo reproducir este video.';
-          const after = () => { if (PHC.mode) PHC.openLog(); };
-          if (d.details === 'manifestLoadError' && headers) probeManifest(url, headers).then(after, after); else after();
-        }
+        if (d && d.fatal) playerMsg.textContent = 'No se pudo reproducir este canal.';
       });
     } else {
-      plog('HLS', (window.Hls ? 'hls.js no soportado' : 'hls.js NO cargó (¿falta hls.min.js?)') + ' · se usa <video src> directo · ' + url);
       video.src = url;
       video.play().catch(() => {});
     }
   }
 
-  video.addEventListener('playing', () => { playerMsg.textContent = ''; plog('VIDEO', 'reproduciendo'); });
-  video.addEventListener('loadedmetadata', () => plog('VIDEO', 'metadata · ' + video.videoWidth + 'x' + video.videoHeight + ' · ' + Math.round(video.duration || 0) + ' s'));
-  video.addEventListener('stalled', () => plog('VIDEO', 'stalled (sin datos)'));
-  video.addEventListener('error', () => { const er = video.error; plog('VIDEO', 'error ' + (er ? er.code + ' ' + (er.message || '') : '?')); if (PHC.mode) PHC.openLog(); });
+  video.addEventListener('playing', () => { playerMsg.textContent = ''; });
+
+  // ---------- Barra del Reproductor ----------
+  const SEEK_TAP = 10, SEEK_HOLD_SPS = 60, BAR_HIDE_MS = 4000;
+  const ASPECTS = [{ key: 'contain', label: 'Ajustar' }, { key: 'cover', label: 'Recortar' }, { key: 'fill', label: 'Estirar' }];
+  const ICO_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  const ICO_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+  const ICO_ASPECT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9V5a2 2 0 0 0-2-2h-4M3 15v4a2 2 0 0 0 2 2h4M21 15v4a2 2 0 0 1-2 2h-4M3 9V5a2 2 0 0 1 2-2h4"/></svg>';
+
+  class PlayerBar {
+    constructor() {
+      this.live = false; this.visible = false; this.menuOpen = false;
+      this.btnIdx = 0; this.aspectIdx = 0; this.hideTimer = null; this.toastTimer = null;
+      this.arrow = null; this.scrubPos = null; this.scrubRaf = null; this.items = []; this.itemIdx = 0;
+      this.build();
+    }
+    build() {
+      const mk = (tag, cls, html) => { const d = document.createElement(tag); if (cls) d.className = cls; if (html != null) d.innerHTML = html; return d; };
+      const el = mk('div'); el.id = 'pbar';
+      const prog = mk('div', 'pb-progress');
+      const cur = mk('span', 'pb-time', '00:00');
+      const track = mk('div', 'pb-track'), fill = mk('div', 'pb-fill'), thumb = mk('div', 'pb-thumb');
+      track.appendChild(fill); track.appendChild(thumb);
+      const tot = mk('span', 'pb-time', '00:00');
+      prog.appendChild(cur); prog.appendChild(track); prog.appendChild(tot);
+      const row = mk('div', 'pb-row');
+      const bPlay = mk('div', 'pb-btn', ICO_PLAY), bAsp = mk('div', 'pb-btn', ICO_ASPECT), bQ = mk('div', 'pb-btn', '<span id="pb-qlbl">SD</span>');
+      const menu = mk('div'); menu.id = 'pb-qmenu'; bQ.appendChild(menu);
+      const live = mk('div', 'pb-live', '<span class="pb-dot"></span><span id="pb-livetxt">EN VIVO</span>');
+      row.appendChild(bPlay); row.appendChild(bAsp); row.appendChild(bQ); row.appendChild(live);
+      el.appendChild(prog); el.appendChild(row);
+      const toast = mk('div'); toast.id = 'pb-toast';
+      playerEl.appendChild(el); playerEl.appendChild(toast);
+      Object.assign(this, { el, prog, cur, track, fill, thumb, tot, bPlay, bAsp, bQ, menuEl: menu, liveEl: live, toastEl: toast });
+      this.btns = [bPlay, bAsp, bQ];
+      this.btns.forEach((b, i) => b.addEventListener('click', () => { this.btnIdx = i; this.activate(i); this.resetTimer(); }));
+      track.addEventListener('click', (e) => {
+        if (!this.canSeek()) return;
+        const r = track.getBoundingClientRect();
+        video.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * video.duration;
+        this.updateProgress(); this.resetTimer();
+      });
+      video.addEventListener('click', () => { if (this.visible) this.resetTimer(); else this.show(); });
+      video.addEventListener('play', () => this.updatePlay());
+      video.addEventListener('pause', () => this.updatePlay());
+      video.addEventListener('timeupdate', () => { if (this.visible) this.updateProgress(); });
+      video.addEventListener('durationchange', () => this.updateProgress());
+      video.addEventListener('loadedmetadata', () => { this.updateProgress(); this.updateQuality(); });
+      video.addEventListener('resize', () => this.updateQuality());
+      document.addEventListener('click', (e) => {
+        if (this.menuOpen && !e.target.closest('#pb-qmenu') && !e.target.closest('#pbar .pb-btn:nth-child(3)')) this.closeMenu();
+      });
+    }
+
+    open(live) {
+      this.live = !!live;
+      this.hide();
+      this.liveEl.classList.toggle('vod', !this.live);
+      document.getElementById('pb-livetxt').textContent = this.live ? 'EN VIVO' : 'VOD';
+      this.applyAspect();
+      this.updateProgress(); this.updateQuality();
+      this.show();
+    }
+    close() { this.hide(); this.scrubPos = null; video.style.objectFit = ''; }
+
+    canSeek() { return !this.live && isFinite(video.duration) && video.duration > 0; }
+
+    show() {
+      this.el.classList.add('visible'); this.visible = true;
+      this.updatePlay(); this.updateQuality(); this.updateProgress();
+      this.focusBtn(0); this.resetTimer();
+    }
+    hide() {
+      this.endArrow();
+      this.el.classList.remove('visible'); this.visible = false;
+      this.btns.forEach(b => b.classList.remove('focused')); this.track.classList.remove('focused'); this.prog.classList.remove('on-focus');
+      this.closeMenu();
+      if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
+    }
+    resetTimer() {
+      if (this.hideTimer) clearTimeout(this.hideTimer);
+      this.hideTimer = setTimeout(() => { if (this.menuOpen) { this.resetTimer(); return; } this.hide(); }, BAR_HIDE_MS);
+    }
+    peek() { if (this.visible) this.resetTimer(); else this.show(); }
+
+    focusBtn(i) {
+      this.track.classList.remove('focused'); this.prog.classList.remove('on-focus');
+      this.btns.forEach(b => b.classList.remove('focused'));
+      this.btnIdx = i; this.btns[i].classList.add('focused');
+    }
+    focusProgress() {
+      this.btns.forEach(b => b.classList.remove('focused'));
+      this.btnIdx = -1; this.track.classList.add('focused'); this.prog.classList.add('on-focus');
+    }
+
+    toggle() { if (!video.paused && !video.ended) video.pause(); else video.play().catch(() => {}); this.updatePlay(); }
+    updatePlay() { this.bPlay.innerHTML = (!video.paused && !video.ended) ? ICO_PAUSE : ICO_PLAY; }
+    toast(t) {
+      this.toastEl.textContent = t; this.toastEl.classList.add('show');
+      if (this.toastTimer) clearTimeout(this.toastTimer);
+      this.toastTimer = setTimeout(() => this.toastEl.classList.remove('show'), 1600);
+    }
+    applyAspect() { video.style.objectFit = ASPECTS[this.aspectIdx].key; }
+
+    fmt(sec) {
+      if (!sec || isNaN(sec) || !isFinite(sec)) return '00:00';
+      const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
+      const p = n => (n < 10 ? '0' : '') + n;
+      return h > 0 ? h + ':' + p(m) + ':' + p(s) : p(m) + ':' + p(s);
+    }
+    updateProgress() {
+      const show = this.canSeek();
+      this.prog.style.display = show ? 'flex' : 'none';
+      if (!show) return;
+      const dur = video.duration, cur = this.scrubPos != null ? this.scrubPos : (video.currentTime || 0);
+      const pct = Math.max(0, Math.min(100, cur / dur * 100));
+      this.fill.style.width = pct + '%'; this.thumb.style.left = pct + '%';
+      this.cur.textContent = this.fmt(cur); this.tot.textContent = this.fmt(dur);
+    }
+
+    qualityLabel() {
+      let h = 0, bw = 0;
+      if (hls && hls.levels && hls.levels.length) {
+        let i = hls.currentLevel >= 0 ? hls.currentLevel : hls.loadLevel;
+        if (i < 0) i = hls.levels.reduce((b, lv, k) => ((lv.bitrate || 0) > (hls.levels[b].bitrate || 0) ? k : b), 0);
+        const lv = hls.levels[i] || {}; h = lv.height || 0; bw = lv.bitrate || 0;
+      }
+      if (!h) h = video.videoHeight || 0;
+      if (h >= 1080) return 'FHD'; if (h >= 720) return 'HD'; if (h > 0) return 'SD';
+      if (bw >= 3000000) return 'FHD'; if (bw >= 1500000) return 'HD'; return 'SD';
+    }
+    updateQuality() { const l = document.getElementById('pb-qlbl'); if (l) l.textContent = this.qualityLabel(); }
+    buildMenu() {
+      const m = this.menuEl; m.innerHTML = ''; this.items = [];
+      const add = (txt, level, act, only) => {
+        const d = document.createElement('div'); d.className = 'pb-qitem' + (act ? ' act' : '') + (only ? ' only' : ''); d.textContent = txt;
+        if (level !== undefined) d.dataset.level = String(level);
+        d.addEventListener('click', (ev) => { ev.stopPropagation(); this.selectItem(this.items.indexOf(d)); });
+        m.appendChild(d); this.items.push(d);
+      };
+      if (!hls || !hls.levels || hls.levels.length <= 1) { add('Auto · ' + this.qualityLabel(), undefined, true, true); return; }
+      add('Auto', -1, hls.manualLevel === -1);
+      hls.levels.map((lv, i) => ({ lv, i })).sort((a, b) => (b.lv.height || 0) - (a.lv.height || 0) || (b.lv.bitrate || 0) - (a.lv.bitrate || 0)).forEach(({ lv, i }) => {
+        const h = lv.height || 0, bw = lv.bitrate || 0;
+        add(h >= 720 ? 'HD ' + h + 'p' : h > 0 ? h + 'p' : bw > 0 ? Math.round(bw / 1000) + ' kbps' : 'SD', i, hls.manualLevel === i);
+      });
+    }
+    openMenu() { this.menuOpen = true; this.buildMenu(); this.menuEl.classList.add('open'); this.focusItem(0); this.resetTimer(); }
+    closeMenu() { this.menuOpen = false; this.menuEl.classList.remove('open'); this.items = []; }
+    focusItem(i) {
+      if (!this.items.length) return;
+      i = Math.max(0, Math.min(this.items.length - 1, i));
+      this.items.forEach(x => x.classList.remove('focused')); this.items[i].classList.add('focused'); this.itemIdx = i;
+    }
+    selectItem(i) {
+      if (i < 0 || i >= this.items.length) return;
+      const level = parseInt(this.items[i].dataset.level, 10);
+      if (hls && hls.levels && hls.levels.length > 1 && !isNaN(level) && level !== hls.manualLevel) hls.nextLevel = level;
+      this.closeMenu(); this.updateQuality(); this.focusBtn(2);
+    }
+
+    activate(i) {
+      if (i === 0) this.toggle();
+      else if (i === 1) { this.aspectIdx = (this.aspectIdx + 1) % ASPECTS.length; this.applyAspect(); this.toast('Aspecto: ' + ASPECTS[this.aspectIdx].label); }
+      else if (i === 2) { if (this.menuOpen) this.closeMenu(); else this.openMenu(); }
+    }
+
+    seekBy(sec) { if (this.canSeek()) video.currentTime = Math.max(0, Math.min(video.duration, (video.currentTime || 0) + sec)); this.updateProgress(); }
+    arrowDown(dir, e) {
+      const now = Date.now(), a = this.arrow;
+      if (a && a.dir === dir && (now - a.last) < 700) { a.last = now; if (!a.scrubbing) this.beginScrub(a); return; }
+      if (a) this.endArrow();
+      if (e && e.repeat) return;
+      const na = { dir, last: now, scrubbing: false, tapTimer: null };
+      na.tapTimer = setTimeout(() => { if (this.arrow === na && !na.scrubbing) this.endArrow(); }, 900);
+      this.arrow = na;
+    }
+    beginScrub(a) {
+      if (!this.canSeek()) return;
+      a.scrubbing = true; clearTimeout(a.tapTimer);
+      this.scrubPos = video.currentTime || 0;
+      let lastT = performance.now(), lastReset = lastT;
+      const step = (t) => {
+        if (this.arrow !== a) return;
+        if (Date.now() - a.last > 700) { this.endArrow(); return; }
+        const dur = video.duration || 0, dt = (t - lastT) / 1000; lastT = t;
+        this.scrubPos = Math.max(0, Math.min(dur, this.scrubPos + a.dir * SEEK_HOLD_SPS * dt));
+        this.updateProgress();
+        if (t - lastReset > 500) { lastReset = t; this.resetTimer(); }
+        this.scrubRaf = requestAnimationFrame(step);
+      };
+      this.scrubRaf = requestAnimationFrame(step);
+    }
+    endArrow() {
+      const a = this.arrow; if (!a) return;
+      this.arrow = null; clearTimeout(a.tapTimer);
+      if (this.scrubRaf) { cancelAnimationFrame(this.scrubRaf); this.scrubRaf = null; }
+      if (this.canSeek()) {
+        const dur = video.duration;
+        if (a.scrubbing && this.scrubPos != null) video.currentTime = Math.max(0, Math.min(dur, this.scrubPos));
+        else if (!a.scrubbing) video.currentTime = Math.max(0, Math.min(dur, (video.currentTime || 0) + a.dir * SEEK_TAP));
+      }
+      this.scrubPos = null; this.updateProgress();
+    }
+
+    onKey(e) {
+      const k = e.key, kc = e.keyCode;
+      if (k === 'Backspace' || k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || kc === 4) return false;
+      if (k === 'MediaPlayPause' || kc === 179) { this.toggle(); this.peek(); return true; }
+      if (k === 'MediaPlay' || kc === 415) { video.play().catch(() => {}); this.peek(); return true; }
+      if (k === 'MediaPause' || kc === 19) { video.pause(); this.peek(); return true; }
+      if (this.canSeek() && (k === 'MediaFastForward' || kc === 417)) { this.seekBy(SEEK_TAP); this.peek(); return true; }
+      if (this.canSeek() && (k === 'MediaRewind' || kc === 412)) { this.seekBy(-SEEK_TAP); this.peek(); return true; }
+      const arrow = k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight';
+      if (!arrow && k !== 'Enter' && k !== ' ') return false;
+      if (!this.visible) {
+        this.show();
+        if (this.canSeek() && (k === 'ArrowLeft' || k === 'ArrowRight')) { this.focusProgress(); this.arrowDown(k === 'ArrowRight' ? 1 : -1, e); }
+        return true;
+      }
+      return this.handleKey(k, e);
+    }
+    handleKey(k, e) {
+      this.resetTimer();
+      if (this.menuOpen) {
+        if (k === 'ArrowDown') this.focusItem(this.itemIdx + 1);
+        else if (k === 'ArrowUp') this.focusItem(this.itemIdx - 1);
+        else if (k === 'Enter' || k === ' ') this.selectItem(this.itemIdx);
+        else { this.closeMenu(); this.focusBtn(2); }
+        return true;
+      }
+      if (this.btnIdx === -1 && !this.canSeek()) this.focusBtn(0);
+      if (this.btnIdx === -1) {
+        if (k !== 'ArrowLeft' && k !== 'ArrowRight' && this.arrow) this.endArrow();
+        if (k === 'ArrowLeft') this.arrowDown(-1, e);
+        else if (k === 'ArrowRight') this.arrowDown(1, e);
+        else if (k === 'ArrowDown') this.focusBtn(0);
+        else if (k === 'Enter' || k === ' ') this.toggle();
+        return true;
+      }
+      if (k === 'ArrowLeft') this.focusBtn(Math.max(0, this.btnIdx - 1));
+      else if (k === 'ArrowRight') this.focusBtn(Math.min(this.btns.length - 1, this.btnIdx + 1));
+      else if (k === 'ArrowUp') { if (this.canSeek()) this.focusProgress(); }
+      else if (k === 'Enter' || k === ' ') this.activate(this.btnIdx);
+      return true;
+    }
+  }
+  pbar = new PlayerBar();
+
+  window.addEventListener('keydown', (e) => {
+    if (!playerEl.classList.contains('open') || e.defaultPrevented) return;
+    if (pbar.onKey(e)) e.preventDefault();
+  });
+  window.addEventListener('keyup', (e) => {
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && pbar.arrow) { e.preventDefault(); pbar.endArrow(); }
+  });
+
+  video.addEventListener('playing', () => { playedOnce = true; });
+  video.addEventListener('waiting', () => { if (playedOnce && playerEl.classList.contains('open')) playerMsg.textContent = 'Bufferizando…'; });
+  video.addEventListener('canplay', () => { if (playerMsg.textContent === 'Bufferizando…') playerMsg.textContent = ''; });
 
   function playChannel(c) {
-    openPlayer(c.nombre, false);
+    openPlayer(c.nombre);
     const u = (c.url || '').toLowerCase();
     if (u.includes('.flv') && window.mpegts && mpegts.isSupported()) {
-      plog('FLV', 'mpegts · ' + c.url);
       flv = mpegts.createPlayer({ type: 'flv', isLive: true, url: c.url }, { enableWorker: true });
-      flv.on(mpegts.Events.ERROR, (t, d, info) => plog('FLV', 'error ' + t + '/' + d + ' ' + ((info && info.msg) || '')));
       flv.attachMediaElement(video); flv.load(); flv.play().catch(() => {});
     } else if (u.includes('.m3u')) {
-      plog('CANAL', c.nombre + ' · ' + c.url);
-      playHls(c.url, null);
+      playHls(c.url);
     } else {
       video.src = c.url; video.play().catch(() => {});
     }
   }
 
-  // ---------- Modal de detalle / episodios / servidores ----------
-  let modalBack = null;
-
-  function addOpt(container, label, onClick, selected) {
-    const b = document.createElement('button');
-    b.className = 'opt' + (selected ? ' sel' : '');
-    b.tabIndex = 0;
-    b.textContent = label;
-    b.addEventListener('click', onClick);
-    b.addEventListener('keydown', (e) => { if (e.key === 'Enter') b.click(); });
-    container.appendChild(b);
-    return b;
-  }
-
-  function setModal(title, desc, back, srv) {
-    modal.classList.toggle('srv', !!srv);
-    mTitle.textContent = title;
-    mDesc.textContent = desc || '';
-    mDesc.style.display = desc ? '' : 'none';
-    mRow.innerHTML = ''; mList.innerHTML = '';
-    modalBack = back || null;
-    mClose.textContent = modalBack ? 'Volver' : 'Cerrar';
-  }
-
-  function focusModal() {
-    setTimeout(() => {
-      const f = mList.querySelector('button') || mRow.querySelector('button') || mClose;
-      f.focus();
-    }, 100);
-  }
-
+  // ---------- Modal (confirmar salida) ----------
   function closeModal() {
     modal.classList.remove('open');
-    modalBack = null;
-    restoreFocus(lastFocus);   // película: Reproducir · serie: capítulo elegido
+    restoreFocus(lastFocus);
   }
 
-  // ---------- Pantalla de detalle ----------
-  const detail = document.getElementById('detail');
-  const dTitle = document.getElementById('d-title'), dMeta = document.getElementById('d-meta'),
-        dDesc = document.getElementById('d-desc'), dActions = document.getElementById('d-actions'),
-        dEps = document.getElementById('d-eps');
-  let detailCard = null;
-
-  function closeDetail() {
-    detail.classList.remove('open');
-    detail.style.backgroundImage = '';
-    const dc = detailCard; detailCard = null;
-    restoreFocus(dc);   // vuelve al póster elegido
-  }
-
-  function dBtn(label, cls, onClick) {
-    const b = document.createElement('button');
-    b.className = 'd-btn ' + (cls || '');
-    b.tabIndex = 0; b.textContent = label;
-    b.addEventListener('click', onClick);
-    b.addEventListener('keydown', (e) => { if (e.key === 'Enter') b.click(); });
-    dActions.appendChild(b);
-    return b;
-  }
-
-  function metaHTML(M, d) {
-    const parts = [M.type === 'tv' ? 'Serie' : 'Película'];
-    const gen = Array.isArray(d.genres) ? d.genres.join(' · ') : (d.genres || '');
-    if (gen) parts.push(gen);
-    const year = d.year || d.releaseInfo || '';
-    if (year) parts.push(year);
-    let h = parts.map(p => '<span>' + escapeHtml(String(p)) + '</span>').join('<span class="d-dot">•</span>');
-    const rt = d.rating || d.imdbRating || d.imdb;
-    if (rt) h += '<span class="d-imdb">IMDb</span><span>' + escapeHtml(String(rt)) + '</span>';
-    return h;
-  }
-
-  async function openDetail(type, id, title, poster, cardEl) {
-    detailCard = cardEl || document.activeElement;
-    const M = { type, id, title: title || (type === 'tv' ? 'Serie' : 'Película'), poster: poster || '', season: null, eps: {}, seasons: [] };
-    dTitle.textContent = M.title;
-    dMeta.innerHTML = metaHTML(M, {});
-    dDesc.textContent = 'Cargando sinopsis...';
-    dActions.innerHTML = ''; dEps.innerHTML = '';
-    detail.style.backgroundImage = M.poster ? `url('${M.poster}')` : 'none';
-    detail.scrollTop = 0;
-    detail.classList.add('open');
-    detail.tabIndex = -1; detail.focus();
-    try {
-      const d = await provider.detail(type, id);
-      M.d = d;
-      if (d.title) { M.title = d.title; dTitle.textContent = d.title; }
-      const bg = d.backdrop || d.background || d.poster || M.poster;
-      if (bg) detail.style.backgroundImage = `url('${bg}')`;
-      dMeta.innerHTML = metaHTML(M, d);
-      dDesc.textContent = d.overview || 'No se encontró sinopsis para este título.';
-      M.seasons = d.seasons || [];
-      renderDetailActions(M);
-      if (type === 'tv' && M.seasons.length) selectSeason(M, M.seasons[0]);
-    } catch (e) {
-      dDesc.innerHTML = 'Error de conexión al cargar la ficha. Revisa tu conexión a internet.' + diag();
-      console.error(e);
-    }
-  }
-
-  function renderDetailActions(M) {
-    dActions.innerHTML = '';
-    if (M.type === 'movie') {
-      const p = dBtn('▶ Reproducir', 'play', () => showServers({ type: 'movie', id: M.id }, M.title));
-      setTimeout(() => p.focus(), 80);
-    } else {
-      M.seasons.forEach(n => dBtn('Temporada ' + n, n === M.season ? 'active' : '', () => selectSeason(M, n)));
-    }
-  }
-
-  async function selectSeason(M, n) {
-    M.season = n;
-    renderDetailActions(M);
-    if (!M.eps[n]) {
-      dEps.innerHTML = '<div class="loader" style="padding:2vh;font-size:1.4vw">Cargando episodios...</div>';
-      try { M.eps[n] = await provider.episodes(M.id, n); } catch (e) { M.eps[n] = []; }
-      if (M.season !== n) return;
-    }
-    renderEpisodes(M);
-    const act = dActions.querySelector('.d-btn.active'); if (act) act.focus();
-  }
-
-  function renderEpisodes(M) {
-    const eps = M.eps[M.season] || [];
-    dEps.innerHTML = '';
-    if (!eps.length) { dEps.innerHTML = '<div class="loader" style="padding:2vh;font-size:1.4vw">No se encontraron episodios.</div>'; return; }
-    eps.forEach(ep => {
-      const c = document.createElement('div');
-      c.className = 'ep-card'; c.tabIndex = 0;
-      const img = ep.thumbnail || ep.thumb || ep.image || ep.still || M.poster || '';
-      if (img) c.style.backgroundImage = `url('${img}')`;
-      const dur = ep.runtime || ep.duration || '';
-      c.innerHTML = `<div class="ep-info"><span class="ep-num">EPISODIO ${escapeHtml(String(ep.number))}</span>
-        <div class="ep-title">${escapeHtml(ep.title || 'Episodio ' + ep.number)}</div>
-        ${dur ? `<div class="ep-dur">⏱ ${escapeHtml(String(dur))}${/\d$/.test(String(dur)) ? ' min' : ''}</div>` : ''}</div>`;
-      c.addEventListener('click', () => showServers({ type: 'tv', id: M.id, season: M.season, episode: ep.number }, `${M.title} · T${M.season}E${ep.number}`));
-      c.addEventListener('keydown', (e) => { if (e.key === 'Enter') c.click(); });
-      dEps.appendChild(c);
-    });
-  }
-
-  // ---------- Modal de servidores ----------
-  async function showServers(media, label) {
-    lastFocus = document.activeElement;
-    setModal(label, 'Buscando servidores...', null, true);
-    modal.classList.add('open');
-    mClose.focus();
-    plog('SERVIDORES', 'Buscando para ' + label);
-    if (!extractor) { mDesc.textContent = 'El extractor de video no está disponible.'; plog('SERVIDORES', 'extractor NO disponible'); return; }
-    let servers = [];
-    try { servers = await extractor.servers(media); } catch (e) { console.error(e); }
-    if (!servers.length) { plog('SERVIDORES', 'ninguno · ' + (window.PH.last || '')); mDesc.textContent = 'No se encontraron servidores para este título.' + (window.PH.last ? ' (' + window.PH.last + ')' : ''); return; }
-    plog('SERVIDORES', servers.length + ' → ' + servers.map(s => s.name).join(', '));
-    mDesc.textContent = 'Elige un servidor:';
-    servers.forEach(s => addOpt(mList, s.name, () => playServer(s, label)));
-    focusModal();
-  }
-
-  function playResolved(pl) {
-    modal.classList.remove('open');
-    openPlayer(pl.label, true);
-    playHls(pl.source, pl.headers);
-  }
-  if (window.PHC) window.PHC.onPlay = playResolved;
-
-  async function playServer(server, label) {
-    mDesc.textContent = 'Obteniendo video...';
-    const host = hostOf(server.src), t0 = Date.now(), url = String(server.src).slice(0, 90);
-    plog('EXTRACT', 'Servidor «' + server.name + '» · ' + server.src);
-    try {
-      const v = await extractor.extract(server.src);
-      const ms = Date.now() - t0;
-      plog('EXTRACT', 'OK ' + ms + ' ms · ' + v.source);
-      PHC.histPush({ host, ok: true, ms, url });
-      const pl = { source: v.source, headers: v.headers, label };
-      if (PHC.mode) {
-        mDesc.textContent = 'Elige un servidor:';
-        PHC.show('EXTRACTOR: OK', 'Servidor: ' + server.name + '\nEmbed: ' + server.src + '\nTiempo: ' + ms + ' ms\n\nURL: ' + v.source +
-          '\nHeaders: ' + safeJson(v.headers || {}) + '\n\n--- Respuesta completa del extractor ---\n' + safeJson(v), pl);
-        return;
-      }
-      playResolved(pl);
-    } catch (e) {
-      const ms = Date.now() - t0, msg = (e && e.message) || String(e);
-      plog('EXTRACT', 'FALLÓ ' + ms + ' ms · ' + msg);
-      PHC.histPush({ host, ok: false, ms, url, err: msg.slice(0, 80) });
-      mDesc.textContent = 'No se pudo obtener el video de este servidor. Prueba con otro.';
-      console.error(e);
-      if (PHC.mode) PHC.show('EXTRACTOR: FALLÓ', 'Servidor: ' + server.name + '\nEmbed: ' + server.src + '\nError: ' + msg +
-        '\nÚltima petición: ' + (window.PH.last || '-') + '\n\n--- Últimas líneas del registro ---\n' + PHC.tail(25), null);
-    }
-  }
-
-  mClose.addEventListener('click', () => { if (modalBack) modalBack(); else closeModal(); });
-  mClose.addEventListener('keydown', (e) => { if (e.key === 'Enter') mClose.click(); });
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('modal-exit').addEventListener('click', salirApp);
 
   // ---------- Botón Atrás ----------
   let _ultimoAtras = 0;
   function handleBack() {
     const ahora = Date.now();
-    if (ahora - _ultimoAtras < 300) return;   // evita doble disparo
+    if (ahora - _ultimoAtras < 300) return;
     _ultimoAtras = ahora;
-    if (PHC.isOpen()) { PHC.close(); return; }   // la consola se cierra primero
-    if (playerEl.classList.contains('open')) { stopPlayer(); return; }
-    if (modal.classList.contains('open')) { mClose.click(); return; }
-    if (detail.classList.contains('open')) { closeDetail(); return; }
-    if (vistaActual !== 'canales') { navButtons[0].click(); navButtons[0].focus(); return; }
-    // En Canales: confirmar salida
+    
+    if (loginOpen()) { salirApp(); return; }
+    if (playerEl.classList.contains('open')) { if (pbar.menuOpen) { pbar.closeMenu(); return; } stopPlayer(); return; }
+    if (modal.classList.contains('open')) { closeModal(); return; }
+    
+    // En la lista de canales: confirmar salida
     lastFocus = document.activeElement;
-    setModal('¿Salir de la aplicación?', '', null);
-    mClose.textContent = 'Cancelar';
-    addOpt(mList, 'Salir', () => {
-      const App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
-      if (App && App.exitApp) App.exitApp(); else window.close();
-    });
     modal.classList.add('open');
-    focusModal();
+    setTimeout(() => document.getElementById('modal-exit').focus(), 100);
   }
 
-  // Android (Capacitor): el botón Atrás llega como evento "backButton", no como tecla
   try {
     const App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
     if (App && App.addListener) App.addListener('backButton', () => handleBack());
-    else plog('ATRÁS', 'Plugin App de Capacitor no disponible: se usa el historial como respaldo');
   } catch (e) { console.warn('No se pudo registrar backButton', e); }
 
-  // Respaldo: si Android entrega Atrás al WebView (historial) en vez de a JS, se captura aquí y no se cierra la app
   try {
     history.pushState({ ph: 1 }, '');
     window.addEventListener('popstate', () => { history.pushState({ ph: 1 }, ''); handleBack(); });
   } catch (e) { console.warn('No se pudo preparar el historial', e); }
 
-  // Control remoto / teclado
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Backspace' || e.key === 'Escape' || e.key === 'GoBack' || e.key === 'BrowserBack' || e.keyCode === 4) {
       const t = e.target;
@@ -1117,52 +700,33 @@
   });
 
   // ---------- Control remoto (↑ ↓ ← →) ----------
-  // El foco se mueve por secciones, canales, películas y series; solo OK (Enter) elige.
-  // Barra de secciones: ←/→ mueve el foco, ↓ baja al contenido, ↑ se queda en la barra.
-  // Contenido: ←/→ dentro de la fila, ↑/↓ entre filas; ↑ desde la primera fila vuelve a la sección activa.
-  const navList = Array.from(navButtons);
-
   function rcScrollX(el) {
-    const sc = el.closest('.carousel, .d-eps, .d-actions');
+    const sc = el.closest('.carousel');
     if (!sc || sc.scrollWidth <= sc.clientWidth) return;
     const r = el.getBoundingClientRect(), c = sc.getBoundingClientRect();
     const left = sc.scrollLeft + (r.left - c.left) - (c.width - r.width) / 2;
     try { sc.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); } catch (_) { sc.scrollLeft = Math.max(0, left); }
   }
-  function rcScrollY(el, box) {
+  function rcScrollY(el) {
     const sec = el.closest('.section');
-    const t = (sec && sec.offsetHeight <= box.clientHeight) ? sec : el;   // se intenta ver la fila completa con su título
-    const r = t.getBoundingClientRect(), c = box.getBoundingClientRect();
-    if (r.top < c.top + 8) box.scrollTop -= (c.top + 8 - r.top);
-    else if (r.bottom > c.bottom - 8) box.scrollTop += (r.bottom - c.bottom + 8);
+    const t = (sec && sec.offsetHeight <= app.clientHeight) ? sec : el;
+    const r = t.getBoundingClientRect(), c = app.getBoundingClientRect();
+    if (r.top < c.top + 8) app.scrollTop -= (c.top + 8 - r.top);
+    else if (r.bottom > c.bottom - 8) app.scrollTop += (r.bottom - c.bottom + 8);
   }
   function rcFocus(el) {
     if (!el) return;
     try { el.focus({ preventScroll: true }); } catch (_) { el.focus(); }
     rcScrollX(el);
-    const box = detail.classList.contains('open') ? detail : app;
-    if (box.contains(el)) rcScrollY(el, box);
+    if (app.contains(el)) rcScrollY(el);
   }
 
-  // Filas navegables de la vista actual (o del detalle si está abierto), en orden de pantalla
   function rcRows() {
-    if (detail.classList.contains('open')) {
-      return [Array.from(dActions.querySelectorAll('button')), Array.from(dEps.querySelectorAll('.ep-card'))].filter(r => r.length);
-    }
     const rows = [];
-    const qi = document.getElementById('q-input'), qb = document.getElementById('btn-search');
-    if (qi) rows.push([qi, qb].filter(Boolean));
     app.querySelectorAll('.carousel').forEach(c => { const r = Array.from(c.querySelectorAll('.card')); if (r.length) rows.push(r); });
-    app.querySelectorAll('.grid').forEach(g => {
-      const m = new Map();
-      g.querySelectorAll('.card').forEach(c => { const k = c.offsetTop; if (!m.has(k)) m.set(k, []); m.get(k).push(c); });
-      m.forEach(r => rows.push(r));
-    });
-    rows.sort((a, b) => (a[0].compareDocumentPosition(b[0]) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
     return rows;
   }
 
-  // Elemento de la fila más cercano en horizontal al actual
   function rcNearest(row, from) {
     const fr = from.getBoundingClientRect(), cx = (fr.left + fr.right) / 2;
     let best = row[0], bd = Infinity;
@@ -1174,114 +738,197 @@
     const k = e.key;
     if (k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'ArrowLeft' && k !== 'ArrowRight') return;
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
-    if (PHC.isOpen() || playerEl.classList.contains('open')) return;   // consola y reproductor llevan lo suyo
+    if (playerEl.classList.contains('open') || loginOpen()) return;
     const ae = document.activeElement;
 
-    // Modal (servidores / salir): ↑/↓ recorren las opciones
+    // Modal: Navegación en los botones
     if (modal.classList.contains('open')) {
       e.preventDefault();
-      const items = Array.from(modal.querySelectorAll('#modal-row button, #modal-list button, #modal-close'));
+      const items = [document.getElementById('modal-cancel'), document.getElementById('modal-exit')];
       const i = items.indexOf(ae);
-      const t = k === 'ArrowDown' ? items[i < 0 ? 0 : Math.min(i + 1, items.length - 1)]
-              : k === 'ArrowUp' ? items[i < 0 ? 0 : Math.max(i - 1, 0)] : null;
-      if (t) t.focus();
+      let nextIdx = i;
+      if (k === 'ArrowRight' || k === 'ArrowDown') nextIdx = Math.min(i + 1, 1);
+      else if (k === 'ArrowLeft' || k === 'ArrowUp') nextIdx = Math.max(i - 1, 0);
+      if (i === -1) nextIdx = 0;
+      items[nextIdx].focus();
       return;
     }
 
-    const inDetail = detail.classList.contains('open');
     const rows = rcRows();
-
-    // Barra de secciones
-    if (!inDetail && navList.indexOf(ae) >= 0) {
-      e.preventDefault();
-      const i = navList.indexOf(ae);
-      if (k === 'ArrowLeft') rcFocus(navList[Math.max(0, i - 1)]);
-      else if (k === 'ArrowRight') rcFocus(navList[Math.min(navList.length - 1, i + 1)]);
-      else if (k === 'ArrowDown' && rows.length) rcFocus(rows[0][0]);
-      return;   // ↑: el foco se queda en la barra
-    }
-
-    // Posición actual dentro de las filas
     let r = -1, c = -1;
     rows.forEach((row, ri) => { const ci = row.indexOf(ae); if (ci >= 0) { r = ri; c = ci; } });
-    if (r < 0) {   // foco perdido: se recupera para que el control no quede muerto
+    if (r < 0) {
       e.preventDefault();
-      if (inDetail) { if (rows.length) rcFocus(rows[0][0]); }
-      else rcFocus(document.querySelector('#main-nav button.active') || navList[0]);
-      return;
-    }
-
-    const row = rows[r], cur = row[c];
-    if (k === 'ArrowLeft' || k === 'ArrowRight') {
-      if (cur.tagName === 'INPUT') {   // en el buscador, ←/→ mueven el cursor hasta llegar al borde del texto
-        const atStart = cur.selectionStart === 0 && cur.selectionEnd === 0;
-        const atEnd = cur.selectionStart === cur.value.length && cur.selectionEnd === cur.value.length;
-        if ((k === 'ArrowLeft' && !atStart) || (k === 'ArrowRight' && !atEnd)) return;
-      }
-      e.preventDefault();
-      const n = row[c + (k === 'ArrowRight' ? 1 : -1)];
-      if (n) rcFocus(n);
+      if (rows.length) rcFocus(rows[0][0]);
       return;
     }
 
     e.preventDefault();
-    if (k === 'ArrowDown') {
+    const row = rows[r], cur = row[c];
+    if (k === 'ArrowLeft' || k === 'ArrowRight') {
+      const n = row[c + (k === 'ArrowRight' ? 1 : -1)];
+      if (n) rcFocus(n);
+    } else if (k === 'ArrowDown') {
       const nr = rows[r + 1];
-      if (nr) rcFocus(inDetail ? nr[0] : rcNearest(nr, cur));
-    } else {   // ArrowUp
-      if (r > 0) {
-        const pr = rows[r - 1];
-        const act = inDetail ? pr.find(b => b.classList.contains('active')) : null;   // de capítulos sube a la temporada activa
-        rcFocus(act || rcNearest(pr, cur));
-      } else if (!inDetail) {
-        rcFocus(document.querySelector('#main-nav button.active') || navList[0]);   // primera fila → sección activa
-      }
-      // En el detalle, ↑ desde la primera fila no hace nada
+      if (nr) rcFocus(rcNearest(nr, cur));
+    } else {
+      if (r > 0) rcFocus(rcNearest(rows[r - 1], cur));
     }
   });
 
-  // ---------- Menú ----------
-  navButtons.forEach(b => {
-    b.addEventListener('click', () => {
-      detail.classList.remove('open'); detailCard = null;
-      navButtons.forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-      const v = b.getAttribute('data-view');
-      vistaActual = v;
-      if (v === 'movies') showHome('movie');
-      else if (v === 'tv') showHome('tv');
-      else if (v === 'canales') renderCanales();
-      else if (v === 'genres') renderGenres();
-      else if (v === 'search') renderSearchView();
-    });
-    b.addEventListener('keydown', (e) => { if (e.key === 'Enter') b.click(); });
-  });
+  // ---------- Inicio de sesión ----------
+  const lgEl = document.getElementById('login'), lgUser = document.getElementById('lg-user'),
+        lgPass = document.getElementById('lg-pass'), lgMsg = document.getElementById('lg-msg'), lgBtn = document.getElementById('lg-btn');
+  const loginOpen = () => lgEl.classList.contains('open');
 
-  // ---------- Inicio ----------
-  // 1) Abre al instante con lo guardado. 2) Revisa version.json en segundo plano.
-  // 3) Lo nuevo se guarda; los canales se refrescan solos, el proveedor/extractor se usan al próximo arranque.
+  function sha256(ascii) {
+    ascii = unescape(encodeURIComponent(ascii));
+    const rr = (v, a) => (v >>> a) | (v << (32 - a)), maxWord = Math.pow(2, 32);
+    const words = [], bitLen = ascii.length * 8, hash = [], k = [], comp = {};
+    let pc = 0, i, j, result = '';
+    for (let c = 2; pc < 64; c++) {
+      if (!comp[c]) {
+        for (i = 0; i < 313; i += c) comp[i] = c;
+        hash[pc] = (Math.pow(c, .5) * maxWord) | 0;
+        k[pc++] = (Math.pow(c, 1 / 3) * maxWord) | 0;
+      }
+    }
+    ascii += '\x80';
+    while (ascii.length % 64 - 56) ascii += '\x00';
+    for (i = 0; i < ascii.length; i++) { j = ascii.charCodeAt(i); words[i >> 2] |= j << ((3 - i) % 4) * 8; }
+    words[words.length] = (bitLen / maxWord) | 0;
+    words[words.length] = bitLen;
+    let h = hash;
+    for (j = 0; j < words.length;) {
+      const w = words.slice(j, j += 16), old = h;
+      h = h.slice(0, 8);
+      for (i = 0; i < 64; i++) {
+        const w15 = w[i - 15], w2 = w[i - 2], a = h[0], e = h[4];
+        const t1 = h[7] + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & h[5]) ^ (~e & h[6])) + k[i] +
+          (w[i] = (i < 16) ? w[i] : (w[i - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0);
+        const t2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & h[1]) ^ (a & h[2]) ^ (h[1] & h[2]));
+        h = [(t1 + t2) | 0].concat(h);
+        h[4] = (h[4] + t1) | 0;
+      }
+      for (i = 0; i < 8; i++) h[i] = (h[i] + old[i]) | 0;
+    }
+    for (i = 0; i < 8; i++) for (j = 3; j + 1; j--) { const b = (h[i] >> (j * 8)) & 255; result += (b < 16 ? '0' : '') + b.toString(16); }
+    return result;
+  }
+
+  const claveDe = (u, p) => sha256(String(u).trim().toLowerCase() + ':' + p);
+  const nombreDe = e => String(e.user !== undefined ? e.user : (e.usuario !== undefined ? e.usuario : '')).trim().toLowerCase();
+  const passDe = e => e.pass !== undefined ? e.pass : (e.clave !== undefined ? e.clave : e.password);
+  const hashDe = e => e.hash ? String(e.hash).trim().toLowerCase() : (passDe(e) !== undefined ? claveDe(nombreDe(e), String(passDe(e))) : null);
+  const buscarUsuario = (lista, u, k) => lista.find(e => e && nombreDe(e) === String(u).trim().toLowerCase() && hashDe(e) === k);
+  function motivoBloqueo(e) {
+    if (e.activo === false) return 'Tu acceso no está activo. Contacta a tu proveedor.';
+    if (e.vencimiento) {
+      const t = Date.parse(e.vencimiento);
+      if (!isNaN(t) && Date.now() > t) return 'Tu suscripción ha vencido. Contacta a tu proveedor.';
+    }
+    return null;
+  }
+
+  async function cargarUsuarios() {
+    let txt = null;
+    try { txt = await fetchRaw('usuarios.json', 6000); LS.set('ph_cache_usuarios', txt); }
+    catch (e) { txt = LS.get('ph_cache_usuarios'); }
+    if (!txt) return null;
+    try {
+      const j = JSON.parse(txt), lista = Array.isArray(j) ? j : (j.usuarios || []);
+      return lista;
+    } catch (e) { return null; }
+  }
+
+  function salirApp() {
+    const App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if (App && App.exitApp) App.exitApp(); else window.close();
+  }
+
+  function abrirLogin(msg) {
+    lgEl.classList.add('open');
+    lgUser.value = ''; lgPass.value = ''; lgMsg.textContent = msg || '';
+    setTimeout(() => lgUser.focus(), 100);
+  }
+
+  let verificando = false;
+  async function intentarLogin() {
+    if (verificando) return;
+    const u = lgUser.value.trim(), p = lgPass.value;
+    if (!u || !p) { lgMsg.textContent = 'Escribe usuario y contraseña.'; return; }
+    verificando = true; lgMsg.textContent = ''; lgBtn.textContent = 'Verificando…';
+    const k = claveDe(u, p);
+    const lista = await cargarUsuarios();
+    verificando = false; lgBtn.textContent = 'Entrar';
+    if (!lista) { lgMsg.textContent = 'No se pudo conectar. Intenta de nuevo.'; return; }
+    const ent = buscarUsuario(lista, u, k);
+    if (!ent) { lgMsg.textContent = 'Usuario o contraseña incorrectos.'; lgPass.value = ''; lgPass.focus(); return; }
+    const bloqueo = motivoBloqueo(ent);
+    if (bloqueo) { lgMsg.textContent = bloqueo; lgPass.value = ''; return; }
+    LS.set('ph_sesion', JSON.stringify({ u: u.toLowerCase(), k }));
+    lgEl.classList.remove('open'); lgUser.value = ''; lgPass.value = ''; lgMsg.textContent = '';
+    setTimeout(() => { const f = app.querySelector('.card'); if (f) rcFocus(f); }, 100);
+  }
+
+  function cerrarSesion(msg) {
+    try { localStorage.removeItem('ph_sesion'); } catch (e) {}
+    pbar.close(); destroyPlayers();
+    playerEl.classList.remove('open'); modal.classList.remove('open');
+    abrirLogin(msg || 'Tu sesión ya no es válida. Entra de nuevo.');
+  }
+
+  lgBtn.addEventListener('click', intentarLogin);
+  window.addEventListener('keydown', (e) => {
+    if (!loginOpen()) return;
+    const k = e.key, ae = document.activeElement, items = [lgUser, lgPass, lgBtn], i = items.indexOf(ae);
+    if (k === 'ArrowDown') { e.preventDefault(); items[Math.min(i < 0 ? 0 : i + 1, 2)].focus(); }
+    else if (k === 'ArrowUp') { e.preventDefault(); if (i > 0) items[i - 1].focus(); }
+    else if (k === 'Enter') {
+      if (ae === lgUser) { e.preventDefault(); lgPass.focus(); }
+      else if (ae === lgPass) { e.preventDefault(); intentarLogin(); }
+    } else if ((k === 'ArrowLeft' || k === 'ArrowRight') && ae === lgBtn) e.preventDefault();
+  });
+  document.addEventListener('focusin', (e) => { if (loginOpen() && !lgEl.contains(e.target)) lgUser.focus(); });
+
+  (() => {
+    let ses = null;
+    try { ses = JSON.parse(LS.get('ph_sesion') || 'null'); } catch (e) { ses = null; }
+    if (ses && ses.u && ses.k) {
+      cargarUsuarios().then(lista => {
+        if (!lista) return;
+        const ent = buscarUsuario(lista, ses.u, ses.k);
+        if (!ent) cerrarSesion();
+        else { const m = motivoBloqueo(ent); if (m) cerrarSesion(m); }
+      }).catch(() => {});
+    } else abrirLogin();
+  })();
+
   (async () => {
     let completo = false;
     try { completo = cargarDesdeCache(); } catch (e) { console.error(e); }
     if (!completo) {
-      setBoot('Descargando contenido...');
+      setBoot('Descargando canales...');
       try { await revisarActualizaciones(); } catch (e) { console.error(e); }
       try { cargarDesdeCache(); } catch (e) { console.error(e); }
     }
     renderCanales();
-    setTimeout(() => navButtons[0].focus(), 200);
 
     if (completo) {
       revisarActualizaciones().then(act => {
-        if (act.includes(ARCHIVOS[0].cache)) {
-          try { canales = JSON.parse(MEM[ARCHIVOS[0].cache] || LS.get(ARCHIVOS[0].cache) || 'null'); } catch (e) {}
-          const enNav = document.activeElement && document.activeElement.closest && document.activeElement.closest('#main-nav');
-          if (vistaActual === 'canales' && enNav && !detail.classList.contains('open')) {
-            const prev = document.activeElement;
-            renderCanales();
-            setTimeout(() => { if (prev && document.body.contains(prev)) prev.focus(); }, 50);
-          }
-        }
+        if (!act.includes(ARCHIVOS[0].cache)) return;
+        try { canales = JSON.parse(MEM[ARCHIVOS[0].cache] || LS.get(ARCHIVOS[0].cache) || 'null'); } catch (e) { return; }
+        if (playerEl.classList.contains('open') || modal.classList.contains('open') || loginOpen()) return;
+        const act2 = document.activeElement;
+        const cat = act2 && app.contains(act2) ? act2.getAttribute('data-cat') : null;
+        const idx = act2 && app.contains(act2) ? act2.getAttribute('data-idx') : null;
+        const top = app.scrollTop;
+        renderCanales(true);
+        app.scrollTop = top;
+        if (cat !== null) {
+          const el = Array.from(app.querySelectorAll('.card.chan')).find(c => c.getAttribute('data-cat') === cat && c.getAttribute('data-idx') === idx);
+          if (el) el.focus({ preventScroll: true });
+        } else autoFocus();
       }).catch(e => console.warn(e));
     }
   })();
