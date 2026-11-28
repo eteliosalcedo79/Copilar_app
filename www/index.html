@@ -127,11 +127,11 @@
   #lg-msg { min-height: 1.4em; text-align: center; color: #ffb3b8; font-size: clamp(.85rem, 1.2vw, 1.05rem); }
 
   /* REPRODUCTOR */
-  #player { position: fixed; inset: 0; background: #000; z-index: 200; display: none; flex-direction: column; }
+  #player { position: fixed; inset: 0; background: #000 url('fondo_reproductor.webp') center center / cover no-repeat; z-index: 200; display: none; flex-direction: column; }
   #player.open { display: flex; }
   #player-bar { display: none; }
-  #player video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; background: #000; }
-  #player-msg { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 1.8vw; color: #fff; padding: 2vh 3vw; pointer-events: none; }
+  #player video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; background: transparent; }
+  #player-msg { position: absolute; left: 0; right: 0; top: 78%; text-align: center; font-size: 1.8vw; color: #fff; padding: 2vh 3vw; pointer-events: none; }
 
   /* BARRA DEL REPRODUCTOR */
   #pbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; flex-direction: column; gap: 6px;
@@ -202,7 +202,7 @@
 
 <div id="player">
   <div id="player-bar"></div>
-  <video id="player-video" autoplay playsinline tabindex="0"></video>
+  <video id="player-video" autoplay playsinline tabindex="0" poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></video>
   <div id="player-msg"></div>
 </div>
 
